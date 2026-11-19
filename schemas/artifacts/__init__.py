@@ -14,6 +14,7 @@ ARTIFACT_NAMES = [
     "research_brief",
     "proposal_packet",
     "brief",
+    "style_lock",
     "script",
     "character_design",
     "rig_plan",

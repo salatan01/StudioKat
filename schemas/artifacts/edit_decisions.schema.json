@@ -201,8 +201,8 @@
     },
     "render_runtime": {
       "type": "string",
-      "enum": ["remotion", "hyperframes", "ffmpeg"],
-      "description": "Locked at proposal stage — technical runtime that realizes renderer_family. Edit MUST carry this forward unchanged unless a logged render_runtime_selection decision overrides it."
+      "enum": ["remotion", "hyperframes", "ffmpeg", "faceless"],
+      "description": "Locked at proposal stage — technical runtime that realizes renderer_family. Edit MUST carry this forward unchanged unless a logged render_runtime_selection decision overrides it. 'faceless' is valid only for the faceless-short pipeline and is executed by faceless_render; video_compose rejects it."
     },
     "composition_mode": {
       "type": "string",

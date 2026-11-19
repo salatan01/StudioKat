@@ -18,6 +18,34 @@
     "cta": { "type": "string", "description": "Call to action" },
     "tone": { "type": "string" },
     "style": { "type": "string", "description": "Style playbook name or custom description" },
+    "visual_style": {
+      "type": "object",
+      "description": "Structured record of the chosen visual style. The faceless system uses system='faceless' plus style_id and engine; other pipelines keep using the existing systems.",
+      "required": ["system", "name", "source"],
+      "properties": {
+        "system": {
+          "type": "string",
+          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless"]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "style_id": {
+          "type": "string",
+          "enum": ["deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale"]
+        },
+        "engine": { "type": "string", "enum": ["canvas-2d", "threejs"] }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "system": { "const": "faceless" } },
+            "required": ["system"]
+          },
+          "then": { "required": ["style_id", "engine"] }
+        }
+      ]
+    },
     "target_audience": { "type": "string" },
     "target_platform": {
       "type": "string",
