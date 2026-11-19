@@ -11,8 +11,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
+import selectors
+import shlex
 import shutil
+import signal
 import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -34,7 +40,22 @@ SKILL_DIR = REPO_ROOT / ".agents" / "skills" / "faceless-shorts"
 
 PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 STYLE_IDS = ("deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale")
-PROJECT_OPERATIONS = {"new", "voice", "words", "estimate", "check", "cues", "mix"}
+PROJECT_OPERATIONS = {
+    "new",
+    "voice",
+    "words",
+    "estimate",
+    "check",
+    "cues",
+    "mix",
+    "render",
+    "render_start",
+    "job_status",
+    "job_cancel",
+    "sheet",
+    "frames",
+    "preview",
+}
 
 
 class FacelessRenderError(RuntimeError):
@@ -43,6 +64,20 @@ class FacelessRenderError(RuntimeError):
 
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class FacelessRender(BaseTool):
@@ -72,6 +107,10 @@ class FacelessRender(BaseTool):
         "faceless_check",
         "faceless_cues",
         "faceless_mix",
+        "faceless_render",
+        "faceless_sheet",
+        "faceless_frames",
+        "faceless_preview",
     ]
     best_for = [
         "One of the six vendored faceless-shorts styles",
@@ -100,6 +139,13 @@ class FacelessRender(BaseTool):
                     "check",
                     "cues",
                     "mix",
+                    "render",
+                    "render_start",
+                    "job_status",
+                    "job_cancel",
+                    "sheet",
+                    "frames",
+                    "preview",
                 ],
             },
             "project_id": {"type": "string"},
@@ -115,6 +161,19 @@ class FacelessRender(BaseTool):
             "quality_scale": {"type": "string"},
             "fps": {"type": "integer", "minimum": 1},
             "timeout_seconds": {"type": "integer", "minimum": 1},
+            "output_path": {"type": "string"},
+            "review_dir": {"type": "string"},
+            "step": {"type": "number", "minimum": 0.05},
+            "columns": {"type": "integer", "minimum": 1},
+            "times": {
+                "type": "array",
+                "items": {"type": "number", "minimum": 0},
+                "minItems": 1,
+            },
+            "start_seconds": {"type": "number", "minimum": 0},
+            "end_seconds": {"type": "number", "minimum": 0},
+            "draft": {"type": "boolean", "default": False},
+            "job_id": {"type": "string"},
         },
         "additionalProperties": False,
     }
@@ -290,6 +349,191 @@ class FacelessRender(BaseTool):
         )
 
     # ------------------------------------------------------------------
+    # Job and output-path helpers
+    # ------------------------------------------------------------------
+
+    def _project_path(
+        self,
+        inputs: dict[str, Any],
+        raw: Optional[str],
+        default: str,
+    ) -> Path:
+        project_dir = self._resolve_project_dir(inputs)
+        root = project_dir.resolve()
+
+        def inside(path: Path) -> bool:
+            try:
+                path.relative_to(root)
+                return True
+            except ValueError:
+                return False
+
+        if raw:
+            candidate = Path(str(raw)).expanduser()
+            if candidate.is_absolute():
+                resolved = candidate.resolve()
+            else:
+                resolved = (project_dir / candidate).resolve()
+                if not inside(resolved):
+                    resolved = (project_dir / "faceless" / candidate).resolve()
+        else:
+            resolved = (project_dir / default).resolve()
+
+        if not inside(resolved):
+            raise FacelessRenderError(
+                f"Output path {resolved} must stay under the project directory {root}"
+            )
+        return resolved
+
+    def _capture_command(self, workspace: Path, args: list[str]) -> list[str]:
+        node = shutil.which("node")
+        if not node:
+            raise FacelessRenderError("Node.js is required for faceless capture")
+        capture = workspace / "tools" / "capture.mjs"
+        self._require_file(capture, "capture.mjs")
+        return [node, str(capture), *args]
+
+    def _engine_for(self, inputs: dict[str, Any], workspace: Path) -> str:
+        style_id = inputs.get("style_id")
+        if style_id:
+            from styles.faceless.loader import get_style
+
+            try:
+                return get_style(style_id)["engine"]
+            except Exception as exc:
+                raise FacelessRenderError(
+                    f"Unknown faceless style_id {style_id!r}"
+                ) from exc
+        marker = workspace / ".faceless-style"
+        if marker.is_file():
+            try:
+                return str(_read_json(marker).get("engine") or "canvas-2d")
+            except (OSError, json.JSONDecodeError):
+                return "canvas-2d"
+        return "canvas-2d"
+
+    def _job_dir(self, workspace: Path) -> Path:
+        jobs = workspace / "jobs"
+        jobs.mkdir(parents=True, exist_ok=True)
+        return jobs
+
+    def _job_path(self, workspace: Path, job_id: str) -> Path:
+        if not isinstance(job_id, str) or not PROJECT_ID_RE.match(job_id):
+            raise FacelessRenderError(f"Invalid job_id {job_id!r}")
+        jobs = (workspace / "jobs").resolve()
+        path = (jobs / f"{job_id}.json").resolve()
+        if path.parent != jobs:
+            raise FacelessRenderError(f"Invalid job_id {job_id!r}")
+        if not path.is_file():
+            raise FacelessRenderError(f"Job not found: {job_id}")
+        return path
+
+    def _write_job(self, path: Path, payload: dict[str, Any]) -> None:
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def _write_job_script(
+        self,
+        workspace: Path,
+        job_id: str,
+        command: list[str],
+    ) -> tuple[Path, Path, Path, Path]:
+        jobs = self._job_dir(workspace)
+        script_path = jobs / f"{job_id}.sh"
+        log_path = jobs / f"{job_id}.log"
+        exit_path = jobs / f"{job_id}.exit"
+        script_path.write_text(
+            "#!/usr/bin/env bash\n"
+            "set -u\n"
+            f"cd {shlex.quote(str(workspace))}\n"
+            f"{shlex.join(command)}\n"
+            "code=$?\n"
+            f"echo $code > {shlex.quote(str(exit_path))}\n"
+            "exit $code\n",
+            encoding="utf-8",
+        )
+        script_path.chmod(0o755)
+        return script_path, log_path, exit_path, jobs
+
+    def _start_job(
+        self,
+        inputs: dict[str, Any],
+        *,
+        kind: str,
+        output_path: Optional[Path],
+        command: list[str],
+    ) -> ToolResult:
+        workspace = self._workspace(inputs)
+        if output_path is not None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        job_id = f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}"
+        script_path, log_path, exit_path, jobs = self._write_job_script(
+            workspace, job_id, command
+        )
+        log = open(log_path, "w", encoding="utf-8")
+        try:
+            proc = subprocess.Popen(
+                ["bash", str(script_path)],
+                cwd=str(workspace),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                env=self._capture_env(inputs),
+            )
+        finally:
+            log.close()
+
+        job_path = jobs / f"{job_id}.json"
+        payload = {
+            "version": "1.0",
+            "job_id": job_id,
+            "kind": kind,
+            "project_id": inputs.get("project_id"),
+            "workspace": str(workspace),
+            "status": "running",
+            "pid": proc.pid,
+            "command": command,
+            "script_path": str(script_path),
+            "log_path": str(log_path),
+            "exit_code_path": str(exit_path),
+            "output_path": str(output_path) if output_path else None,
+            "started_at": _now(),
+            "ended_at": None,
+            "exit_code": None,
+            "error": None,
+        }
+        self._write_job(job_path, payload)
+        return ToolResult(
+            success=True,
+            data={
+                **payload,
+                "job_path": str(job_path),
+            },
+            artifacts=[str(job_path)],
+        )
+
+    def _terminate(self, pid: int) -> None:
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                return
+        time.sleep(0.5)
+        if not _pid_alive(pid):
+            return
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+    # ------------------------------------------------------------------
     # Operations
     # ------------------------------------------------------------------
 
@@ -368,6 +612,10 @@ class FacelessRender(BaseTool):
             raise FacelessRenderError(
                 f"new completed but {script_json} is missing. Check the vendored example."
             )
+        (workspace / ".faceless-style").write_text(
+            json.dumps({"style_id": style["id"], "engine": style["engine"]}),
+            encoding="utf-8",
+        )
         return ToolResult(
             success=True,
             data={
@@ -564,9 +812,328 @@ class FacelessRender(BaseTool):
         )
 
     # ------------------------------------------------------------------
-    # Dispatch
+    # Render, jobs, and QA
     # ------------------------------------------------------------------
 
+    def _render_args(self, output: Path, inputs: dict[str, Any]) -> list[str]:
+        args = ["video", str(output)]
+        start = inputs.get("start_seconds")
+        end = inputs.get("end_seconds")
+        if start is not None:
+            args.append(str(start))
+            if end is not None:
+                args.append(str(end))
+        elif end is not None:
+            raise FacelessRenderError("start_seconds is required when end_seconds is set")
+        if inputs.get("draft"):
+            args.append("--draft")
+        return args
+
+    def _render_sync(self, inputs: dict[str, Any], output: Path) -> ToolResult:
+        workspace = self._workspace(inputs)
+        self._require_file(workspace / "data" / "mix.wav", "data/mix.wav")
+        proc = self._capture(
+            workspace,
+            self._render_args(output, inputs),
+            inputs,
+            timeout=3600,
+        )
+        self._output(proc, "render")
+        self._require_file(output, "rendered output")
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "status": "succeeded",
+                "output_path": str(output),
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=[str(output)],
+        )
+
+    def _op_render(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        output = self._project_path(inputs, inputs.get("output_path"), "renders/final.mp4")
+        engine = self._engine_for(inputs, workspace)
+        if engine == "threejs" or inputs.get("software_gl"):
+            command = self._capture_command(workspace, self._render_args(output, inputs))
+            return self._start_job(
+                inputs,
+                kind="render",
+                output_path=output,
+                command=command,
+            )
+        return self._render_sync(inputs, output)
+
+    def _op_render_start(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        self._require_file(workspace / "data" / "mix.wav", "data/mix.wav")
+        output = self._project_path(inputs, inputs.get("output_path"), "renders/final.mp4")
+        command = self._capture_command(workspace, self._render_args(output, inputs))
+        return self._start_job(
+            inputs,
+            kind="render",
+            output_path=output,
+            command=command,
+        )
+
+    def _op_job_status(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        job_path = self._job_path(workspace, str(inputs.get("job_id") or ""))
+        job = _read_json(job_path)
+        if job.get("status") != "running":
+            return ToolResult(
+                success=True,
+                data={
+                    "workspace": str(workspace),
+                    "job_path": str(job_path),
+                    "job_id": job.get("job_id"),
+                    "kind": job.get("kind"),
+                    "status": job.get("status"),
+                    "pid": job.get("pid"),
+                    "output_path": job.get("output_path"),
+                    "exit_code": job.get("exit_code"),
+                    "error": job.get("error"),
+                    "url": job.get("url"),
+                },
+            )
+
+        exit_path = Path(str(job.get("exit_code_path") or ""))
+        output_path = Path(str(job.get("output_path"))) if job.get("output_path") else None
+        status = "running"
+        exit_code = None
+        error = None
+
+        if exit_path.is_file():
+            try:
+                exit_code = int(exit_path.read_text(encoding="utf-8").strip())
+            except (OSError, ValueError):
+                exit_code = -1
+            if exit_code == 0 and output_path and output_path.is_file():
+                status = "succeeded"
+            elif job.get("kind") == "preview":
+                status = "stopped"
+            else:
+                status = "failed"
+                error = f"Render exited {exit_code}"
+        elif _pid_alive(int(job.get("pid") or 0)):
+            status = "running"
+        elif job.get("kind") == "preview":
+            status = "stopped"
+        else:
+            status = "failed"
+            error = "Process exited without writing an exit code"
+
+        job["status"] = status
+        job["exit_code"] = exit_code
+        job["error"] = error
+        if status != "running":
+            job["ended_at"] = _now()
+        self._write_job(job_path, job)
+
+        log_tail = ""
+        log_path = Path(str(job.get("log_path") or ""))
+        if log_path.is_file():
+            log_tail = "\n".join(
+                log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-40:]
+            )
+
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "job_path": str(job_path),
+                "job_id": job.get("job_id"),
+                "kind": job.get("kind"),
+                "status": status,
+                "pid": job.get("pid"),
+                "output_path": job.get("output_path"),
+                "exit_code": exit_code,
+                "error": error,
+                "url": job.get("url"),
+                "log_tail": log_tail,
+            },
+        )
+
+    def _op_job_cancel(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        job_path = self._job_path(workspace, str(inputs.get("job_id") or ""))
+        job = _read_json(job_path)
+        if job.get("status") != "running":
+            return ToolResult(
+                success=True,
+                data={
+                    "workspace": str(workspace),
+                    "job_path": str(job_path),
+                    "job_id": job.get("job_id"),
+                    "status": job.get("status"),
+                },
+            )
+
+        pid = int(job.get("pid") or 0)
+        if pid and _pid_alive(pid):
+            self._terminate(pid)
+        job["status"] = "cancelled"
+        job["ended_at"] = _now()
+        job["error"] = "Cancelled by user request"
+        self._write_job(job_path, job)
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "job_path": str(job_path),
+                "job_id": job.get("job_id"),
+                "status": "cancelled",
+                "output_path": job.get("output_path"),
+            },
+        )
+
+    def _op_sheet(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        output = self._project_path(
+            inputs,
+            inputs.get("output_path"),
+            "review/contact-sheet.jpg",
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        step = float(inputs.get("step") or 0.5)
+        columns = int(inputs.get("columns") or 10)
+        proc = self._capture(
+            workspace,
+            ["sheet", str(output), str(step), str(columns)],
+            inputs,
+            timeout=600,
+        )
+        self._output(proc, "sheet")
+        self._require_file(output, "contact sheet")
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "contact_sheet": str(output),
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=[str(output)],
+        )
+
+    def _op_frames(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        times = inputs.get("times")
+        if (
+            not isinstance(times, list)
+            or not times
+            or not all(isinstance(value, (int, float)) and value >= 0 for value in times)
+        ):
+            raise FacelessRenderError("times must be a non-empty list of non-negative numbers")
+        output_dir = self._project_path(
+            inputs,
+            inputs.get("review_dir"),
+            "review/frames",
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        proc = self._capture(
+            workspace,
+            ["frames", str(output_dir), ",".join(str(value) for value in times)],
+            inputs,
+            timeout=600,
+        )
+        self._output(proc, "frames")
+        frames = sorted(str(path) for path in output_dir.glob("*.jpg"))
+        if not frames:
+            raise FacelessRenderError(f"frames produced no JPEGs in {output_dir}")
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "frames_dir": str(output_dir),
+                "frames": frames,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=frames,
+        )
+
+    def _op_preview(self, inputs: dict[str, Any]) -> ToolResult:
+        workspace = self._workspace(inputs)
+        jobs = self._job_dir(workspace)
+        job_id = f"preview-{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}"
+        log_path = jobs / f"{job_id}.log"
+        command = self._capture_command(workspace, ["preview"])
+        log = open(log_path, "w", encoding="utf-8")
+        try:
+            proc = subprocess.Popen(
+                command,
+                cwd=str(workspace),
+                stdout=subprocess.PIPE,
+                stderr=log,
+                stdin=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                start_new_session=True,
+                env=self._capture_env(inputs),
+            )
+        finally:
+            log.close()
+
+        url = None
+        selector = selectors.DefaultSelector()
+        try:
+            selector.register(proc.stdout, selectors.EVENT_READ)
+            deadline = time.time() + 15
+            while time.time() < deadline:
+                events = selector.select(timeout=max(0.1, deadline - time.time()))
+                if not events:
+                    break
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                match = re.search(r"http://127\.0\.0\.1:\d+/", line)
+                if match:
+                    url = match.group(0)
+                    break
+        finally:
+            selector.close()
+
+        if not url:
+            proc.kill()
+            raise FacelessRenderError(
+                f"preview did not print a URL within 15 s; see {log_path}"
+            )
+
+        job_path = jobs / f"{job_id}.json"
+        payload = {
+            "version": "1.0",
+            "job_id": job_id,
+            "kind": "preview",
+            "project_id": inputs.get("project_id"),
+            "workspace": str(workspace),
+            "status": "running",
+            "pid": proc.pid,
+            "command": command,
+            "log_path": str(log_path),
+            "output_path": None,
+            "started_at": _now(),
+            "ended_at": None,
+            "exit_code": None,
+            "error": None,
+            "url": url,
+        }
+        self._write_job(job_path, payload)
+        return ToolResult(
+            success=True,
+            data={
+                **payload,
+                "job_path": str(job_path),
+            },
+            artifacts=[str(job_path)],
+        )
+
+    # ------------------------------------------------------------------
+    # Dispatch
+    # ------------------------------------------------------------------
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         operation = inputs.get("operation")
         if not isinstance(operation, str):
