@@ -126,3 +126,8 @@ result-*
 # These are process records for the working session, not product files.
 docs/superpowers/
 .superpowers/
+
+# Faceless fidelity baselines: the manifest is committed, the media is regenerable
+# (`pytest tests/faceless/test_baseline_setup.py` inside the Nix shell).
+tests/faceless/baselines/*/renders/
+tests/faceless/baselines/*/review/

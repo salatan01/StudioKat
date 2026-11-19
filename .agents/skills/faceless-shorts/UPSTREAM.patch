@@ -1,5 +1,5 @@
---- /home/superkat01/Projects/faceless-shorts/SKILL.md	2026-11-03 19:14:42.000000000 +0600
-+++ SKILL.md	2026-11-19 17:11:07.636580113 +0600
+--- a/SKILL.md
++++ b/SKILL.md
 @@ -1,6 +1,7 @@
  ---
  name: faceless-shorts
@@ -86,8 +86,8 @@
  
  ## Adding a new style (when the user asks)
  Make `styles/<new-style>/` with `style-sheet.png`, `STYLE.md` (same sections as Inside Out: look rules, palette, format,
---- /home/superkat01/Projects/faceless-shorts/README.md	2026-11-03 19:14:47.000000000 +0600
-+++ README.md	2026-11-19 17:11:13.901583623 +0600
+--- a/README.md
++++ b/README.md
 @@ -1,4 +1,4 @@
 -# Faceless Shorts: a free Claude skill
 +# Faceless Shorts: a free OpenCode skill
@@ -120,3 +120,11 @@
  `styles/<style>/` (`style-sheet.png`, `STYLE.md`, `example/` = a complete project that renders as-is).
  
  **Licenses:** the code, stories, drawings and sound are original and free to use in your videos. Inter font: SIL Open Font
+--- a/scripts/py
++++ b/scripts/py
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/usr/bin/env bash
+ # Runs Python from the skill's private environment (~/.faceless-shorts/venv), or the system python3 before setup.
+ FH="${FACELESS_HOME:-$HOME/.faceless-shorts}"
+ for p in "$FH/venv/bin/python" "$FH/venv/Scripts/python.exe"; do [ -x "$p" ] && exec "$p" "$@"; done
