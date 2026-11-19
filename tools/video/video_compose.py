@@ -1620,18 +1620,30 @@ class VideoCompose(BaseTool):
                     "it MUST be locked at proposal stage (proposal_packet."
                     "production_plan.render_runtime) and carried forward through "
                     "edit_decisions.render_runtime. Valid values: 'remotion', "
-                    "'hyperframes', 'ffmpeg'. Re-run the proposal stage with an "
+                    "'hyperframes', 'ffmpeg', 'faceless'. Re-run the proposal stage with an "
                     "explicit runtime choice — do NOT default this field."
                 ),
             )
 
-        if render_runtime not in {"remotion", "hyperframes", "ffmpeg"}:
+        if render_runtime not in {"remotion", "hyperframes", "ffmpeg", "faceless"}:
             return ToolResult(
                 success=False,
                 error=(
                     f"Unknown render_runtime {render_runtime!r}. "
-                    f"Valid values: remotion, hyperframes, ffmpeg. "
+                    f"Valid values: remotion, hyperframes, ffmpeg, faceless. "
                     f"render_runtime must be set at proposal stage."
+                ),
+            )
+
+        # Explicit rejection for faceless — it must use faceless_render, not video_compose
+        if render_runtime == "faceless":
+            return ToolResult(
+                success=False,
+                error=(
+                    "render_runtime 'faceless' is not executed by video_compose. "
+                    "The faceless-short pipeline uses the faceless_render tool for all "
+                    "engine operations (mix, render, sheet, frames, preview). "
+                    "Re-run compose with the faceless_render operation instead."
                 ),
             )
 

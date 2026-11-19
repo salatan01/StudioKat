@@ -93,6 +93,7 @@
         linuxEnv = lib.optionalString pkgs.stdenv.isLinux ''
           export HYPERFRAMES_BROWSER_PATH="${pkgs.chromium}/bin/chromium"
           export REMOTION_BROWSER_EXECUTABLE="${pkgs.chromium}/bin/chromium"
+          export CHROME="${pkgs.chromium}/bin/chromium"
           export LD_LIBRARY_PATH="${lib.makeLibraryPath runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
         '';
 

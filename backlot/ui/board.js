@@ -54,7 +54,7 @@ function renderSlate(s) {
     board && board.total_duration_seconds
       ? el("span", { class: "chip" }, `${board.scenes.length} scenes · ${fmtDuration(board.total_duration_seconds)}`)
       : null,
-    s.style_playbook ? el("span", { class: "chip" }, s.style_playbook) : null,
+    s.style_label ? el("span", { class: "chip" }, s.style_label) : null,
   ];
 
   const awaiting = s.stages.find((x) => x.status === "awaiting_human");

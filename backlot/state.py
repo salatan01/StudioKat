@@ -231,6 +231,7 @@ def _build_stage_rail(
 ARTIFACT_FILES = {
     "research_brief": "research_brief.json",
     "brief": "brief.json",
+    "style_lock": "style_lock.json",
     "proposal_packet": "proposal_packet.json",
     "script": "script.json",
     "scene_plan": "scene_plan.json",
@@ -502,7 +503,7 @@ def _build_storyboard(
     return {
         "scenes": cards,
         "total_duration_seconds": total,
-        "style_playbook": scene_plan.get("style_playbook"),
+        "style_label": scene_plan.get("style_playbook"),
     }
 
 
@@ -653,6 +654,7 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
         "title": marker.get("title") or meta_json.get("name") or project_id.replace("-", " ").title(),
         "pipeline": pipeline_meta,
         "style_playbook": marker.get("style_playbook"),
+        "style_label": _style_label(marker, artifacts),
         "series": _series_of(marker),
         "created_at": marker.get("created_at"),
         "has_marker": bool(marker),
@@ -668,6 +670,33 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
     }
     state["poster"] = _find_poster(project_dir, state)
     return state
+
+
+def _style_label(marker: dict[str, Any], artifacts: dict[str, Any]) -> Optional[str]:
+    """Presentational style chip text.
+
+    The marker's ``style_playbook`` wins for playbook-driven pipelines. Faceless
+    projects have no playbook, so fall back to the brief's ``visual_style`` name
+    and then to the ``style_lock`` style name.
+    """
+    label = marker.get("style_playbook")
+    if label:
+        return label
+
+    brief = artifacts.get("brief")
+    if isinstance(brief, dict):
+        visual = brief.get("visual_style")
+        if not isinstance(visual, dict):
+            metadata = brief.get("metadata")
+            visual = metadata.get("visual_style") if isinstance(metadata, dict) else None
+        if isinstance(visual, dict) and visual.get("name"):
+            return str(visual["name"])
+
+    lock = artifacts.get("style_lock")
+    if isinstance(lock, dict) and lock.get("style_name"):
+        return str(lock["style_name"])
+
+    return None
 
 
 def _series_of(marker: dict[str, Any]) -> Optional[str]:
