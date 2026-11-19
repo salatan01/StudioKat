@@ -1,0 +1,22 @@
+{
+  "id": "tall-tale",
+  "name": "Tall Tale 3D",
+  "aliases": [
+    "tall tale",
+    "tall tale 3d",
+    "funny true story",
+    "storytime",
+    "true story cartoon"
+  ],
+  "engine": "threejs",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [40, 60],
+  "genre": ["funny", "true story", "storytime"],
+  "when_to_use": "A funny or clever true story with flat 2D cartoon people in a sunny 3D world.",
+  "not_for": "Body/science explainers, true crime, or historical maps.",
+  "style_md": ".agents/skills/faceless-shorts/styles/tall-tale/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/tall-tale/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/tall-tale/example"
+}

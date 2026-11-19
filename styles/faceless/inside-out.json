@@ -1,0 +1,22 @@
+{
+  "id": "inside-out",
+  "name": "Inside Out",
+  "aliases": [
+    "inside out",
+    "flat 2d",
+    "2d x-ray",
+    "x-ray explainer",
+    "flat 2d what happens if"
+  ],
+  "engine": "canvas-2d",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [25, 45],
+  "genre": ["body", "health", "science", "what happens if"],
+  "when_to_use": "A lighter, faster 2D what-happens-if explainer with flat shapes and x-ray cutaways.",
+  "not_for": "True-crime mysteries, historical paper-cut stories, or cinematic 3D body journeys.",
+  "style_md": ".agents/skills/faceless-shorts/styles/inside-out/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/inside-out/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/inside-out/example"
+}

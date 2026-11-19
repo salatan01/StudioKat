@@ -1,0 +1,23 @@
+{
+  "id": "night-file",
+  "name": "Night File 3D",
+  "aliases": [
+    "night file",
+    "night file 3d",
+    "true crime",
+    "unsolved mystery",
+    "unsolved mysteries",
+    "mystery short"
+  ],
+  "engine": "threejs",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [30, 45],
+  "genre": ["true crime", "mystery", "unsolved"],
+  "when_to_use": "An unsolved mystery or true-crime story in a dark 3D space with one light and evidence inserts.",
+  "not_for": "Body/science explainers, history, or comedy storytime.",
+  "style_md": ".agents/skills/faceless-shorts/styles/night-file/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/night-file/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/night-file/example"
+}

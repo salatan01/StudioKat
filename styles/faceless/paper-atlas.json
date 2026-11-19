@@ -1,0 +1,22 @@
+{
+  "id": "paper-atlas",
+  "name": "Paper Atlas",
+  "aliases": [
+    "paper atlas",
+    "cut paper",
+    "paper cut",
+    "history short",
+    "history explainer"
+  ],
+  "engine": "canvas-2d",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [30, 45],
+  "genre": ["history", "maps", "historical"],
+  "when_to_use": "A historical event told in cut paper with maps, routes, and date ribbons.",
+  "not_for": "Body/science explainers, true crime, or stick-figure survival steps.",
+  "style_md": ".agents/skills/faceless-shorts/styles/paper-atlas/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/paper-atlas/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/paper-atlas/example"
+}

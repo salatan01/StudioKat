@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/styles/faceless_style",
+  "title": "Faceless Style Manifest",
+  "description": "Selection metadata and source pointers for one faceless engine style. The look contract lives in STYLE.md and style-sheet.png; this file never duplicates palette or engine rules.",
+  "type": "object",
+  "required": ["id", "name", "aliases", "engine", "aspect", "resolution", "fps", "duration_seconds", "genre", "when_to_use", "not_for", "style_md", "style_sheet", "example"],
+  "properties": {
+    "id": { "type": "string", "enum": ["deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale"] },
+    "name": { "type": "string", "minLength": 1 },
+    "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "engine": { "type": "string", "enum": ["canvas-2d", "threejs"] },
+    "aspect": { "const": "9:16" },
+    "resolution": { "const": "1080x1920" },
+    "fps": { "type": "integer", "minimum": 1 },
+    "duration_seconds": { "type": "array", "items": { "type": "number", "minimum": 1 }, "minItems": 2, "maxItems": 2 },
+    "genre": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "when_to_use": { "type": "string", "minLength": 1 },
+    "not_for": { "type": "string", "minLength": 1 },
+    "style_md": { "type": "string", "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/STYLE\\.md$" },
+    "style_sheet": { "type": "string", "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/style-sheet\\.png$" },
+    "example": { "type": "string", "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/example$" }
+  },
+  "additionalProperties": false
+}

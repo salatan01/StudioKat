@@ -1,0 +1,22 @@
+{
+  "id": "stick-story",
+  "name": "Stick Story",
+  "aliases": [
+    "stick story",
+    "stick figure",
+    "stick figures",
+    "survival steps",
+    "what would you do"
+  ],
+  "engine": "canvas-2d",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [30, 45],
+  "genre": ["survival", "how to", "safety"],
+  "when_to_use": "A survival or how-to story told in numbered steps with stick people and flat rooms.",
+  "not_for": "History, true crime, or cinematic 3D explainers.",
+  "style_md": ".agents/skills/faceless-shorts/styles/stick-story/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/stick-story/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/stick-story/example"
+}

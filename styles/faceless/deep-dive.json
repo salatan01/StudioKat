@@ -1,0 +1,23 @@
+{
+  "id": "deep-dive",
+  "name": "Deep Dive 3D",
+  "aliases": [
+    "deep dive",
+    "deep dive 3d",
+    "zack d films",
+    "zack d. films",
+    "body explainer",
+    "science explainer"
+  ],
+  "engine": "threejs",
+  "aspect": "9:16",
+  "resolution": "1080x1920",
+  "fps": 30,
+  "duration_seconds": [30, 45],
+  "genre": ["body", "health", "science", "what happens if"],
+  "when_to_use": "A cinematic 3D body or science what-happens-if explainer with camera journeys and x-ray cutaways.",
+  "not_for": "True-crime mysteries, historical paper-cut stories, or a fast 2D look.",
+  "style_md": ".agents/skills/faceless-shorts/styles/deep-dive/STYLE.md",
+  "style_sheet": ".agents/skills/faceless-shorts/styles/deep-dive/style-sheet.png",
+  "example": ".agents/skills/faceless-shorts/styles/deep-dive/example"
+}
