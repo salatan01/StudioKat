@@ -1033,6 +1033,11 @@ class FacelessRender(BaseTool):
             "review/frames",
         )
         output_dir.mkdir(parents=True, exist_ok=True)
+        # Snapshot mtimes so a frame is only reported if this capture wrote it —
+        # re-running the same timestamps overwrites the same filenames.
+        before = {
+            path: path.stat().st_mtime_ns for path in output_dir.glob("*.jpg")
+        }
         proc = self._capture(
             workspace,
             ["frames", str(output_dir), ",".join(str(value) for value in times)],
@@ -1040,9 +1045,19 @@ class FacelessRender(BaseTool):
             timeout=600,
         )
         self._output(proc, "frames")
-        frames = sorted(str(path) for path in output_dir.glob("*.jpg"))
+        # Only frames this capture wrote. A leftover JPEG from an earlier run in
+        # the same directory is not evidence for this render, and reporting it as
+        # such would let a stale picture pass visual QA.
+        produced = [
+            path
+            for path in output_dir.glob("*.jpg")
+            if before.get(path) != path.stat().st_mtime_ns
+        ]
+        frames = sorted(str(path) for path in produced)
         if not frames:
-            raise FacelessRenderError(f"frames produced no JPEGs in {output_dir}")
+            raise FacelessRenderError(
+                f"frames produced no new JPEGs in {output_dir} for times {times}"
+            )
         return ToolResult(
             success=True,
             data={

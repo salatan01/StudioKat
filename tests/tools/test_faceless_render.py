@@ -408,6 +408,37 @@ def test_sheet_and_frames_write_under_review(project_env, tmp_path, monkeypatch)
     assert frames.data["frames"] == [str(project_env / "review" / "frames" / "t1.00.jpg")]
 
 
+def test_frames_does_not_report_stale_jpegs_as_evidence(project_env, tmp_path, monkeypatch):
+    """A JPEG left by an earlier render must not be returned as this run's frame.
+
+    The adapter globs the review directory, so a stale picture from a previous
+    render would otherwise be reported as visual evidence for the current one.
+    """
+    _mark_engine(project_env, "canvas-2d")
+    chrome = tmp_path / "chrome"
+    chrome.write_bytes(b"")
+    monkeypatch.setenv("CHROME", str(chrome))
+
+    frames_dir = project_env / "review" / "frames"
+    frames_dir.mkdir(parents=True)
+    stale = frames_dir / "t99.00.jpg"
+    stale.write_bytes(b"stale")
+
+    def fake_capture(self, workspace, args, inputs, *, timeout=600):
+        out = Path(args[1])
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "t1.00.jpg").write_bytes(b"fresh")
+        return subprocess.CompletedProcess(args, 0, "ok", "")
+
+    monkeypatch.setattr(FacelessRender, "_capture", fake_capture)
+    result = FacelessRender().execute(
+        {"operation": "frames", "project_id": "demo", "times": [1.0]}
+    )
+    assert result.success, result.error
+    assert result.data["frames"] == [str(frames_dir / "t1.00.jpg")]
+    assert str(stale) not in result.data["frames"]
+
+
 def test_preview_returns_url_and_job(project_env, tmp_path, monkeypatch):
     _mark_engine(project_env, "canvas-2d")
     chrome = tmp_path / "chrome"

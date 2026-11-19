@@ -158,13 +158,17 @@ def test_inside_out_baseline_renders(vendored_skill, adapter_available):
 
     tool = FacelessRender()
     project_dir = PROJECTS_ROOT / PROJECT_ID
-    project_dir.mkdir(parents=True, exist_ok=True)
+    assert project_dir.resolve().is_relative_to(PROJECTS_ROOT.resolve())
 
-    # `new` refuses to overwrite, so a re-run starts from a clean workspace.
+    # Rebuild the whole project, not just the workspace. `frames` globs every
+    # JPEG in review/frames, so leftover frames from an earlier run would be
+    # reported as this run's evidence.
+    if project_dir.exists():
+        shutil.rmtree(project_dir)
+    project_dir.mkdir(parents=True)
+
+    # `new` refuses to overwrite, so the workspace must not pre-exist.
     workspace = project_dir / "faceless"
-    assert workspace.resolve().is_relative_to(PROJECTS_ROOT.resolve())
-    if workspace.exists():
-        shutil.rmtree(workspace)
 
     (project_dir / "project.json").write_text(
         json.dumps(
@@ -189,20 +193,25 @@ def test_inside_out_baseline_renders(vendored_skill, adapter_available):
     marker = json.loads((workspace / ".faceless-style").read_text(encoding="utf-8"))
     assert marker == {"style_id": "inside-out", "engine": "canvas-2d"}
 
-    # 2. Voice (Kokoro) -> exact line timings.
+    # 2. Estimate first: it is the captions-only dry run and it OVERWRITES
+    #    lines.json/words.json. Running it after voice/words would replace the
+    #    audio-synced timings with guesses and leave dead air at the end.
+    call(operation="estimate")
+
+    # 3. Voice (Kokoro) -> exact line timings.
     voiced = call(operation="voice")
     assert (workspace / "data" / "narration.wav").is_file()
     assert (workspace / "data" / "lines.json").is_file()
-    assert float(voiced.data["duration_seconds"]) > 0
+    narration_seconds = float(voiced.data["duration_seconds"])
+    assert narration_seconds > 0
+    lines = json.loads((workspace / "data" / "lines.json").read_text(encoding="utf-8"))
+    assert lines.get("estimated") is None, "voice must replace the estimated timings"
 
-    # 3. Words (Whisper) -> word timings.
+    # 4. Words (Whisper) -> word timings.
     worded = call(operation="words")
     assert (workspace / "data" / "words.json").is_file()
     assert (workspace / "data" / "words.txt").is_file()
     assert worded.data["word_count"] > 0
-
-    # 4. Estimate is a dry-run check on the same script.
-    call(operation="estimate")
 
     # 5. Scene boot check must be clean.
     checked = call(operation="check")
@@ -226,11 +235,16 @@ def test_inside_out_baseline_renders(vendored_skill, adapter_available):
     contact_sheet = project_dir / "review" / "contact-sheet.jpg"
     assert contact_sheet.is_file() and contact_sheet.stat().st_size > 0
 
-    # 9. Key frames across the piece.
+    # 9. Key frames across the piece (positions scaled to the real duration).
     framed = call(
         operation="frames",
         review_dir="review/frames",
-        times=[1.0, 8.0, 18.0, 30.0],
+        times=[
+            round(narration_seconds * 0.03, 2),
+            round(narration_seconds * 0.3, 2),
+            round(narration_seconds * 0.6, 2),
+            round(narration_seconds * 0.9, 2),
+        ],
     )
     frames = [Path(path) for path in framed.data["frames"]]
     assert len(frames) >= 4
@@ -245,7 +259,16 @@ def test_inside_out_baseline_renders(vendored_skill, adapter_available):
     fps = _rate(video.get("r_frame_rate", ""))
     assert fps is not None
 
+    # The picture must follow the narration, not a stale estimate. A gap here
+    # means estimate.py ran after voice.py and overwrote the real timings.
+    assert abs(duration - narration_seconds) <= 0.5, (
+        f"render is {duration:.2f}s but the narration is {narration_seconds:.2f}s — "
+        "the timeline drifted from the audio"
+    )
+
     # 11. Snapshot into the baseline dir so `projects/` cleanup cannot lose it.
+    #     Rebuild the whole directory: stale frames from an earlier render would
+    #     otherwise survive and misrepresent the baseline.
     if BASELINE_DIR.exists():
         shutil.rmtree(BASELINE_DIR)
     (BASELINE_DIR / "renders").mkdir(parents=True)

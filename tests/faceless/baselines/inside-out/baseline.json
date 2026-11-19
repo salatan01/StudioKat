@@ -6,15 +6,15 @@
   "output_mp4": "tests/faceless/baselines/inside-out/renders/final.mp4",
   "contact_sheet": "tests/faceless/baselines/inside-out/review/contact-sheet.jpg",
   "frames": [
-    "tests/faceless/baselines/inside-out/review/frames/t1.00.jpg",
-    "tests/faceless/baselines/inside-out/review/frames/t18.00.jpg",
-    "tests/faceless/baselines/inside-out/review/frames/t30.00.jpg",
-    "tests/faceless/baselines/inside-out/review/frames/t8.00.jpg"
+    "tests/faceless/baselines/inside-out/review/frames/t1.08.jpg",
+    "tests/faceless/baselines/inside-out/review/frames/t10.79.jpg",
+    "tests/faceless/baselines/inside-out/review/frames/t21.57.jpg",
+    "tests/faceless/baselines/inside-out/review/frames/t32.36.jpg"
   ],
-  "duration_seconds": 45.13,
+  "duration_seconds": 35.95,
   "resolution": "1080x1920",
   "fps": 30,
   "has_audio": true,
-  "cue_count": 39,
+  "cue_count": 38,
   "word_count": 110
 }
