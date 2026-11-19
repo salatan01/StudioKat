@@ -1,0 +1,186 @@
+name: faceless-short
+version: "1.0"
+description: >
+  Executable faceless-shorts pipeline for 9:16 narrated shorts. One of six vendored
+  canvas-2D or Three.js style engines draws every frame; a local Kokoro voice and
+  word-synced captions carry the story. The agent resolves the style with
+  styles/faceless/loader.py, reads the full STYLE.md, locks it in style_lock, and
+  drives the vendored scripts through faceless_render. Output is
+  projects/<project_id>/renders/final.mp4.
+category: animation
+stability: beta
+default_checkpoint_policy: guided
+
+required_skills:
+  - pipelines/faceless-short/idea-director
+  - pipelines/faceless-short/script-director
+  - pipelines/faceless-short/scene-director
+  - pipelines/faceless-short/asset-director
+  - pipelines/faceless-short/edit-director
+  - pipelines/faceless-short/compose-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+extensions:
+  custom_scripts: false
+  custom_playbooks: false
+  custom_skills: false
+  custom_tools: false
+
+stages:
+  - name: idea
+    skill: pipelines/faceless-short/idea-director
+    produces:
+      - brief
+      - style_lock
+      - decision_log
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Style resolved by canonical id or alias; ambiguity asked, never guessed
+      - The full STYLE.md for the locked style was read, not summarized
+      - style-sheet.png viewed and the runnable example inspected
+      - style_lock source paths exist and point into the locked style's directory
+      - style_lock.confirmed_by_user is false on awaiting_human
+      - Duration fits the style's window; platform and format are 9:16
+      - decision_log records visual_accuracy_check with all six options
+      - No style_playbook value is set and no Remotion/HyperFrames choice is offered
+    success_criteria:
+      - Schema-valid brief with brief.visual_style.system == "faceless"
+      - Schema-valid style_lock whose source paths exist
+      - decision_log entry with category visual_accuracy_check and user_visible true
+      - One-line style contract played back to the user
+
+  - name: script
+    skill: pipelines/faceless-short/script-director
+    required_artifacts_in:
+      - brief
+      - style_lock
+    produces:
+      - script
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every narration line follows the locked style's story shape
+      - One line is one shot; a long sentence may span 2-3 short lines
+      - Caps chunks are 1-3 words and mark exactly one yellow word per chunk
+      - Caps start with the spoken chunk's first word; numbers are spelled as said
+      - Voice, speed, lead, outro, gap, and music come from the locked style
+      - Facts and numbers carry source_refs
+      - Word count and estimated duration fit the style window
+    success_criteria:
+      - Schema-valid script
+      - script.metadata.faceless.lines present with text, caps, gap, source_refs
+      - total_duration_seconds inside style_lock.format.duration_seconds
+
+  - name: scene_plan
+    skill: pipelines/faceless-short/scene-director
+    required_artifacts_in:
+      - script
+      - style_lock
+    produces:
+      - scene_plan
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every script line maps to one or more shots in metadata.faceless.shots
+      - Shot anatomy and kit components come from STYLE.md, not invention
+      - Every shot names camera movement, components, cues, and caption chunks
+      - Caption zone and safe areas match the style's caption rules
+      - Cues use only the style's documented cue names
+      - No shot depends on an engine feature the style does not document
+    success_criteria:
+      - Schema-valid scene_plan
+      - metadata.faceless.shots covers every line at least once, with no orphan shots
+      - Each shot has id, line_index, camera, components, cues, caption_chunks
+
+  - name: assets
+    skill: pipelines/faceless-short/asset-director
+    required_artifacts_in:
+      - scene_plan
+      - script
+      - style_lock
+    produces:
+      - asset_manifest
+    required_tools:
+      - faceless_render
+    tools_available:
+      - faceless_render
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Workspace created at projects/<id>/faceless without overwriting an existing one
+      - faceless/script.json matches the approved script and style defaults
+      - Voice mode and voice ID are explicit; Kokoro is the default, user recording is supported
+      - narration.wav, lines.json, words.json, words.txt, and the timing estimate exist
+      - Music mode is one of the style's documented choices (bed/tension/bounce/none/file)
+      - No paid API call was made; model downloads were disclosed before they started
+      - Language/model setup failures are surfaced, never hidden
+    success_criteria:
+      - Schema-valid asset_manifest with metadata.faceless voice/timing/music fields
+      - faceless/data/narration.wav and faceless/data/words.json exist
+      - faceless/script.json is present and matches script.metadata.faceless.lines
+      - faceless_render setup/selftest are honest about missing dependencies
+
+  - name: edit
+    skill: pipelines/faceless-short/edit-director
+    required_artifacts_in:
+      - scene_plan
+      - script
+      - asset_manifest
+      - style_lock
+    produces:
+      - edit_decisions
+    required_tools:
+      - faceless_render
+    tools_available:
+      - faceless_render
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - faceless/script.json is unchanged from the version used for voice, or voice was regenerated
+      - faceless/src/shots.js implements the approved scene plan using the style's kit/engine
+      - Captions match the approved chunks; no invented words
+      - faceless_render check prints CHECK OK
+      - cues.json covers every shot and uses documented cue names
+      - edit_decisions.render_runtime is faceless and metadata.faceless records paths and check output
+    success_criteria:
+      - Schema-valid edit_decisions with render_runtime faceless
+      - metadata.faceless.script_path, shots_path, check_output, cue_summary present
+      - faceless_render check succeeded
+
+  - name: compose
+    skill: pipelines/faceless-short/compose-director
+    required_artifacts_in:
+      - edit_decisions
+      - asset_manifest
+      - style_lock
+    optional_artifacts_in:
+      - scene_plan
+      - script
+    produces:
+      - render_report
+      - final_review
+    required_tools:
+      - faceless_render
+    tools_available:
+      - faceless_render
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Mix and render ran through faceless_render, never video_compose
+      - Output is projects/<id>/renders/final.mp4, 1080x1920, 30 fps, with audio
+      - Contact sheet read in full; key frames inspected at full size
+      - render_report.metadata.faceless_qa names the contact sheet and non-empty inspected_frames
+      - Findings recorded honestly; fixed issues re-rendered and re-inspected
+      - Audio checked with objective loudness/peak/alignment measurements
+      - A five-second human audio spot-check was requested; the agent never claims to have listened
+      - final_review checks are complete and status reflects the evidence
+    success_criteria:
+      - Schema-valid render_report with faceless_qa.contact_sheet and non-empty inspected_frames
+      - Schema-valid final_review with render_runtime_used faceless
+      - Output file exists, passes ffprobe, and matches the style's duration window
+      - contact sheet and at least 4 full-size key frames exist under review/

@@ -76,10 +76,20 @@ When the user asks to make, create, produce, or generate any video content — a
    - **Use a named HeyGen style:** Pick from 20 styles in `.agents/skills/create-video/references/visual-styles.md` (e.g., "Swiss Pulse", "Data Drift", "Shadow Cut", "Play Mode", "Maximalist Type"). Read the style block and include it in the prompt.
    - **Use a visual-style.md file:** Apply a `.visual-style.md` from `.agents/skills/visual-style/references/gallery/` (Swiss, Brody Industrial, Saul Bass, Game Boy, HeyGen AI) or create a custom one via the `visual-style` skill.
    - **Use a style playbook:** Pick from `styles/*.yaml` (clean-professional, premium-minimalist, flat-motion-graphics, minimalist-diagram, anime-ghibli).
+   - **Use a faceless-shorts engine style:** Pick exactly one of `deep-dive`, `night-file`,
+     `inside-out`, `stick-story`, `paper-atlas`, `tall-tale` from `styles/faceless/`. These are
+     executable engines, not YAML playbooks. Resolve the request with
+     `.venv/bin/python -m styles.faceless.loader resolve "<request>"`; if it reports ambiguity,
+     ask one question with the candidates. If the request names a faceless style, select the
+     `faceless-short` pipeline and do not present Remotion/HyperFrames as runtime options —
+     the faceless engine is the runtime.
    - **Extract from reference:** If user provides a reference video/URL, run the `visual-style` skill extractor to generate a `.visual-style.md` from it.
    - **Ask the user:** If no style is specified, present 3-4 options matching the brief's mood (use the Mood-to-Style table in `visual-styles.md`) and get explicit approval.
 
-   **Record the chosen style in the `brief` artifact** (stage `idea`) under `visual_style: { system: "heygen|visual-style-md|playbook|custom", name: "...", source: "..." }`.
+   **Record the chosen style in the `brief` artifact** (stage `idea`) under
+   `visual_style: { system: "heygen|visual-style-md|playbook|custom|faceless", name: "...",
+   source: "...", style_id?: "...", engine?: "..." }`. For `faceless`, `style_id` and `engine`
+   are required and the `style_lock` artifact is mandatory.
 
 5. **Execute stage by stage.** For EACH stage, read the stage director skill (`skills/pipelines/<pipeline>/<stage>-director.md`) BEFORE doing any work in that stage.
 6. **Read Layer 3 skills before calling tools.** Before using any tool with an `agent_skills` field, read the referenced skill in `.agents/skills/`. These contain provider-specific prompting guidance, parameter optimization, and quality techniques that dramatically improve output.
@@ -161,6 +171,9 @@ Then wait for explicit user approval before advancing. Record the full shortlist
 Exception: if only one runtime is available on the machine, the agent proceeds with it but MUST say so explicitly ("HyperFrames isn't installed on this machine; I'm proceeding with Remotion. Install HyperFrames if you want the alternative."). The `render_runtime_selection` decision still records the unavailable option as `rejected_because: "runtime not available on this machine"`.
 
 This rule applies to every pipeline that invokes `video_compose` — not just Wave 1. A pipeline's director skill may recommend a runtime, but that recommendation is input to the conversation with the user, not a decision.
+
+Exception: `faceless-short` never invokes `video_compose`; its runtime is fixed to `faceless`
+by the pipeline. Do not present Remotion/HyperFrames for that pipeline.
 
 ### Composition Authoring Mode — Templated vs Atelier
 
@@ -267,6 +280,18 @@ music_library/
 
 If the folder has tracks, the proposal and asset stages should present them as options alongside generated music. See the proposal-director and asset-director skills for details.
 
+### Faceless Shorts Routing (Binding)
+
+When the request names or describes a faceless style:
+
+1. Resolve it with `styles/faceless/loader.py`. Canonical id wins, then alias; ambiguity asks.
+2. A named faceless style selects `faceless-short`. Do not route it to `animation`,
+   `animated-explainer`, or a `style_playbook`.
+3. The runtime is fixed: `edit_decisions.render_runtime = "faceless"` and compose uses
+   `faceless_render`. Never call `video_compose` for this pipeline.
+4. If the request is generic ("3D", "cartoon", "what happens if"), ask one question with the
+   candidate styles. Do not guess.
+
 ## Available Pipelines
 
 | Pipeline | Best For | Stability |
@@ -279,6 +304,7 @@ If the folder has tracks, the proposal and asset stages should present them as o
 | `cinematic` | Trailer, teaser, and mood-led edits | production |
 | `documentary-montage` | Retrieval-first montage of real footage from free stock and open archives | beta |
 | `animation` | Motion-graphics and animation-first videos | production |
+| `faceless-short` | One of six executable faceless-shorts styles (9:16, narrated, captioned) | beta |
 | `character-animation` | Local rigged cartoon characters and reusable character acting | beta |
 | `hybrid` | Source footage plus support visuals | production |
 | `avatar-spokesperson` | Presenter-led avatar or lip-sync videos | production |
@@ -728,6 +754,7 @@ The `.agents/skills/` directory is large. When you're not coming in through a to
 | **Capture** | `playwright-recording` (browser flows), `ffmpeg` (post) |
 | **Visualization** | `beautiful-mermaid`, `d3-viz`, `manim-composer`, `manimce-best-practices`, `manimgl-best-practices` |
 | **Media editing** | `video-edit`, `video-download`, `video-understand`, `video-toolkit`, `visual-style` |
+| **Faceless shorts** | `faceless-shorts` (vendored engine + six style contracts) |
 
 **When in doubt, read the category's meta routing file first:**
 - Picking an animation runtime? → `skills/meta/animation-runtime-selector.md` routes between Remotion primitives, GSAP plugins, framer-motion, Lottie, Manim, D3.
@@ -745,6 +772,7 @@ The `.agents/skills/` directory is large. When you're not coming in through a to
 | What is the checkpoint/review policy? | `skills/meta/` |
 | **Which visual style to use?** | **`.agents/skills/create-video/references/visual-styles.md` (20 HeyGen styles) OR `.agents/skills/visual-style/references/gallery/*.visual-style.md` (5 structured files) OR `styles/*.yaml` (5 playbooks)** |
 | **How to pick a style?** | **Read the Mood-to-Style table in `visual-styles.md` — match mood first, content second. If unclear, present 3 options and ask.** |
+| **Which faceless style?** | **`styles/faceless/loader.py` — canonical ID, alias, or ambiguity question. Never a YAML playbook.** |
 
 ## What Not To Do
 
@@ -760,3 +788,5 @@ The `.agents/skills/` directory is large. When you're not coming in through a to
 - Do not present a single unavailable tool in isolation. Always show the full capability picture: "X of Y providers configured for this capability."
 - Do not skip the Provider Menu at preflight. The user must see what they have AND what they could unlock.
 - Do not change provider, model, or render path without telling the user first and getting approval when the change is material.
+- Do not pass a faceless style ID to `style_playbook`, and do not route `faceless-short` to
+  `video_compose`. The two runtimes are separate by design.

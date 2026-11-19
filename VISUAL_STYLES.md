@@ -4,13 +4,14 @@
 
 ---
 
-## Three Style Systems Available
+## Four Style Systems Available
 
 | System | Count | Location | Use For |
 |--------|-------|----------|---------|
 | **HeyGen Prompt Styles** | 20 | `.agents/skills/create-video/references/visual-styles.md` | Quick HeyGen Video Agent prompts (copy-paste block) |
 | **visual-style.md Files** | 5 | `.agents/skills/visual-style/references/gallery/` | Full design systems for HyperFrames/Remotion/Figma/HTML |
 | **Style Playbooks (YAML)** | 5 | `styles/*.yaml` | Pipeline templated scenes (clean-professional, flat-motion-graphics, etc.) |
+| **Faceless Shorts Engines** | 6 | `.agents/skills/faceless-shorts/styles/` | Executable 9:16 narrated shorts with real canvas/Three.js renderers |
 
 ---
 
@@ -71,6 +72,25 @@
 
 ---
 
+## Faceless Shorts Styles (6) — executable engines, not presets
+
+These are complete engines with their own pipeline (`faceless-short`), not looks to hand to
+another pipeline. Resolve with `styles/faceless/loader.py`; read the full `STYLE.md` before use.
+
+| Style ID | Name | Engine | Best For | Duration |
+|---|---|---|---|---|
+| `deep-dive` | Deep Dive 3D | Three.js | Cinematic body/science what-happens-if explainers | 30-45 s |
+| `night-file` | Night File 3D | Three.js | Unsolved mysteries and true crime | 30-45 s |
+| `inside-out` | Inside Out | Canvas 2D | Flat 2D x-ray what-happens-if explainers | 25-45 s |
+| `stick-story` | Stick Story | Canvas 2D | Stick-figure survival and how-to steps | 30-45 s |
+| `paper-atlas` | Paper Atlas | Canvas 2D | History in cut paper with maps | 30-45 s |
+| `tall-tale` | Tall Tale 3D | Three.js | Funny true stories with flat 2D people in a sunny 3D world | 40-60 s |
+
+**Ambiguity rule:** if the request is generic ("3D", "cartoon", "what happens if"), ask one
+question with the candidate styles. Never silently pick one.
+
+---
+
 ## Mood-to-Style Quick Pick
 
 | Content feels... | Try These First |
@@ -117,9 +137,10 @@ When user asks for a video:
 
 ---
 
-## No "Cartoon / 3D / Vector" Presets Exist
+## No "Cartoon / 3D / Vector" Presets Exist in the Three General-Purpose Systems
 
-These systems don't have explicit cartoon/3D/vector presets. For those aesthetics:
+For a full faceless short, use the engines above. For a non-faceless pipeline that only needs
+a look, keep using `visual-style` or a playbook:
 
 - **Cartoon/flat vector:** Use `visual-style` skill to create custom: "Flat vector illustration, 3-color palette, clean lines, bold shapes"
 - **3D/Pixar-style:** Use `visual-style` skill: "Pixar-style 3D, soft lighting, rounded forms, subsurface scattering"
@@ -134,4 +155,6 @@ These systems don't have explicit cartoon/3D/vector presets. For those aesthetic
 - `.agents/skills/visual-style/SKILL.md` — How to create/extract/apply visual-style.md
 - `.agents/skills/visual-style/references/gallery/` — 5 gallery files
 - `styles/*.yaml` — 5 playbook YAML files
+- `styles/faceless/README.md` — selection manifests, resolver, and paths
+- `.agents/skills/faceless-shorts/SKILL.md` — the vendored engine's operating contract
 - `skills/meta/taste-direction.md` — For custom/atelier work

@@ -5,6 +5,9 @@
   // discovered from .agents/skills; no extra skill registration is needed.
   // Provider/model credentials stay machine-local in ~/.config/opencode or
   // environment variables and must never be committed here.
+  // The faceless-shorts skill is vendored at .agents/skills/faceless-shorts and is
+  // discovered automatically. Its engine runs through the faceless_render tool; no
+  // extra plugin or skill registration is required.
   "plugins": [
     "superpowers@git+https://github.com/obra/superpowers.git"
   ]

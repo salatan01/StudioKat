@@ -174,3 +174,86 @@ def test_final_review_accepts_faceless_runtime():
         },
     }
     validate_artifact("final_review", doc)
+
+
+from pathlib import Path
+
+from lib.pipeline_loader import get_stage_order, get_stage_skill, load_pipeline
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FACELESS_STAGES = ["idea", "script", "scene_plan", "assets", "edit", "compose"]
+
+
+def _facet_stage(manifest, name):
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+
+
+def test_faceless_pipeline_stage_order():
+    manifest = load_pipeline("faceless-short")
+    assert get_stage_order(manifest) == FACELESS_STAGES
+
+
+def test_faceless_pipeline_skills_resolve():
+    manifest = load_pipeline("faceless-short")
+    for stage in manifest["stages"]:
+        skill = get_stage_skill(manifest, stage["name"])
+        assert skill, stage["name"]
+        path = REPO_ROOT / "skills" / f"{skill}.md"
+        assert path.is_file(), path
+        assert path.stat().st_size > 400, path
+
+
+def test_faceless_pipeline_uses_only_the_faceless_runtime():
+    manifest = load_pipeline("faceless-short")
+    tools = {
+        tool
+        for stage in manifest["stages"]
+        for field in ("required_tools", "optional_tools", "tools_available")
+        for tool in stage.get(field, [])
+    }
+    assert "faceless_render" in tools
+    assert "video_compose" not in tools
+
+
+def test_faceless_pipeline_gates_match_the_design():
+    manifest = load_pipeline("faceless-short")
+    for stage in manifest["stages"]:
+        assert stage["checkpoint_required"] is True
+    for name in ("idea", "script", "scene_plan", "assets"):
+        assert _facet_stage(manifest, name)["human_approval_default"] is True
+    for name in ("edit", "compose"):
+        assert _facet_stage(manifest, name)["human_approval_default"] is False
+
+
+def test_faceless_idea_and_compose_declare_their_gates():
+    manifest = load_pipeline("faceless-short")
+    idea = _facet_stage(manifest, "idea")
+    assert "style_lock" in idea["produces"]
+    compose = _facet_stage(manifest, "compose")
+    text = " ".join(compose["review_focus"] + compose["success_criteria"]).lower()
+    assert "faceless_qa" in text
+    assert "contact sheet" in text
+
+
+def test_agent_guide_routes_faceless_styles():
+    text = (REPO_ROOT / "AGENT_GUIDE.md").read_text(encoding="utf-8")
+    for needle in (
+        "faceless-short",
+        "styles/faceless",
+        "faceless_render",
+        "style_lock",
+        "Faceless Shorts Routing",
+    ):
+        assert needle in text, needle
+
+
+def test_visual_styles_lists_all_six_and_the_fourth_system():
+    text = (REPO_ROOT / "VISUAL_STYLES.md").read_text(encoding="utf-8")
+    assert "Four Style Systems Available" in text
+    for style_id in ("deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale"):
+        assert style_id in text, style_id
+
+
+def test_opencode_config_mentions_the_vendored_skill():
+    text = (REPO_ROOT / "opencode.jsonc").read_text(encoding="utf-8")
+    assert ".agents/skills/faceless-shorts" in text
