@@ -328,7 +328,21 @@ Load via `styles/playbook_loader.py`: `load_playbook("clean-professional")`. `li
 
 All agent skills live in `.agents/skills/` and are managed via `npx skills add`.
 `ls .agents/skills` is the authoritative list (94 skill directories as of 2026-11-20); the table below groups them by what they are for.
-Claude Code accesses them via symlinks in `.claude/skills/`.
+
+### How each harness discovers these skills
+
+`.agents/skills/` is the single source of truth. Never add a second editable copy — a copy drifts silently.
+
+| Harness | Discovery path | Notes |
+|---------|----------------|-------|
+| **OpenCode** | `.agents/skills/` (project compatibility) | Built in — no config needed. OpenCode also reads `.claude/skills/`, but `.agents/skills/` wins on ID collision, so the authoritative version is always the one used. |
+| **Claude Code** | `.claude/skills/` | A real-file mirror of `.agents/skills/` (49 of 94; the rest are OpenCode-only or provider skills). **Sync it when you change a mirrored skill** — Claude Code does not follow `.agents/`. |
+| **Codex** | `.agents/skills/` | Custom prompts live in `.codex/prompts/`; Codex only scans `~/.codex/prompts/`, so copy or symlink them there (see `.codex/prompts/README.md`). |
+| **Cursor / Copilot / Windsurf** | Root instruction files | `CURSOR.md` + `.cursor/rules/`, `COPILOT.md` + `.github/copilot-instructions.md`, `.windsurfrules` — all point at `AGENT_GUIDE.md`. |
+
+**OpenCode slash commands** live in `.opencode/commands/` (`reel`, `backlot`, `ink-art`, `animated-drawing`). OpenCode does **not** read `.claude/commands/`, so those four are duplicated there deliberately — edit both if you change one.
+
+The `.claude/skills/` mirror is currently behind `.agents/skills/` for `ai-video-gen`, `d3-viz`, `elevenlabs`, `remotion-best-practices`, and `text-to-speech`. OpenCode users are unaffected (they read `.agents/`); Claude Code users see the older text until it is re-synced.
 
 | Category | Installed Skills | Source |
 |----------|-----------------|--------|

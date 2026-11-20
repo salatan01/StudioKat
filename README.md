@@ -686,16 +686,18 @@ No surprise bills. The agent tells you what it will cost before it spends.
 
 StudioKat works with any AI coding assistant that can read files and execute Python. Dedicated instruction files are included for:
 
-| Platform | Config File |
-|----------|------------|
-| **OpenCode** | `AGENTS.md` + `.agents/skills/` + `opencode.jsonc` |
-| **Claude Code** | `CLAUDE.md` |
-| **Cursor** | `CURSOR.md` + `.cursor/rules/` |
-| **GitHub Copilot** | `COPILOT.md` + `.github/copilot-instructions.md` |
-| **Codex** | `CODEX.md` |
-| **Windsurf** | `.windsurfrules` |
+| Platform | Config File | Slash commands |
+|----------|------------|----------------|
+| **OpenCode** | `AGENTS.md` + `.agents/skills/` + `opencode.jsonc` | `.opencode/commands/` |
+| **Claude Code** | `CLAUDE.md` + `.claude/skills/` | `.claude/commands/` |
+| **Cursor** | `CURSOR.md` + `.cursor/rules/` | — |
+| **GitHub Copilot** | `COPILOT.md` + `.github/copilot-instructions.md` | — |
+| **Codex** | `CODEX.md` | `.codex/prompts/` (copy to `~/.codex/prompts/`) |
+| **Windsurf** | `.windsurfrules` | — |
 
 All platform files point to the shared `AGENT_GUIDE.md` (operating guide and agent contract) and `PROJECT_CONTEXT.md` (architecture reference).
+
+**Skills** come from `.agents/skills/` — the single source of truth. OpenCode discovers it natively; Claude Code reads its own `.claude/skills/` mirror. Never add a third editable copy.
 
 ### OpenCode
 
@@ -706,7 +708,9 @@ curl -fsSL https://opencode.ai/v2/install | bash
 # or: npm install -g @opencode/cli
 ```
 
-Run `opencode` from the repository root. It reads `AGENTS.md`, discovers the Layer 3 skills in `.agents/skills/`, and loads the `superpowers` plugin declared in `opencode.jsonc`. Provider/model selection and API keys stay machine-local in `~/.config/opencode/opencode.jsonc` or environment variables; never commit them.
+Run `opencode` from the repository root. It reads `AGENTS.md`, discovers the Layer 3 skills in `.agents/skills/`, loads the slash commands in `.opencode/commands/`, and loads the `superpowers` plugin declared in `opencode.jsonc`. Provider/model selection and API keys stay machine-local in `~/.config/opencode/opencode.jsonc` or environment variables; never commit them.
+
+Available commands: `/reel` (produce or work on a video), `/backlot` (open the live storyboard), `/ink-art` (ink-doodle animation), `/animated-drawing` (mocap-animate a supplied drawing).
 
 On NixOS, launch OpenCode from inside `nix develop` so the agent inherits the project `.venv`, Chromium override, and library path. See [docs/NIXOS.md](docs/NIXOS.md#running-the-opencode-agent).
 
