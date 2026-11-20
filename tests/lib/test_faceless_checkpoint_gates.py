@@ -181,6 +181,71 @@ def test_idea_rejects_duration_window_drift(faceless_project):
         )
 
 
+def test_idea_accepts_a_declared_fps_override(faceless_project):
+    """60 fps delivery is allowed when the native rate and reason are recorded."""
+    artifacts = _idea_artifacts()
+    artifacts["style_lock"]["format"]["fps"] = 60
+    artifacts["style_lock"]["format"]["fps_native"] = 30
+    artifacts["style_lock"]["format"]["fps_override_reason"] = (
+        "Delivery spec requires 60 fps; the style renders at 30."
+    )
+    write_checkpoint(
+        faceless_project,
+        "demo",
+        "idea",
+        "awaiting_human",
+        artifacts,
+        pipeline_type="faceless-short",
+    )
+
+
+def test_idea_rejects_an_undeclared_fps_override(faceless_project):
+    """An override without fps_native is indistinguishable from silent drift."""
+    artifacts = _idea_artifacts()
+    artifacts["style_lock"]["format"]["fps"] = 60
+    with pytest.raises(CheckpointValidationError, match="fps_native"):
+        write_checkpoint(
+            faceless_project,
+            "demo",
+            "idea",
+            "awaiting_human",
+            artifacts,
+            pipeline_type="faceless-short",
+        )
+
+
+def test_idea_rejects_an_fps_override_without_a_reason(faceless_project):
+    artifacts = _idea_artifacts()
+    artifacts["style_lock"]["format"]["fps"] = 60
+    artifacts["style_lock"]["format"]["fps_native"] = 30
+    with pytest.raises(CheckpointValidationError, match="fps_override_reason"):
+        write_checkpoint(
+            faceless_project,
+            "demo",
+            "idea",
+            "awaiting_human",
+            artifacts,
+            pipeline_type="faceless-short",
+        )
+
+
+def test_idea_rejects_a_stale_fps_native(faceless_project):
+    """fps_native must name the style's real rate, not an arbitrary number."""
+    artifacts = _idea_artifacts()
+    artifacts["style_lock"]["format"]["fps"] = 60
+    artifacts["style_lock"]["format"]["fps_native"] = 24
+    artifacts["style_lock"]["format"]["fps_override_reason"] = "x"
+    with pytest.raises(CheckpointValidationError, match="fps_native"):
+        write_checkpoint(
+            faceless_project,
+            "demo",
+            "idea",
+            "awaiting_human",
+            artifacts,
+            pipeline_type="faceless-short",
+        )
+
+
 def _write_through_edit(root) -> None:
     write_checkpoint(
         root,

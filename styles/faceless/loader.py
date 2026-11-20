@@ -120,9 +120,17 @@ def get_style(style_id: str) -> dict[str, Any]:
 
 
 def _canonical_match(query: str, styles: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """A style's id or full name, as a whole-word run inside the query."""
+    tokens = query.split()
     for style in styles:
-        if query in (normalize_query(style["id"]), normalize_query(style["name"])):
-            return style
+        for label in (style["id"], style["name"]):
+            label_tokens = normalize_query(label).split()
+            if not label_tokens:
+                continue
+            span = len(label_tokens)
+            for start in range(len(tokens) - span + 1):
+                if tokens[start : start + span] == label_tokens:
+                    return style
     return None
 
 
@@ -146,13 +154,38 @@ def _alias_match(query: str, styles: list[dict[str, Any]]) -> list[dict[str, Any
     return matched
 
 
+def _generic_match(query: str) -> list[dict[str, Any]]:
+    """Styles named by type rather than by name, matched as whole-word runs.
+
+    A bare "3D" and a sentence like "make me a 3D cartoon" name the same family,
+    so the phrases are matched against the token stream instead of the whole
+    normalized string. Several hits union their candidates: that is exactly the
+    question the agent should ask.
+    """
+    tokens = query.split()
+    candidate_ids: set[str] = set()
+    for phrase, style_ids in GENERIC_QUERIES.items():
+        phrase_tokens = normalize_query(phrase).split()
+        if not phrase_tokens:
+            continue
+        span = len(phrase_tokens)
+        for start in range(len(tokens) - span + 1):
+            if tokens[start : start + span] == phrase_tokens:
+                candidate_ids.update(style_ids)
+                break
+    if not candidate_ids:
+        return []
+    return sorted((get_style(style_id) for style_id in candidate_ids), key=lambda style: style["id"])
+
+
 def resolve_style(query: str) -> dict[str, Any]:
-    """Canonical id/name first, then generic-query ambiguity, then aliases.
+    """Canonical id/name first, then aliases, then generic phrases.
 
     - Canonical match returns matched_on="canonical".
-    - A GENERIC_QUERIES hit raises AmbiguousStyleError with the listed styles.
     - Exactly one alias match returns matched_on="alias".
     - Multiple alias matches raise AmbiguousStyleError.
+    - A GENERIC_QUERIES phrase (bare or inside a sentence) raises
+      AmbiguousStyleError with every matching style.
     - No match raises UnknownStyleError with all six ids.
     """
     styles = list_styles()
@@ -162,14 +195,8 @@ def resolve_style(query: str) -> dict[str, Any]:
     if canonical is not None:
         return {"style": canonical, "matched_on": "canonical", "query": query}
 
-    generic_ids = GENERIC_QUERIES.get(normalized)
-    if generic_ids is not None:
-        candidates = sorted(
-            (get_style(style_id) for style_id in generic_ids),
-            key=lambda style: style["id"],
-        )
-        raise AmbiguousStyleError(query, candidates)
-
+    # Aliases come before generic phrases: "flat 2d x-ray" is an Inside Out
+    # alias and also contains the generic "2d", and the specific name wins.
     matched = _alias_match(normalized, styles)
     if len(matched) == 1:
         return {"style": matched[0], "matched_on": "alias", "query": query}
@@ -177,6 +204,10 @@ def resolve_style(query: str) -> dict[str, Any]:
         raise AmbiguousStyleError(
             query, sorted(matched, key=lambda style: style["id"])
         )
+
+    generic = _generic_match(normalized)
+    if generic:
+        raise AmbiguousStyleError(query, generic)
 
     raise UnknownStyleError(query, list(STYLE_IDS))
 

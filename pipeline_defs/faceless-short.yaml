@@ -114,8 +114,10 @@ stages:
     review_focus:
       - Workspace created at projects/<id>/faceless without overwriting an existing one
       - faceless/script.json matches the approved script and style defaults
-      - Voice mode and voice ID are explicit; Kokoro is the default, user recording is supported
-      - narration.wav, lines.json, words.json, words.txt, and the timing estimate exist
+      - Voice mode and voice ID are explicit; Kokoro is the default, a user recording goes
+        through `words` with audio_path (not `voice`)
+      - narration.wav, lines.json, words.json, and words.txt exist and hold real timings;
+        `estimate` ran only as a pre-voice dry run
       - Music mode is one of the style's documented choices (bed/tension/bounce/none/file)
       - No paid API call was made; model downloads were disclosed before they started
       - Language/model setup failures are surfaced, never hidden
@@ -172,7 +174,8 @@ stages:
     human_approval_default: false
     review_focus:
       - Mix and render ran through faceless_render, never video_compose
-      - Output is projects/<id>/renders/final.mp4, 1080x1920, 30 fps, with audio
+      - Output is projects/<id>/renders/final.mp4, 1080x1920, at the frame rate declared
+        in style_lock.format.fps (native or declared override), with audio
       - Contact sheet read in full; key frames inspected at full size
       - render_report.metadata.faceless_qa names the contact sheet and non-empty inspected_frames
       - Findings recorded honestly; fixed issues re-rendered and re-inspected

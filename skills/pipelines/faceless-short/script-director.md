@@ -51,8 +51,13 @@ Beside each line, write `metadata.faceless.lines[]`:
 ### 3. Write the caps
 
 - Split chunks with `|`.
-- Mark exactly one `*` yellow word per chunk.
-- 1-3 words per chunk.
+- Take the chunk budget and the colour rule from `style_lock.caption_rules`
+  (`words_per_chunk`, `yellow_words_per_chunk`) — they differ per style:
+  deep-dive and inside-out take 1-3 words with one highlighted word; night-file
+  takes 2-5 with one red word; paper-atlas and stick-story take 2-4; tall-tale
+  takes one word at a time and has **no** colour highlight.
+- Mark the highlighted word with one `*` prefix, only when the style highlights
+  one. Where the style has no highlight, write the chunk without `*`.
 - The caption starts with the spoken chunk's first word.
 - Spell numbers the way the voice will say them ("nineteen seventy-one", not "1971").
 
@@ -74,7 +79,7 @@ Every factual claim or number carries a `source_refs` entry.
 ## Quality Gate
 
 - `script.metadata.faceless.lines` exists with `text`, `caps`, `gap`, `source_refs`.
-- 1-3 words per chunk; exactly one yellow word per chunk.
+- Chunk size and highlight count match `style_lock.caption_rules` for this style.
 - Total duration sits inside the style window.
 - Every line has a shot-worthy visual; nothing is narrated over a static hold the style
   does not use.

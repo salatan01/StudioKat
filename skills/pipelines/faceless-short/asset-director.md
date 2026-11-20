@@ -54,9 +54,15 @@ style's voice, speed, lead, outro, gap, and music defaults. Never edit the examp
 
 Run, in order:
 
-1. `voice` — Kokoro by default; pass `audio_path` for a user recording.
-2. `words` — writes `data/words.json`, `data/words.txt`, `data/lines.json`.
-3. `estimate` — duration estimate for the gate.
+1. `estimate` — **pre-voice dry run only.** It writes guessed `data/lines.json` and
+   `data/words.json` so you can sanity-check the cut before spending time on voice. Skip it
+   once real timings exist: it overwrites them.
+2. `voice` — Kokoro narration, exact line times.
+3. `words` — word timings from the narration.
+
+For a user's own recording, **skip `voice`** and run `words` with `audio_path`; it converts the
+file to `data/narration.wav` and rebuilds the line times from what they said. `voice` does not
+accept `audio_path`.
 
 ### 5. Record the manifest
 

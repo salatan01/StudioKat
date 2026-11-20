@@ -464,3 +464,78 @@ def test_preview_returns_url_and_job(project_env, tmp_path, monkeypatch):
     assert result.success, result.error
     assert result.data["url"] == "http://127.0.0.1:8765/"
     assert result.data["status"] == "running"
+
+
+def test_voice_rejects_audio_path_and_points_at_words(project_env):
+    """A user recording belongs to `words`; `voice` would narrate over it."""
+    _workspace(project_env)
+    result = FacelessRender().execute(
+        {"operation": "voice", "project_id": "demo", "audio_path": "/tmp/take.m4a"}
+    )
+    assert not result.success
+    assert "audio_path" in result.error
+    assert "words" in result.error
+
+
+def test_estimate_refuses_to_overwrite_audio_synced_timings(project_env, monkeypatch):
+    """estimate after voice replaces real line times with guesses."""
+    workspace = _workspace(project_env)
+    (workspace / "data").mkdir(parents=True)
+    (workspace / "data" / "narration.wav").write_bytes(b"wav")
+    (workspace / "data" / "lines.json").write_text(
+        json.dumps({"duration": 35.9, "lines": []}), encoding="utf-8"
+    )
+
+    result = FacelessRender().execute({"operation": "estimate", "project_id": "demo"})
+    assert not result.success
+    assert "audio-synced" in result.error
+
+
+def test_estimate_runs_before_voice(project_env, monkeypatch):
+    """With no narration yet, estimate is the intended pre-voice dry run."""
+    workspace = _workspace(project_env)
+
+    def fake_run(self, cmd, *, cwd=None, timeout=None):
+        (workspace / "data").mkdir(exist_ok=True)
+        (workspace / "data" / "lines.json").write_text(
+            json.dumps({"duration": 30.0, "estimated": True, "lines": []}), encoding="utf-8"
+        )
+        (workspace / "data" / "words.json").write_text("[]", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, "estimated", "")
+
+    monkeypatch.setattr(FacelessRender, "_run", fake_run)
+    result = FacelessRender().execute({"operation": "estimate", "project_id": "demo"})
+    assert result.success, result.error
+    assert result.data["duration_seconds"] == 30.0
+
+
+def test_render_requires_the_mix_for_threejs_too(project_env, tmp_path, monkeypatch):
+    """3D renders run unattended; capture.mjs would silently mux a silent track."""
+    workspace = _mark_engine(project_env, "threejs")
+    (workspace / "data" / "mix.wav").unlink()
+    chrome = tmp_path / "chrome"
+    chrome.write_bytes(b"")
+    monkeypatch.setenv("CHROME", str(chrome))
+    monkeypatch.setattr(mod.shutil, "which", _fake_node)
+
+    result = FacelessRender().execute({"operation": "render", "project_id": "demo"})
+    assert not result.success
+    assert "mix.wav" in result.error
+
+
+def test_output_paths_accept_project_and_workspace_relative_forms(project_env):
+    """Both "renders/x" and "../renders/x" name the same file; an escape still fails."""
+    _workspace(project_env)
+    tool = FacelessRender()
+    project_relative = tool._project_path(
+        {"project_id": "demo"}, "renders/final.mp4", "renders/final.mp4"
+    )
+    workspace_relative = tool._project_path(
+        {"project_id": "demo"}, "../renders/final.mp4", "renders/final.mp4"
+    )
+    assert project_relative == workspace_relative == project_env / "renders" / "final.mp4"
+
+    with pytest.raises(mod.FacelessRenderError, match="must stay under"):
+        tool._project_path(
+            {"project_id": "demo"}, "../../escape.mp4", "renders/final.mp4"
+        )

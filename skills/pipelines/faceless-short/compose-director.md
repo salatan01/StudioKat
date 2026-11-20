@@ -48,13 +48,14 @@ Run `faceless_render` `mix` — narration plus the documented music mode plus cu
 
 ### 2. Render
 
-Run `faceless_render` `render` with output `../../renders/final.mp4` and review paths
-`../../review/`. If the response includes a `job_id`, poll `job_status` until it reaches a
-terminal state. Use `job_cancel` only on user request or a failed run.
+Run `faceless_render` `render` with output `renders/final.mp4` and review paths
+`review/`. Both are resolved against `projects/<id>/`, never the skill tree. If the response
+includes a `job_id`, poll `job_status` until it reaches a terminal state. Use `job_cancel` only
+on user request or a failed run.
 
 ### 3. Inspect frames
 
-Run `sheet` to `../../review/contact-sheet.jpg` and read the whole sheet. Then run `frames` for
+Run `sheet` to `review/contact-sheet.jpg` and read the whole sheet. Then run `frames` for
 at least four moments — opening, middle, climax, ending — and inspect each one at full size.
 Compare against `style-sheet.png` and against the narration moment each frame belongs to.
 
@@ -77,7 +78,8 @@ The status must match the evidence — a failed probe is a fail, not a pass with
 
 ## Quality Gate
 
-- Output is `projects/<id>/renders/final.mp4`, 1080x1920, 30 fps, with an audio stream.
+- Output is `projects/<id>/renders/final.mp4`, 1080x1920, at the frame rate declared in
+  `style_lock.format.fps` (the style's native rate, or a declared override), with an audio stream.
 - Contact sheet and at least four full-size frames exist under `review/`.
 - `render_report.metadata.faceless_qa` is complete with a non-empty `inspected_frames`.
 - `final_review` checks are all present and the status reflects the evidence.

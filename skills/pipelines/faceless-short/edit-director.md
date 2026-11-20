@@ -45,8 +45,9 @@ engine and kit. Reuse the example's grammar; do not copy its story.
 ### 3. Guard the voice pass
 
 Confirm `faceless/script.json` is unchanged since `voice` ran. If any text changed, re-run
-`voice`, then `words`, then `estimate` before continuing — stale word timings shift every
-caption.
+`voice`, then `words` before continuing — stale word timings shift every
+caption. Do not re-run `estimate` here: it would overwrite the audio-synced
+timings with guesses.
 
 ### 4. Prove it compiles
 

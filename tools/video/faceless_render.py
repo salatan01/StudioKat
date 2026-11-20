@@ -373,6 +373,10 @@ class FacelessRender(BaseTool):
             if candidate.is_absolute():
                 resolved = candidate.resolve()
             else:
+                # Relative paths are read two ways, because both are natural:
+                # project-relative ("renders/final.mp4") and workspace-relative
+                # ("../renders/final.mp4" — the engine runs with cwd set to
+                # <project>/faceless, so that is how the path looks from there).
                 resolved = (project_dir / candidate).resolve()
                 if not inside(resolved):
                     resolved = (project_dir / "faceless" / candidate).resolve()
@@ -574,9 +578,12 @@ class FacelessRender(BaseTool):
         )
         self._output(proc, "selftest")
         if "SELFTEST PASSED" not in proc.stdout:
+            # selftest.sh writes under $HOME/faceless-shorts regardless of
+            # FACELESS_HOME, so derive the same path it uses.
+            log = Path.home() / "faceless-shorts" / "_selftest" / "selftest.log"
             raise FacelessRenderError(
-                "selftest did not print 'SELFTEST PASSED'. Read the output and the "
-                "full log in ~/faceless-shorts/_selftest/selftest.log."
+                f"selftest did not print 'SELFTEST PASSED'. Read the output and the "
+                f"full log at {log}."
             )
         return ToolResult(success=True, data={"stdout": proc.stdout, "stderr": proc.stderr})
 
@@ -631,6 +638,18 @@ class FacelessRender(BaseTool):
     def _op_voice(self, inputs: dict[str, Any]) -> ToolResult:
         workspace = self._workspace(inputs)
         self._require_file(workspace / "script.json", "faceless/script.json")
+
+        # voice.py always synthesises with Kokoro. A user recording is ingested by
+        # `words` (--audio), which converts it to narration.wav and rebuilds the
+        # line times. Accepting audio_path here would silently narrate over the
+        # user's own take, so fail loudly and point at the right operation.
+        if inputs.get("audio_path"):
+            raise FacelessRenderError(
+                "operation='voice' always synthesises with Kokoro; it does not "
+                "accept audio_path. For a user recording, skip 'voice' and run "
+                "operation='words' with audio_path — it converts the file to "
+                "data/narration.wav and rebuilds the line times from what was said."
+            )
 
         kokoro = self._faceless_home() / "kokoro" / "kokoro-v1.0.onnx"
         if not kokoro.is_file() and not inputs.get("confirm_downloads"):
@@ -713,6 +732,21 @@ class FacelessRender(BaseTool):
     def _op_estimate(self, inputs: dict[str, Any]) -> ToolResult:
         workspace = self._workspace(inputs)
         self._require_file(workspace / "script.json", "faceless/script.json")
+
+        # estimate.py overwrites lines.json and words.json with guessed timings.
+        # After a real voice pass that silently replaces audio-synced times with
+        # guesses, so the picture drifts off the narration (dead air at the end,
+        # captions out of sync). Refuse instead of corrupting a good take.
+        narration = workspace / "data" / "narration.wav"
+        lines = workspace / "data" / "lines.json"
+        if narration.is_file() and lines.is_file():
+            if not _read_json(lines).get("estimated"):
+                raise FacelessRenderError(
+                    "estimate would overwrite the audio-synced timings from voice.py "
+                    f"(found {narration.name} with real line times). estimate is a "
+                    "pre-voice dry run only. To re-time for a new script, run voice "
+                    "then words instead."
+                )
 
         py = SKILL_DIR / "scripts" / "py"
         estimate_script = SKILL_DIR / "scripts" / "estimate.py"
@@ -854,6 +888,10 @@ class FacelessRender(BaseTool):
 
     def _op_render(self, inputs: dict[str, Any]) -> ToolResult:
         workspace = self._workspace(inputs)
+        # Enforce the mix for every engine. capture.mjs falls back to a silent
+        # anullsrc track when mix.wav is missing, so a Three.js render would
+        # otherwise succeed with no audio and still pass a has_audio probe.
+        self._require_file(workspace / "data" / "mix.wav", "data/mix.wav")
         output = self._project_path(inputs, inputs.get("output_path"), "renders/final.mp4")
         engine = self._engine_for(inputs, workspace)
         if engine == "threejs" or inputs.get("software_gl"):

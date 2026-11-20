@@ -97,9 +97,23 @@ def test_style_lock_rejects_non_hex_palette_value():
         validate_artifact("style_lock", doc)
 
 
-def test_style_lock_rejects_wrong_fps():
+def test_style_lock_accepts_a_declared_fps_override():
+    """A delivery-rate override is allowed, but only when it is declared.
+
+    The schema permits fps != 30 so a project can be delivered at 60 fps; the
+    checkpoint gate then demands fps_native plus a reason, so an override can
+    never be mistaken for the style's own rate.
+    """
     doc = copy.deepcopy(STYLE_LOCK)
-    doc["format"]["fps"] = 24
+    doc["format"]["fps"] = 60
+    doc["format"]["fps_native"] = 30
+    doc["format"]["fps_override_reason"] = "Client delivery spec is 60 fps."
+    validate_artifact("style_lock", doc)
+
+
+def test_style_lock_rejects_non_positive_fps():
+    doc = copy.deepcopy(STYLE_LOCK)
+    doc["format"]["fps"] = 0
     with pytest.raises(jsonschema.ValidationError):
         validate_artifact("style_lock", doc)
 

@@ -44,8 +44,19 @@
         "aspect": { "const": "9:16" },
         "resolution": { "const": "1080x1920" },
         "fps": {
-          "const": 30,
-          "description": "All six examples set FPS = 30 in core/lib.js; that is the v1 source of truth."
+          "type": "integer",
+          "minimum": 1,
+          "description": "Delivery frame rate. Equal to the style's native fps unless fps_native_fps is set, which records the style's own rate alongside a sanctioned override."
+        },
+        "fps_native": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The style's native frame rate. Required when fps differs from it, so an override is always explicit and never silently mistaken for the style's own rate."
+        },
+        "fps_override_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the delivery rate differs from the style's native rate. Required when fps != fps_native."
         },
         "duration_seconds": {
           "type": "array",

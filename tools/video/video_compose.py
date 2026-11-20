@@ -1620,8 +1620,10 @@ class VideoCompose(BaseTool):
                     "it MUST be locked at proposal stage (proposal_packet."
                     "production_plan.render_runtime) and carried forward through "
                     "edit_decisions.render_runtime. Valid values: 'remotion', "
-                    "'hyperframes', 'ffmpeg', 'faceless'. Re-run the proposal stage with an "
-                    "explicit runtime choice — do NOT default this field."
+                    "'hyperframes', 'ffmpeg'. ('faceless' is a valid runtime but is "
+                    "executed by faceless_render, not video_compose.) Re-run the "
+                    "proposal stage with an explicit runtime choice — do NOT default "
+                    "this field."
                 ),
             )
 
@@ -1630,7 +1632,8 @@ class VideoCompose(BaseTool):
                 success=False,
                 error=(
                     f"Unknown render_runtime {render_runtime!r}. "
-                    f"Valid values: remotion, hyperframes, ffmpeg, faceless. "
+                    f"Valid values: remotion, hyperframes, ffmpeg "
+                    f"('faceless' is executed by faceless_render). "
                     f"render_runtime must be set at proposal stage."
                 ),
             )

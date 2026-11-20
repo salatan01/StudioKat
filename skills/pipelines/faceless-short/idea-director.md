@@ -73,8 +73,11 @@ Read the full `STYLE.md`. Open `style-sheet.png`. Inspect `example/script.json` 
 
 ### 4. Write `style_lock`
 
-Write the artifact with `confirmed_by_user: false` and every required field. Copy palette
-values and caption rules out of `STYLE.md` — never from memory. `contract` is the one-line
+Write the artifact with `confirmed_by_user: false` and every required field. Read the colours
+and caption rules out of the style's own files — never from memory. `STYLE.md` names the
+colours in prose; the exact hex values live in the example's kit (`example/src/core/kit.js`,
+the `P` palette) and `example/src/core/lib.js` (the `C` palette). Cross-check the two: the
+prose says what each colour *means*, the code says what it *is*. `contract` is the one-line
 playback of what the user will see.
 
 ### 5. Write `brief`
@@ -103,9 +106,20 @@ question — the idea gate still lets them change it.
 ## Quality Gate
 
 - `style_lock` source paths exist and the `styles/<id>/` segment matches `style_id`.
-- `duration_seconds` has min <= max and sits inside the style's window.
+- `duration_seconds` has min <= max and equals the registry window for this style exactly
+  (the format is the style's format). The piece's target length goes in
+  `brief.target_duration_seconds`, not here.
 - `brief.visual_style.system == "faceless"` with `style_id` and `engine` present.
-- The stated format is 9:16 / 1080x1920 / 30 fps.
+- The stated format is 9:16 / 1080x1920, at the style's native 30 fps.
+  Every style's `example/src/core/lib.js` sets `FPS = 30` and `capture.mjs`
+  defaults to 30, so 30 is what the engine actually renders. `deep-dive`'s
+  `STYLE.md` still says "24 fps" in its Format section — that is stale upstream
+  prose; the code is authoritative. Do not lower the rate or record 24.
+  A faster delivery rate is allowed only as a declared override: set
+  `format.fps` to the requested rate, `format.fps_native` to the registry's
+  native rate (`30` for every style today) and write a one-line
+  `format.fps_override_reason`. The engine is then driven with `FPS=<rate>`;
+  never interpolate a lower-rate render.
 - `confirmed_by_user` is `false` before approval; `true` only when the checkpoint is written
   with `human_approved=True`.
 

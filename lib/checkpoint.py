@@ -176,11 +176,41 @@ def _validate_faceless_style_lock(
             "style_lock.format must be an object with aspect, resolution, fps, "
             "and duration_seconds"
         )
-    for key in ("aspect", "resolution", "fps"):
+    for key in ("aspect", "resolution"):
         if fmt.get(key) != style[key]:
             raise CheckpointValidationError(
                 f"style_lock.format.{key} must be {style[key]!r} for style "
                 f"{style['id']!r}, got {fmt.get(key)!r}"
+            )
+
+    # Frame rate may differ from the style's native rate, but only as a
+    # declared override: the native rate must be recorded and a reason given.
+    # An undeclared mismatch is exactly the silent drift this lock prevents.
+    native_fps = style["fps"]
+    fps = fmt.get("fps")
+    if not isinstance(fps, int) or isinstance(fps, bool) or fps < 1:
+        raise CheckpointValidationError(
+            f"style_lock.format.fps must be a positive integer, got {fps!r}"
+        )
+    if fps == native_fps:
+        if fmt.get("fps_native") not in (None, native_fps):
+            raise CheckpointValidationError(
+                f"style_lock.format.fps_native must be {native_fps} for style "
+                f"{style['id']!r} when fps is not overridden, got "
+                f"{fmt.get('fps_native')!r}"
+            )
+    else:
+        if fmt.get("fps_native") != native_fps:
+            raise CheckpointValidationError(
+                f"style_lock.format.fps is {fps} but style {style['id']!r} renders "
+                f"at {native_fps} fps. Record format.fps_native={native_fps} to make "
+                "the override explicit."
+            )
+        reason = fmt.get("fps_override_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise CheckpointValidationError(
+                "style_lock.format.fps_override_reason is required when fps differs "
+                f"from the style's native {native_fps} fps"
             )
     duration = fmt.get("duration_seconds")
     if (

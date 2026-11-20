@@ -46,6 +46,40 @@ def test_what_happens_if_is_ambiguous_between_3d_and_2d():
     assert [s["id"] for s in exc.value.candidates] == ["deep-dive", "inside-out"]
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "what happens if you swallow gum",
+        "make me a 3D cartoon",
+        "a 3D animation please",
+        "I want a cartoon explainer about gum",
+    ],
+)
+def test_generic_phrases_inside_a_sentence_ask_rather_than_fail(query):
+    """A whole-sentence request that names a family must ask, not hard-stop.
+
+    Matching only the entire normalized string made every natural request fall
+    through to UnknownStyleError, which the idea director reads as "not a
+    faceless style".
+    """
+    with pytest.raises(AmbiguousStyleError) as exc:
+        resolve_style(query)
+    assert len(exc.value.candidates) >= 2
+
+
+def test_multiple_generic_hits_union_their_candidates():
+    """"3D cartoon" names two families; the union is the honest candidate list."""
+    with pytest.raises(AmbiguousStyleError) as exc:
+        resolve_style("make a 3D cartoon")
+    ids = [s["id"] for s in exc.value.candidates]
+    assert "deep-dive" in ids and "inside-out" in ids
+
+
+def test_canonical_name_still_wins_over_a_generic_phrase():
+    """A named style must not be turned into a question by surrounding words."""
+    assert resolve_style("Inside Out but 3D-ish")["style"]["id"] == "inside-out"
+
+
 def test_unknown_style_lists_the_valid_ids():
     with pytest.raises(UnknownStyleError) as exc:
         resolve_style("claymation noir")
