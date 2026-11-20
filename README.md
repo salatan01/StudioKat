@@ -1,5 +1,3 @@
-**English** | [Português (Brasil)](README_pt-BR.md) | [Español](README_es.md) | [简体中文](README_zh-CN.md)
-
 <p align="center">
   <h1 align="center">StudioKat</h1>
 </p>
@@ -9,6 +7,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
   <a href="#pipelines">Pipelines</a> &nbsp;·&nbsp;
+  <a href="#style-system">Styles</a> &nbsp;·&nbsp;
   <a href="#try-these-prompts">Try These Prompts</a> &nbsp;·&nbsp;
   <a href="docs/PROVIDERS.md">Providers</a> &nbsp;·&nbsp;
   <a href="docs/ARCHITECTURE.md">Architecture</a> &nbsp;·&nbsp;
@@ -39,11 +38,62 @@
 
 ### Install & Run
 
+#### 1. Clone
+
 ```bash
 git clone https://github.com/salatan01/StudioKat.git
-cd OpenMontage
+cd StudioKat
+```
+
+#### 2. Install
+
+```bash
 make setup
 ```
+
+That one command does the whole install:
+
+| Step | What it does |
+|------|--------------|
+| `ensure-venv` | Creates `.venv` with Python 3.10+ (uses `uv` if available) |
+| `bootstrap` | Upgrades pip so the CA bundle is current |
+| deps | Installs `requirements.txt` into `.venv` |
+| composer | Runs `npm install` in `remotion-composer/` |
+| voice | Downloads the free offline Piper voice (`~/.piper/models`) |
+| runtime | Cache-warms the HyperFrames CLI via `npx` (~20 MB) |
+| config | Copies `.env.example` → `.env` if you don't have one |
+
+**On NixOS / any machine with Nix, run `nix develop` instead** — the first interactive entry calls `make setup` for you and supplies Python 3.11, Node 22, FFmpeg, and the Chromium both render runtimes need. See [docs/NIXOS.md](docs/NIXOS.md).
+
+#### 3. Start the engine and verify it
+
+Activate the environment, then run the smoke checks. Each one proves a different part of the engine is alive:
+
+```bash
+source .venv/bin/activate
+
+make preflight        # registry discovers every tool; prints providers + availability
+make demo-list        # lists the zero-key demos you can render offline
+make demo             # renders them — proves the Remotion/FFmpeg path works end to end
+```
+
+`make preflight` is the important one: it loads all **165 registered tools** and reports which providers are configured. If it prints JSON with a `total` count, the engine is up.
+
+To confirm the faceless engine (local voice + captions, no API keys):
+
+```text
+"Run faceless_render with operation='selftest'."
+```
+
+The first faceless run downloads ~850 MB of local models into `~/.faceless-shorts/`; after that it is fully offline.
+
+To open the live production board:
+
+```bash
+python -m backlot open       # library — every project on disk
+```
+
+#### 4. Open your agent
 
 Open the project in your AI coding assistant and tell it what you want:
 
@@ -65,9 +115,20 @@ That's it. The agent researches your topic with live web search, generates AI im
 >
 > **Windows:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
 >
-> **On NixOS (or any machine with Nix):** `nix develop` — the first interactive entry runs `make setup` and activates `.venv`, and the shell supplies every system dependency, including the browser override both render runtimes need. Non-interactive shells skip the auto-install, so run `make setup` once there. See [docs/NIXOS.md](docs/NIXOS.md).
+> **Non-interactive Nix shells** skip the auto-install, so run `make setup` once there.
 
-Existing environments: activate the project environment and run `python -m pip install --upgrade 'pip>=26.2.2' 'certifi>=2026.10.19'`, then restart long-running Python processes. These versions update both the application CA bundle and pip's separate bundled CA store for the eMudhra intermediate CA compromise. Update the operating system's trust store too: pip may also use system certificates, and custom CA bundles need separate maintenance. `make install` and `make install-dev` enforce the Python package minimums on subsequent installs.
+#### 5. Keep it current
+
+After pulling changes, re-sync the environment:
+
+```bash
+source .venv/bin/activate
+python -m pip install --upgrade 'pip>=26.2.2' 'certifi>=2026.10.19'
+make install          # or make install-dev / make install-gpu
+make hyperframes-warm # refresh the HyperFrames npx cache to the latest release
+```
+
+These versions update both the application CA bundle and pip's separate bundled CA store for the eMudhra intermediate CA compromise. Update the operating system's trust store too: pip may also use system certificates, and custom CA bundles need separate maintenance. `make install` and `make install-dev` enforce the Python package minimums on subsequent installs.
 
 ### Add API Keys (optional — more keys = more tools)
 
@@ -349,7 +410,8 @@ Final video output -- only if self-review passes
 ## Architecture
 
 ```
-OpenMontage/
+StudioKat/            # the local checkout — this directory is still named
+│                     # OpenMontage/ on existing installs (see NOTICE)
 ├── tools/              # 165 registered production tools (the agent's hands)
 │   ├── video/          # 20+ generation providers + compose, stitch, trim
 │   ├── audio/          # 10+ speech providers + music, mixing, enhancement
@@ -519,19 +581,50 @@ Runtime is chosen at proposal (`render_runtime`) and locked through `edit_decisi
 
 ## Style System
 
-Style playbooks define the visual language for your productions:
+Styles are split into two independent catalogs: **playbooks** for the general pipelines, and **faceless styles** for the `faceless-short` pipeline. The agent picks one, locks it, and applies it consistently across every generated asset.
 
-| Playbook | Best For |
-|----------|----------|
-| **Clean Professional** | Corporate, educational, SaaS |
-| **Premium Minimalist** | Investor updates, expert explainers, product narratives |
-| **Flat Motion Graphics** | Social media, TikTok, startups |
-| **Minimalist Diagram** | Technical deep-dives, architecture |
-| **Anime Ghibli** | Narrative animations, nature-themed stories, emotional storytelling, fantasy visuals |
+### Style Playbooks (6)
 
-Playbooks control typography, color palettes, motion styles, audio profiles, and quality rules. The agent reads the playbook and applies it consistently across all generated assets.
+Loaded from `styles/*.yaml` (plus generated playbooks in `styles/custom/`) via `styles/playbook_loader.py`. `list_playbooks()` is the authoritative list.
 
-**Faceless styles** (6): `deep-dive`, `inside-out`, `night-file`, `paper-atlas`, `stick-story`, `tall-tale` — defined in `styles/faceless/*.json` and loaded via the faceless skill.
+| Playbook | Name | Category | Mood | Pace | Heading font | Palette | Best for |
+|----------|------|----------|------|------|--------------|---------|----------|
+| `clean-professional` | Clean Professional | motion-graphics | polished, trustworthy, clear | moderate | Inter | `#2563EB` `#1E40AF` on white | Corporate explainers, educational content, SaaS demos, conference talks |
+| `premium-minimalist` | Premium Minimalist | minimalist | calm, editorial, precise | deliberate | Inter | `#111827` `#374151` on `#F9FAFB` | Investor updates, expert explainers, product narratives, high-trust launches |
+| `flat-motion-graphics` | Flat Motion Graphics | motion-graphics | energetic, modern, bold | fast | Space Grotesk | `#7C3AED` `#4F46E5` on `#0F172A` | Social media explainers, TikTok/Reels, product launches, startup pitches |
+| `minimalist-diagram` | Minimalist Diagram | whiteboard | focused, technical, precise | deliberate | IBM Plex Sans | `#1A1A2E` `#16213E` on `#FAFAFA` | Technical deep-dives, architecture, math/CS concepts, documentation |
+| `anime-ghibli` | Anime Ghibli | custom | warm, whimsical, contemplative, magical | slow | Noto Serif JP | `#2D5016` `#1B4332` on `#0A0A1A` | Narrative animations, nature stories, emotional storytelling, fantasy |
+| `sky-spectrum` | sky-spectrum | minimalist | curious, bright, clear-headed | moderate | Space Grotesk | `#3B8BEB` `#1E5FB8` on `#0B1D3A` | Science explainers about light, colour, and the atmosphere |
+
+`sky-spectrum` is a generated playbook living in `styles/custom/` — the same directory `lib/playbook_generator.save_playbook()` writes to, so agent-authored playbooks appear here automatically.
+
+### Faceless Styles (6)
+
+Defined in `styles/faceless/*.json`, each backed by a `STYLE.md` manual, a `style-sheet.png` look reference, and a runnable `example/`. All render **9:16 at 1080×1920, 30 fps**.
+
+| Style | Name | Engine | Length | Genre | What it makes |
+|-------|------|--------|--------|-------|---------------|
+| `deep-dive` | Deep Dive 3D | threejs | 30–45 s | body, health, science | The flagship, Zack D. Films-like: sculpted 3D people in sunlit sets, glowing x-ray bodies, camera journeys through blood vessels. "What happens if…?" |
+| `night-file` | Night File 3D | threejs | 30–45 s | true crime, mystery, unsolved | Dark 3D places with one light, faceless people (the subject glows red), typewriter dates, case-file inserts |
+| `inside-out` | Inside Out | canvas-2d | 25–45 s | body, health, science | Flat 2D "what happens if…?" explainer: a simple hero, x-ray cutaways, bold 1–3 word captions, punchy cuts |
+| `stick-story` | Stick Story | canvas-2d | 30–45 s | survival, how-to, safety | "What would you do if…?" survival steps: stick people with acting eyes, flat rooms day/night, gold step cards |
+| `paper-atlas` | Paper Atlas | canvas-2d | 30–45 s | history, maps, historical | History in cut paper: parchment maps, crimson routes, gold date ribbons, period figures |
+| `tall-tale` | Tall Tale 3D | threejs | 40–60 s | funny, true story, storytime | Funny true stories: flat 2D cartoon people in a sunny 3D small-town world, camera always moving, one-word captions |
+
+Resolve a style from a plain-language request:
+
+```bash
+.venv/bin/python -m styles.faceless.loader list
+.venv/bin/python -m styles.faceless.loader resolve "a creepy unsolved mystery from 1971"
+```
+
+The resolver matches ids and aliases (`zack d films` → `deep-dive`, `true crime` → `night-file`, `cut paper` → `paper-atlas`) and reports ambiguity rather than guessing.
+
+### Also: Ink Theater
+
+`ink-sketch` is a **style id**, not a YAML playbook — a hand-drawn black-ink-on-white "moving art" engine in `ink-theater/`, rendered through HyperFrames in atelier mode. It runs on the `animation` pipeline. See `skills/creative/ink-theater.md`.
+
+Playbooks control typography, color palettes, motion styles, audio profiles, and quality rules. The agent reads the chosen style and applies it consistently across all generated assets.
 
 ---
 
