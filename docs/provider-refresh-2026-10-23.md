@@ -1,5 +1,7 @@
 # Provider refresh — October 23, 2026
 
+> **Historical Document** — This plan was written during StudioKat's predecessor (OpenMontage) development. It is preserved for reference; implementation status may differ.
+
 Implemented in `codex/provider-refresh-oct23`, based on origin/main `c8066452`.
 The original checkout and its uncommitted work were preserved in place.
 

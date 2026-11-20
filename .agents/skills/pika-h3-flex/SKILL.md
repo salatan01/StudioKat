@@ -23,7 +23,7 @@ local ComfyUI use, which is a separate, unverified path.
 | Price | 480p $0.01/s, 768p $0.02/s, 1080p $0.035/s, 2k $0.04/s, 4k $0.08/s. Reference-to-video: 480p $0.03/s, 768p $0.06/s, 1080p $0.075/s, 2k $0.08/s, 4k $0.10/s, plus reference video input seconds at the same rates. |
 | Cost reporting | `cost_usd` is the settled charge from the job record. `data.cost_status` is `settled`, `pending` or `unavailable`; only `settled` is final. |
 
-OpenMontage's default budget policy asks the user before any single action over
+StudioKat's default budget policy asks the user before any single action over
 $0.50 and the first time a new paid tool is used. A 768p 15 second clip is $0.30
 and runs unprompted; any 4k clip of 7 seconds or more prompts.
 

@@ -1,6 +1,6 @@
 ---
 name: lyria
-description: Generate and validate music with Google Lyria through the Gemini Interactions API. Use before calling OpenMontage `google_music`, designing Lyria 3.5 or Clip prompts, using image-to-music or custom lyrics, choosing between single-turn Lyria and Lyria RealTime, diagnosing Google music-generation failures, or preparing exact-duration music for a video.
+description: Generate and validate music with Google Lyria through the Gemini Interactions API. Use before calling StudioKat `google_music`, designing Lyria 3.5 or Clip prompts, using image-to-music or custom lyrics, choosing between single-turn Lyria and Lyria RealTime, diagnosing Google music-generation failures, or preparing exact-duration music for a video.
 ---
 
 # Google Lyria
@@ -31,7 +31,7 @@ Read [references/api-and-prompting.md](references/api-and-prompting.md) when cho
 | Explicitly requested legacy Pro workflow | `lyria-3-pro-preview` | Legacy model; verify availability before use; currently $0.08/request |
 | Live, continuously steered instrumental performance | `lyria-realtime-exp` | Separate WebSocket workflow; do not route through `google_music` |
 
-The current OpenMontage `google_music` adapter accepts `model="lyria-3.5"` (default) or `model="lyria-3-pro-preview"`. It does not expose Clip, WAV response selection, multiple images, or RealTime controls. Its Lyria 3.5 cost estimator requires a current price quote; do not assume the legacy estimate supplies that quote. Prices above are Gemini Developer API prices checked on 2026-10-10, not a guarantee for every backend or future request.
+The current StudioKat `google_music` adapter accepts `model="lyria-3.5"` (default) or `model="lyria-3-pro-preview"`. It does not expose Clip, WAV response selection, multiple images, or RealTime controls. Its Lyria 3.5 cost estimator requires a current price quote; do not assume the legacy estimate supplies that quote. Prices above are Gemini Developer API prices checked on 2026-10-10, not a guarantee for every backend or future request.
 
 Do not change models silently. For a 30-second video, either use the approved full-song model plus exact-duration mastering or use Clip through an explicitly supported path.
 
@@ -74,7 +74,7 @@ Treat the returned vocal as untrusted until auditioned. Check lyric adherence, l
 
 ## Treat Duration As Untrusted Until Probed
 
-Full-song duration is controlled through prompt instructions and timestamps, not an exact API parameter. The OpenMontage adapter appends a target-duration instruction and bounds its requested duration to 5–184 seconds, but its returned `duration_seconds` field is the request, not a media probe. Treat those bounds as adapter validation, not proof of the returned duration.
+Full-song duration is controlled through prompt instructions and timestamps, not an exact API parameter. The StudioKat adapter appends a target-duration instruction and bounds its requested duration to 5–184 seconds, but its returned `duration_seconds` field is the request, not a media probe. Treat those bounds as adapter validation, not proof of the returned duration.
 
 Always inspect the generated file:
 
@@ -94,7 +94,7 @@ If exact duration is required:
 
 ## Authenticate And Diagnose Safely
 
-The Gemini API commonly uses `GEMINI_API_KEY`. OpenMontage also supports `GOOGLE_API_KEY` and Vertex service-account credentials.
+The Gemini API commonly uses `GEMINI_API_KEY`. StudioKat also supports `GOOGLE_API_KEY` and Vertex service-account credentials.
 
 - Use one known credential path per run.
 - Never print keys or edit credential files while debugging.

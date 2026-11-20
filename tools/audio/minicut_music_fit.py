@@ -76,7 +76,7 @@ def timeline(inputs: dict[str, Any]) -> tuple[float, list[float]]:
 
 
 def write_song(length: float, cut_times: list[float], key: str = "D", mode: str = "minor",
-               bpm: float = 90.0, title: str = "OpenMontage cut") -> dict[str, Any]:
+               bpm: float = 90.0, title: str = "StudioKat cut") -> dict[str, Any]:
     """A song whose chord changes and drum hits sit exactly on the cut times."""
     if mode not in PROGRESSIONS:
         raise ValueError(f"mode must be one of {sorted(PROGRESSIONS)}")

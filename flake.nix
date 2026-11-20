@@ -1,5 +1,5 @@
 {
-  description = "OpenMontage NixOS development environment";
+  description = "StudioKat NixOS development environment";
 
   inputs = {
     nixpkgs.url = "github:Nixos/nixpkgs/nixos-26.05";
@@ -115,7 +115,7 @@
               # uv would fetch its own Python 3.10 build instead.
               export PYTHON_VERSION=3.11
               ${linuxEnv}
-              echo "🎬 OpenMontage Nix environment: ${envName}"
+              echo "🎬 StudioKat Nix environment: ${envName}"
               echo "    Node:     $(node --version 2>&1)"
               echo "    FFmpeg:   $(ffmpeg -version 2>/dev/null | head -n 1)"
               ${linuxBanner}

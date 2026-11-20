@@ -20,7 +20,7 @@
     },
     "project_dir": {
       "type": "string",
-      "description": "Optional OpenMontage project root; defaults output to its renders folder."
+      "description": "Optional StudioKat project root; defaults output to its renders folder."
     },
     "output_path": {
       "type": "string",

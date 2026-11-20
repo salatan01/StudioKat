@@ -1,30 +1,17 @@
 **English** | [Português (Brasil)](README_pt-BR.md) | [Español](README_es.md) | [简体中文](README_zh-CN.md)
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/monty-dark.svg">
-    <img src="assets/monty-light.svg" alt="Monty the Clapper — the official mascot of OpenMontage" width="200">
-  </picture>
+  <h1 align="center">StudioKat</h1>
 </p>
 
-<p align="center"><sub><em>Monty the Clapper — the official mascot of OpenMontage</em></sub></p>
-
-<h1 align="center">OpenMontage</h1>
-
-<p align="center"><strong>The first open-source, agentic video production system.</strong></p>
+<p align="center"><strong>Agentic video production — orchestrated by your AI coding assistant.</strong></p>
 
 <p align="center">
-  <a href="https://openmontage.video"><img src="https://img.shields.io/badge/Website-openmontage.video-d14a28?style=for-the-badge" alt="openmontage.video"></a>
-</p>
-
-<p align="center">
-  <a href="#start-from-a-video-you-already-love">Paste A Video</a> &nbsp;·&nbsp;
   <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
-  <a href="#try-these-prompts">Try These Prompts</a> &nbsp;·&nbsp;
   <a href="#pipelines">Pipelines</a> &nbsp;·&nbsp;
-  <a href="#how-it-works">How It Works</a> &nbsp;·&nbsp;
+  <a href="#try-these-prompts">Try These Prompts</a> &nbsp;·&nbsp;
   <a href="docs/PROVIDERS.md">Providers</a> &nbsp;·&nbsp;
-  <a href="docs/PR_REVIEW_GUIDE.md">Review Guide</a> &nbsp;·&nbsp;
+  <a href="docs/ARCHITECTURE.md">Architecture</a> &nbsp;·&nbsp;
   <a href="AGENT_GUIDE.md">Agent Guide</a>
 </p>
 
@@ -32,142 +19,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License"></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/trending">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/repo-of-the-day-dark.svg">
-      <img alt="🏆 #1 Repository of the Day on GitHub Trending" src=".github/assets/repo-of-the-day-light.svg" height="60">
-    </picture>
-  </a>
-</p>
-
-<p align="center"><strong>Follow The Build</strong></p>
-
-<p align="center">
-  <a href="https://www.youtube.com/@OpenMontage"><img src="https://img.shields.io/badge/YouTube-%40OpenMontage-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube"></a>
-  <a href="https://www.instagram.com/openmontageinc/"><img src="https://img.shields.io/badge/Instagram-%40openmontageinc-E4405F?style=for-the-badge&logo=instagram&logoColor=white" alt="Instagram @openmontageinc"></a>
-  <a href="https://x.com/calesthioailabs"><img src="https://img.shields.io/badge/X-%40calesthioailabs-111111?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
-  <a href="https://github.com/calesthio/OpenMontage/discussions"><img src="https://img.shields.io/badge/Community-GitHub%20Discussions-0b1220?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Discussions"></a>
-</p>
-
 ---
 
-> **Something new is taking shape.**
->
-> We're building something new for creatives, and we're looking for curious minds to try it early.
->
-> **[Curious? Take a first look and join the early users.](https://github.com/calesthio/OpenMontage/discussions/892)**
+> **What this is:** StudioKat turns your AI coding assistant (OpenCode, Claude Code, Cursor, Copilot, Windsurf, Codex) into a full video production studio. You describe what you want in plain language; the agent handles research, scripting, asset generation, editing, and final composition — with quality gates and budget controls at every step.
 
-Turn your AI coding assistant into a full video production studio. Describe what you want in plain language — your agent handles research, scripting, asset generation, editing, and final composition.
-
-**Important distinction:** OpenMontage can make image-based videos, but it can also make a real **video video** for free/open-source workflows: the agent builds a corpus from free stock footage and open archives, retrieves actual motion clips, edits them into a timeline, and renders a finished piece. That is not the usual "animate a handful of stills and call it video" trick.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/f77ce7a4-68b8-4f94-a287-e94bf50a32e1" width="100%" controls></video>
-</div>
-
-> **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer fully produced through OpenMontage: concept, script, scene plan, Veo-generated motion clips, soundtrack, and Remotion composition.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/8daca07f-cdf8-4bec-89c3-9dc2176363fa" width="100%" controls></video>
-</div>
-
-> **"THE LAST BANANA"** — a 60-second Pixar-style animated short about a lonely banana who finds friendship with a kiwi. 6 Kling v3-generated motion clips (via fal.ai), Google Chirp3-HD narration, royalty-free piano music, TikTok-style word-level captions, and Remotion composition. Total cost: **$1.33**.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/0a71333b-9b05-40b5-8800-a0a679e9b433" width="100%" controls></video>
-</div>
-
-> **"OBJECTS IN OVERDRIVE"** — a 54-second, music-driven 3D showcase featuring ten objects with distinct choreography: gravity-shifting furniture, frozen car drifts, cloth impacts, refractive lenses, moving gears, an acrobatic robot, and more. Custom Blender animation and physics, kinetic typography, and a phonk soundtrack. Rendered with Blender Eevee/Cycles and assembled with FFmpeg. No narration.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/88962725-97a0-4aac-a08e-34aaa9d8bb92" width="100%" controls></video>
-</div>
-
-> **"Reimagine Your Universe"** — a 50-second vertical transformation film in which one visual idea moves across objects, eras, materials, and scale. Five generated motion scenes, sparse Google Chirp narration, a Pixabay score, and a bespoke HyperFrames composition turn separate clips into one authored cinematic journey. Total cost: **about $4**.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/c947070c-95ee-4d73-8d76-0bd3dc4826eb" width="100%" controls></video>
-</div>
-
-> **"Products Come to Life"** — a 60-second product film built from approved hero stills. Five hard-surface products separate into their own engineering and reassemble, with each still pinned as the first and last frame so the model invents motion without losing product identity. Image-to-video generation, bespoke sound, narration, and a custom composition complete the film.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/6815c2d2-17a3-4057-b9a0-893fc9c05bef" width="100%" controls></video>
-</div>
-
-> **"Imagine the Possibilities with OpenMontage"** — seven generated worlds collected into one music-only showcase. Three image models supply campaign, fashion, and miniature-world artwork; four video models expand the journey through architecture, material transformation, a living greenhouse, and a creature encounter. OpenMontage animates the stills, edits the motion, unifies the soundtrack, and closes with Monty the Clapper. Source generation cost: **about $5**.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/a524f02a-2d18-42ca-a2c4-d3dc09503546" width="100%" controls></video>
-</div>
-
-> **"How Salt Made History"** — a 100-second cinematic documentary about the mineral that funded empires, shaped trade routes, sparked revolutions, and gave us the word “salary.” Real-world footage is woven together with original narration and hand-authored motion graphics for its etched title, etymology reveal, animated maps, historical timeline, and closing thesis.
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/61919fb8-9dd1-446c-b833-dca82f6a3af8" width="100%" controls></video>
-</div>
-
-> **"One Prompt Built This Complete 3D World"** — a continuous 60-second journey through one coherent, editable fantasy world. Distinct terrain regions, an inhabited village, waterways, ruins, dense vegetation, and a late hero-landmark reveal are assembled from textured 3D assets, then brought together with cinematic lighting, atmospheric music, and a planned camera path.
-
-<p align="center">
-  <a href="https://www.youtube.com/@OpenMontage?sub_confirmation=1"><strong>Subscribe to @OpenMontage on YouTube</strong></a> to see new videos as they ship — every video includes the full prompt, pipeline, tools used, and cost so you can reproduce it yourself.
-</p>
-
----
-
-## Start From A Video You Already Love
-
-Starting from a reference video is often faster than starting from a blank prompt.
-
-OpenMontage can start from a **YouTube video, Short, Reel, TikTok, or local clip** and turn it into a grounded production plan:
-
-1. **Paste a reference video**
-2. **The agent analyzes transcript, pacing, scenes, keyframes, and style**
-3. **You get 2-3 differentiated concepts, an honest tool path, cost estimates, and a sample before full production**
-
-```text
-"Here's a YouTube Short I love. Make me something like this, but about quantum computing."
-```
-
-What you get back is not "best guess prompt spaghetti." You get:
-
-- **What it keeps** from the reference: pacing, hook style, structure, tone
-- **What it changes**: topic, visual treatment, angle, narration approach
-- **What it will cost** at your target duration, before asset generation starts
-- **What it will actually look like** with your currently available tools
-
-Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
-
----
-
-## Watch It Happen — The Backlot Living Storyboard
-
-Chat tells you what the agent *said*. **Backlot shows you what the production is actually doing** — a local board that fills itself in as the pipeline runs. Stages light up, the script lands as a screenplay page, scene cards shimmer while assets generate, and every provider decision and dollar spent is on the wall.
-
-When a production starts, the agent opens it for you automatically. No setup, no reporting — the board derives everything from the project files the pipeline already writes.
-
-<p align="center"><img src="docs/images/backlot/board-live.png" alt="Backlot live board — assets generating" width="920"></p>
-
-**The storyboard is now a real approval gate.** Asset generation pauses on a scene-by-scene contact sheet — takes, prompts, per-asset cost, quality scores — so you approve the visuals *before* the render, not after it's too late:
-
-<p align="center"><img src="docs/images/backlot/storyboard.png" alt="Backlot storyboard — filmstrip with takes and renders" width="920"></p>
-
-Creative gates hold until you answer. The board shows what's waiting and why; you reply in chat:
-
-<p align="center"><img src="docs/images/backlot/script-gate.png" alt="Backlot script gate — awaiting approval" width="920"></p>
-
-Every production on your machine, live-first, in the library:
-
-<p align="center"><img src="docs/images/backlot/library.png" alt="Backlot library" width="920"></p>
-
-```bash
-python -m backlot open                  # the library — every project on disk
-python -m backlot open <project-id>     # one production's live board
-python scripts/backlot_simulate_run.py  # no production yet? watch a simulated one live
-```
-
-And when a run is done, hit **▶ REPLAY RUN** — the whole production replays from its timestamps, scrubbable end to end. See [`backlot/README.md`](backlot/README.md) for how it works.
+> **What this is not:** A SaaS, a hosted service, or a "one-prompt video" wrapper. StudioKat runs locally, uses your API keys, and gives you an auditable production pipeline with human approval at every creative decision.
 
 ---
 
@@ -177,14 +33,14 @@ And when a run is done, hit **▶ REPLAY RUN** — the whole production replays 
 
 - **Python 3.10+** — [python.org](https://www.python.org/downloads/)
 - **FFmpeg** — `brew install ffmpeg` / `sudo apt install ffmpeg` / [ffmpeg.org](https://ffmpeg.org/download.html)
-- **Node.js** — a patched release on the 22.x (22.23.4+), 24.x (24.22.1+), or 26.x (26.12.1+) line; `.node-version` selects 22.23.4 — [nodejs.org](https://nodejs.org/)
-- **NixOS / Nix** — `nix develop`. The first interactive entry installs dependencies and activates `.venv` automatically; the shell supplies Python 3.11, Node 22, FFmpeg, and a Chromium that HyperFrames and Remotion can launch; see [docs/NIXOS.md](docs/NIXOS.md).
+- **Node.js** — patched release on 22.x (22.23.4+), 24.x (24.22.1+), or 26.x (26.12.1+); `.node-version` selects 22.23.4 — [nodejs.org](https://nodejs.org/)
+- **NixOS / Nix** — `nix develop`. The first interactive entry installs dependencies and activates `.venv` automatically; the shell supplies Python 3.11, Node 22, FFmpeg, and a Chromium that HyperFrames and Remotion can launch; see [docs/NIXOS.md](docs/NIXOS.md)
 - **An AI coding assistant** — OpenCode, Claude Code, Cursor, Copilot, Windsurf, or Codex
 
 ### Install & Run
 
 ```bash
-git clone https://github.com/calesthio/OpenMontage.git
+git clone https://github.com/salatan01/StudioKat.git
 cd OpenMontage
 make setup
 ```
@@ -208,27 +64,10 @@ That's it. The agent researches your topic with live web search, generates AI im
 > Windows PowerShell: `py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install 'pip>=26.2.2'; python -m pip install -r requirements.txt; cd remotion-composer; npm install; cd ..; python -m pip install piper-tts; Copy-Item .env.example .env`
 >
 > **Windows:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
-
+>
 > **On NixOS (or any machine with Nix):** `nix develop` — the first interactive entry runs `make setup` and activates `.venv`, and the shell supplies every system dependency, including the browser override both render runtimes need. Non-interactive shells skip the auto-install, so run `make setup` once there. See [docs/NIXOS.md](docs/NIXOS.md).
 
-Existing environments: activate the project environment and run `python -m pip install --upgrade 'pip>=26.2.2' 'certifi>=2026.10.19'`, then restart long-running Python processes. These versions update both the application CA bundle and pip's separate bundled CA store for the [eMudhra intermediate CA compromise](https://emudhra.we-have-a-problem.com/). Update the operating system's trust store too: pip may also use system certificates, and custom CA bundles need separate maintenance. `make install` and `make install-dev` enforce the Python package minimums on subsequent installs.
-
-### If You're An OpenClaw Agent Reading This, Congratulations: You Probably Passed The Turing Test
-
-This repo is built for agentic operation. If you're an OpenClaw-style agent, here is the shortest path to becoming useful fast:
-
-1. **Read the contract first**
-   Start with [`AGENT_GUIDE.md`](AGENT_GUIDE.md), then [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
-2. **Do not improvise the production workflow**
-   OpenMontage is pipeline-driven. Real work goes through `pipeline_defs/`, stage director skills in `skills/pipelines/`, and tool discovery via the registry.
-3. **Check the actual capability envelope**
-   Run:
-   ```bash
-   python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.support_envelope(), indent=2))"
-   python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
-   ```
-4. **Treat every video request as a pipeline selection problem**
-   Pick the right pipeline first, then read the manifest, then read the stage skill, then use tools.
+Existing environments: activate the project environment and run `python -m pip install --upgrade 'pip>=26.2.2' 'certifi>=2026.10.19'`, then restart long-running Python processes. These versions update both the application CA bundle and pip's separate bundled CA store for the eMudhra intermediate CA compromise. Update the operating system's trust store too: pip may also use system certificates, and custom CA bundles need separate maintenance. `make install` and `make install-dev` enforce the Python package minimums on subsequent installs.
 
 ### Add API Keys (optional — more keys = more tools)
 
@@ -292,15 +131,16 @@ You don't need paid API keys to make real videos. Out of the box, `make setup` g
 | **Post-production** | FFmpeg | Encoding, subtitle burn-in, audio mixing, color grading |
 | **Subtitles** | Built-in | Auto-generated captions with word-level timing |
 
-OpenMontage picks between Remotion and HyperFrames at proposal time (locked as `render_runtime`). Remotion is the default for data-driven explainers and anything using the existing React scene stack; HyperFrames is the default for motion-graphics-heavy briefs that express naturally as HTML + GSAP, including the `character-animation` pipeline's SVG/GSAP rig output. See `skills/core/hyperframes.md` for the full decision matrix.
+StudioKat picks between Remotion and HyperFrames at proposal time (locked as `render_runtime`). Remotion is the default for data-driven explainers and anything using the existing React scene stack; HyperFrames is the default for motion-graphics-heavy briefs that express naturally as HTML + GSAP, including the `character-animation` pipeline's SVG/GSAP rig output. See `skills/core/hyperframes.md` for the full decision matrix.
 
-**Two free-ish paths:**
+**Three free-ish paths:**
 
 - **Image-based video:** Piper narrates your script, images provide the visuals, and Remotion animates them into a polished edit.
 - **Local character animation:** SVG rigs, pose libraries, GSAP timelines, and HyperFrames render cartoon character acting to `projects/<project-name>/renders/final.mp4`.
 - **Real-footage video:** the documentary montage pipeline builds a CLIP-searchable corpus from Archive.org, NASA, Wikimedia Commons, and optional free-key sources like Pexels and Unsplash, then cuts together actual motion footage into a finished video.
+- **Faceless shorts:** vertical short-form videos with kinetic typography, TTS narration, BGM, and stock footage — no face, no camera, no API keys required.
 
-If you want the second one, prompt for a **documentary montage**, **tone poem**, or **stock-footage collage**, and explicitly say **use real footage only**.
+If you want the real-footage path, prompt for a **documentary montage**, **tone poem**, or **stock-footage collage**, and explicitly say **use real footage only**.
 
 ---
 
@@ -332,6 +172,14 @@ Copy any of these into your AI coding assistant after setup. Each one runs a ful
 
 > "Cut together a dreamlike montage about coming home in the rain using real stock footage only. Music yes, narration no."
 
+### Faceless shorts (vertical, under 60s)
+
+> "Make a 45-second faceless short about the history of coffee. Style: paper-atlas. No API keys."
+
+> "Create a 30-second faceless short: 5 weird facts about octopuses. Style: deep-dive. Use Piper TTS."
+
+> "Make a faceless short explaining compound interest. Style: tall-tale. 60 seconds max."
+
 ### With an image/video provider configured (~$0.15–$1.50)
 
 > "Create a 30-second Ghibli-style animated video of a magical floating library in the clouds at golden hour"
@@ -361,16 +209,19 @@ Each pipeline is a complete production workflow, from idea to finished video.
 | **Animated Explainer** | AI-generated explainer with research, narration, visuals, music | Educational content, tutorials, topic breakdowns |
 | **Animation** | Motion graphics, kinetic typography, animated sequences | Social media, product demos, abstract concepts |
 | **Avatar Spokesperson** | Avatar-driven presenter videos | Corporate comms, training, announcements |
+| **Character Animation** | Rigged local cartoon characters, pose libraries, action timelines, SVG/Canvas/Remotion/HyperFrames rendering | Animated series, character-driven storytelling, mascot videos |
 | **Cinematic** | Trailer, teaser, and mood-driven edits | Brand films, teasers, promotional content |
 | **Clip Factory** | Batch of ranked short-form clips from one long source | Repurposing long content for social media |
 | **Documentary Montage** | Thematic montage cut from a CLIP-indexed corpus of free stock footage and open archives (Pexels, Archive.org, NASA, Wikimedia, Unsplash) | Video essays, mood pieces, retrieval-first B-roll edits, real-footage videos without paid generation APIs |
+| **Faceless Short** | Vertical short-form with kinetic typography, TTS narration, BGM, stock footage — no face, no camera | TikTok/Reels/Shorts, educational shorts, fact videos, storytelling |
 | **Hybrid** | Source footage + AI-generated support visuals | Enhancing existing footage with graphics |
 | **Localization & Dub** | Subtitle, dub, and translate existing video | Multi-language distribution |
 | **Podcast Repurpose** | Podcast highlights to video | Podcast marketing, audiogram videos |
 | **Screen Demo** | Polished software screen recordings and walkthroughs | Product demos, tutorials, documentation |
 | **Talking Head** | Footage-led speaker videos | Presentations, vlogs, interviews |
+| **Framework Smoke** | Minimal end-to-end smoke test for pipeline developers | CI verification, new pipeline development |
 
-Every pipeline follows the same structured flow:
+**14 pipelines total.** Every pipeline follows the same structured flow:
 
 ```
 research -> proposal -> script -> scene_plan -> assets -> edit -> compose
@@ -382,21 +233,70 @@ Each stage has a dedicated **director skill** — a markdown instruction file th
 
 ---
 
-## Why OpenMontage?
+## Faceless Shorts
 
-Most AI video tools give you a single clip from a prompt. OpenMontage gives you an **end-to-end production pipeline** — the same structured process a real production team follows, automated by your AI agent.
+The `faceless-short` pipeline produces vertical short-form videos (9:16, ≤60s) with kinetic typography, TTS narration, background music, and stock footage — no face, no camera, no API keys required.
 
-Most "free AI video" stacks quietly mean "animate still images." OpenMontage can do that too, but it can also build a finished video from **real footage** pulled from free/open sources, ranked semantically, edited intentionally, and rendered as a proper timeline.
+**6 built-in styles:** `deep-dive`, `inside-out`, `night-file`, `paper-atlas`, `stick-story`, `tall-tale`
 
-Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
+Ask your agent for one directly — the `faceless-short` pipeline drives the vendored engine through the `faceless_render` tool:
 
-- **10+ production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, documentary montages, character animation, and more
-- **100+ production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
-- **60+ provider integrations** — cloud APIs, local models, stock libraries, open archives, and production runtimes behind one scored selection layer
-- **700+ agent skill and production-knowledge files** — pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
+```text
+"Make a 45-second faceless short about the history of coffee. Style: paper-atlas."
+```
+
+First use downloads the local models once (Kokoro voice + Whisper, ~850 MB) into `~/.faceless-shorts/`. After that every render is offline and free. Output lands at `projects/<project-id>/renders/final.mp4`.
+
+The faceless skill is vendored at `.agents/skills/faceless-shorts/` and runs through the `faceless_render` tool. See `.agents/skills/faceless-shorts/SKILL.md` for the full contract.
+
+---
+
+## Watch It Happen — The Backlot Living Storyboard
+
+Chat tells you what the agent *said*. **Backlot shows you what the production is actually doing** — a local board that fills itself in as the pipeline runs. Stages light up, the script lands as a screenplay page, scene cards shimmer while assets generate, and every provider decision and dollar spent is on the wall.
+
+When a production starts, the agent opens it for you automatically. No setup, no reporting — the board derives everything from the project files the pipeline already writes.
+
+<p align="center"><img src="docs/images/backlot/board-live.png" alt="Backlot live board — assets generating" width="920"></p>
+
+**The storyboard is now a real approval gate.** Asset generation pauses on a scene-by-scene contact sheet — takes, prompts, per-asset cost, quality scores — so you approve the visuals *before* the render, not after it's too late:
+
+<p align="center"><img src="docs/images/backlot/storyboard.png" alt="Backlot storyboard — filmstrip with takes and renders" width="920"></p>
+
+Creative gates hold until you answer. The board shows what's waiting and why; you reply in chat:
+
+<p align="center"><img src="docs/images/backlot/script-gate.png" alt="Backlot script gate — awaiting approval" width="920"></p>
+
+Every production on your machine, live-first, in the library:
+
+<p align="center"><img src="docs/images/backlot/library.png" alt="Backlot library" width="920"></p>
+
+```bash
+python -m backlot open                  # the library — every project on disk
+python -m backlot open <project-id>     # one production's live board
+python scripts/backlot_simulate_run.py  # no production yet? watch a simulated one live
+```
+
+And when a run is done, hit **▶ REPLAY RUN** — the whole production replays from its timestamps, scrubbable end to end. See [`backlot/README.md`](backlot/README.md) for how it works.
+
+---
+
+## Why StudioKat?
+
+Most AI video tools give you a single clip from a prompt. StudioKat gives you an **end-to-end production pipeline** — the same structured process a real production team follows, automated by your AI agent.
+
+Most "free AI video" stacks quietly mean "animate still images." StudioKat can do that too, but it can also build a finished video from **real footage** pulled from free/open sources, ranked semantically, edited intentionally, and rendered as a proper timeline.
+
+Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. Animate rigged cartoon characters with GSAP. **If a production team can make it, StudioKat can orchestrate it.**
+
+- **14 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, documentary montages, character animation, faceless shorts, and more
+- **165 registered tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **97 stage-director skills** — per-pipeline stage instructions with quality rubrics and self-evaluation criteria
+- **93 agent skills** — deep technology knowledge packs (Layer 3) teaching the agent how to use every provider like an expert
+- **5 YAML style playbooks + 6 faceless styles** — visual language, typography, motion, audio, and asset generation constraints
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Real-footage documentary creation without paid video models** — build actual edited videos from free/open motion footage and archival sources, not just Ken Burns over images
-- **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
+- **Live web research built in** — before writing a single word of script, the agent runs 15–25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
 - **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
 - **No vendor lock-in** — swap providers freely. The scored selector ranks every provider across 7 dimensions (task fit, output quality, control, reliability, cost efficiency, latency, continuity) and picks the best match automatically.
 - **Production-grade quality gates** — delivery promise enforcement blocks slideshow-looking renders, pre-compose validation catches broken plans before wasting GPU time, and mandatory post-render self-review (ffprobe + frame extraction + audio analysis) ensures the agent never presents garbage. Every provider choice, style decision, and fallback gets logged in an auditable decision trail.
@@ -406,7 +306,7 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 
 ## How It Works
 
-OpenMontage uses an **agent-first architecture**. There is no code orchestrator. Your AI coding assistant IS the orchestrator.
+StudioKat uses an **agent-first architecture**. There is no code orchestrator. Your AI coding assistant IS the orchestrator.
 
 ```
 You: "Make an explainer video about how black holes form"
@@ -450,7 +350,7 @@ Final video output -- only if self-review passes
 
 ```
 OpenMontage/
-├── tools/              # 100+ registered production tools (the agent's hands)
+├── tools/              # 165 registered production tools (the agent's hands)
 │   ├── video/          # 20+ generation providers + compose, stitch, trim
 │   ├── audio/          # 10+ speech providers + music, mixing, enhancement
 │   ├── graphics/       # 15+ image providers + diagrams, code snippets, math
@@ -461,13 +361,13 @@ OpenMontage/
 │
 ├── pipeline_defs/      # YAML pipeline manifests (the agent's playbook)
 ├── skills/             # Markdown skill files (the agent's knowledge)
-│   ├── pipelines/      # Per-pipeline stage director skills
+│   ├── pipelines/      # Per-pipeline stage director skills (97)
 │   ├── creative/       # Creative technique skills
 │   ├── core/           # Core tool skills
 │   └── meta/           # Reviewer, checkpoint protocol
 │
 ├── schemas/            # 20+ JSON Schemas (contract validation)
-├── styles/             # Visual style playbooks (YAML)
+├── styles/             # Visual style playbooks (YAML) + faceless styles
 ├── remotion-composer/  # React/Remotion video composition engine
 ├── lib/                # Core infrastructure (config, checkpoints, pipeline loader)
 └── tests/              # Contract tests, QA integration tests, eval harness
@@ -477,11 +377,11 @@ OpenMontage/
 
 ```
 Layer 1: tools/ + pipeline_defs/     "What exists" — executable capabilities + orchestration
-Layer 2: skills/                     "How to use it" — OpenMontage conventions and quality bars
+Layer 2: skills/                     "How to use it" — StudioKat conventions and quality bars
 Layer 3: .agents/skills/             "How it works" — external technology knowledge packs
 ```
 
-Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to know what's available, Layer 2 to know how OpenMontage wants it used, and Layer 3 for deep technical knowledge when needed.
+Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to know what's available, Layer 2 to know how StudioKat wants it used, and Layer 3 for deep technical knowledge when needed.
 
 ---
 
@@ -624,10 +524,14 @@ Style playbooks define the visual language for your productions:
 | Playbook | Best For |
 |----------|----------|
 | **Clean Professional** | Corporate, educational, SaaS |
+| **Premium Minimalist** | Investor updates, expert explainers, product narratives |
 | **Flat Motion Graphics** | Social media, TikTok, startups |
 | **Minimalist Diagram** | Technical deep-dives, architecture |
+| **Anime Ghibli** | Narrative animations, nature-themed stories, emotional storytelling, fantasy visuals |
 
 Playbooks control typography, color palettes, motion styles, audio profiles, and quality rules. The agent reads the playbook and applies it consistently across all generated assets.
+
+**Faceless styles** (6): `deep-dive`, `inside-out`, `night-file`, `paper-atlas`, `stick-story`, `tall-tale` — defined in `styles/faceless/*.json` and loaded via the faceless skill.
 
 ---
 
@@ -650,7 +554,7 @@ Built-in render profiles for every major platform:
 
 ## Production Governance
 
-OpenMontage treats video production like real engineering — with quality gates, audit trails, and enforcement at every stage.
+StudioKat treats video production like real engineering — with quality gates, audit trails, and enforcement at every stage.
 
 ### Quality Gates
 
@@ -687,7 +591,7 @@ No surprise bills. The agent tells you what it will cost before it spends.
 
 ## Agent Compatibility
 
-OpenMontage works with any AI coding assistant that can read files and execute Python. Dedicated instruction files are included for:
+StudioKat works with any AI coding assistant that can read files and execute Python. Dedicated instruction files are included for:
 
 | Platform | Config File |
 |----------|------------|
@@ -713,13 +617,11 @@ Run `opencode` from the repository root. It reads `AGENTS.md`, discovers the Lay
 
 On NixOS, launch OpenCode from inside `nix develop` so the agent inherits the project `.venv`, Chromium override, and library path. See [docs/NIXOS.md](docs/NIXOS.md#running-the-opencode-agent).
 
-> **Coming soon:** Local LLM support via **Ollama** and **LM Studio** — run the full production pipeline without any cloud LLM.
-
 ---
 
 ## Contributing
 
-OpenMontage is built to be extended. The two most common contributions:
+StudioKat is built to be extended. The two most common contributions:
 
 ### Adding a New Tool
 
@@ -736,49 +638,11 @@ OpenMontage is built to be extended. The two most common contributions:
 
 See `docs/ARCHITECTURE.md` for the full technical reference, `docs/PROVIDERS.md` for the complete provider guide (setup, pricing, free tiers), and `AGENT_GUIDE.md` for the agent contract.
 
-### Join the Community
-
-We use [GitHub Discussions](https://github.com/calesthio/OpenMontage/discussions) to share work and ideas:
-
-- **[Show and Tell](https://github.com/calesthio/OpenMontage/discussions/categories/show-and-tell)** — Share videos you've made, prompts that worked well, or creative workflows you've discovered
-- **[Ideas](https://github.com/calesthio/OpenMontage/discussions/categories/ideas)** — Suggest new pipelines, tools, style playbooks, or integrations
-- **[Q&A](https://github.com/calesthio/OpenMontage/discussions/categories/q-a)** — Ask questions about setup, pipelines, or troubleshooting
-
-Made something cool? Post it in Show and Tell — we'd love to see what you build.
-
 ---
 
-## Contact
+## Attribution
 
-For updates, releases, and behind-the-scenes build notes, follow [@calesthioailabs](https://x.com/calesthioailabs).
-
-For bugs, feature requests, and workflow discussions, use [GitHub Issues](https://github.com/calesthio/OpenMontage/issues) and [GitHub Discussions](https://github.com/calesthio/OpenMontage/discussions) so everything stays visible and actionable.
-
----
-
-## Testing
-
-```bash
-# Run contract tests (no API keys needed)
-make test-contracts
-
-# Run all tests
-make test
-```
-
-Both targets install `requirements-dev.txt` on first run, so a fresh clone can run tests without a separate `make install-dev`.
-
----
-
-## Star History
-
-<a href="https://star-history.dera.page/#calesthio/OpenMontage&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=calesthio/OpenMontage&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=calesthio/OpenMontage&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=calesthio/OpenMontage&type=date&legend=top-left" />
-  </picture>
-</a>
+StudioKat is a fork of **OpenMontage** (AGPLv3, `github.com/calesthio/OpenMontage`). The `OpenMontage/` directory name and internal identifiers (`OpenMontageConfig`, `OPENMONTAGE_*` env vars, `~/.openmontage` cache, `provider="openmontage"`) are preserved so existing installations, caches, and artifacts keep working. See [`NOTICE`](NOTICE) for the full attribution and license notice.
 
 ---
 
@@ -788,8 +652,6 @@ Both targets install `requirements-dev.txt` on first run, so a fresh clone can r
 
 ---
 
-**OpenMontage** — Production-grade video with real quality enforcement, orchestrated by your AI assistant.
+**StudioKat** — Production-grade video with real quality enforcement, orchestrated by your AI assistant.
 
 If this project looks useful to you, a ⭐ would really mean a lot — it helps others discover it too.
-
-If you'd like to go further, [sponsor the project](https://github.com/sponsors/calesthio) — OpenMontage is built nights and weekends, and your support makes that sustainable.

@@ -29,7 +29,7 @@ Model, pricing, and adapter guidance verified and updated by andromia3: 2026-10-
 - Model: `lyria-realtime-exp`
 - Experimental, instrumental, persistent WebSocket session
 - Supports continuous steering of BPM, scale, density, brightness, and guidance
-- Not the Interactions API and not the model used by OpenMontage `google_music`
+- Not the Interactions API and not the model used by StudioKat `google_music`
 
 ## Interactions API Shape
 
@@ -50,7 +50,7 @@ text = interaction.output_text
 
 The convenience properties are preferred for ordinary responses. For interleaved responses, iterate `interaction.steps`; inspect `model_output` content blocks and keep `audio` and `text` blocks separate.
 
-The OpenMontage adapter currently:
+The StudioKat adapter currently:
 
 - sends a list containing one text block and optionally one image block;
 - appends `[Target Duration: N seconds]` to the text;
@@ -158,7 +158,7 @@ Do not classify a diction or lyric-adherence failure as a file-format problem. I
 
 ## Image-To-Music
 
-The underlying API accepts up to 10 base64-encoded images with MIME types. Prompt for the musical interpretation explicitly: mood, palette-to-timbre mapping, motion-to-rhythm mapping, and the desired structure. The current OpenMontage adapter accepts one `image_path` or one `image_url`.
+The underlying API accepts up to 10 base64-encoded images with MIME types. Prompt for the musical interpretation explicitly: mood, palette-to-timbre mapping, motion-to-rhythm mapping, and the desired structure. The current StudioKat adapter accepts one `image_path` or one `image_url`.
 
 ## Limitations And Safety
 

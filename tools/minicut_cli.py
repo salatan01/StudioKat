@@ -26,7 +26,7 @@ from typing import Any
 
 from tools.base_tool import ToolResult
 
-# MiniCut files a result as a library item; this is the item OpenMontage results go to.
+# MiniCut files a result as a library item; this is the item StudioKat results go to.
 LIBRARY_ITEM = "prop:openmontage"
 NEEDS_YES = 3  # the CLI's exit code for "priced, nothing sent"
 NOT_READY = 6  # the CLI's exit code for "job still running"

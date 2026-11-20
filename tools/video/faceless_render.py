@@ -311,7 +311,7 @@ class FacelessRender(BaseTool):
                 return found
         raise FacelessRenderError(
             "No Chrome/Chromium found. Set CHROME to a browser executable, or run "
-            "inside the OpenMontage Nix shell where CHROME is exported."
+            "inside the StudioKat Nix shell where CHROME is exported."
         )
 
     def _capture_env(self, inputs: dict[str, Any]) -> dict[str, str]:

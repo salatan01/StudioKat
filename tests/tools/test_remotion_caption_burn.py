@@ -216,7 +216,7 @@ def _run_execute(tmp_path, monkeypatch, inputs, *, remotion=True):
 def test_latin_heavy_correction_keeps_thai_mode(tmp_path, monkeypatch):
     props, _ = _run_execute(tmp_path, monkeypatch, {
         "segments": _even_thai_segment("แมวใช้ openai"),
-        "corrections": {"openai": "OpenMontage"},
+        "corrections": {"openai": "StudioKat"},
     })
     assert props["captionWordSeparator"] == ""
     assert props["wordsPerPage"] == 6
@@ -225,10 +225,10 @@ def test_latin_heavy_correction_keeps_thai_mode(tmp_path, monkeypatch):
 def test_latin_heavy_correction_keeps_thai_mode_in_ffmpeg(tmp_path, monkeypatch):
     _, srt_texts = _run_execute(tmp_path, monkeypatch, {
         "segments": _even_thai_segment("แมวใช้ openai"),
-        "corrections": {"openai": "OpenMontage"},
+        "corrections": {"openai": "StudioKat"},
     }, remotion=False)
     text = srt_texts[0].split("\n")[2]
-    assert text == "แมวใช้ OpenMontage"
+    assert text == "แมวใช้ StudioKat"
 
 
 def test_thai_correction_keeps_english_spacing(tmp_path, monkeypatch):

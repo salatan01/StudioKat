@@ -1,9 +1,9 @@
-# OpenMontage on NixOS
+# StudioKat on NixOS
 
 The repo ships a Nix flake that provides the full local toolchain: Python 3.11,
 `uv`, Node 22, FFmpeg, ImageMagick, and a Chromium build that HyperFrames and
 Remotion can actually launch. `nix develop` is the supported way to run
-OpenMontage on NixOS.
+StudioKat on NixOS.
 
 ## Why the bundled browser fails
 

@@ -1,4 +1,4 @@
-﻿# OpenMontage â€" Skill Index
+# StudioKat — Skill Index
 
 > For the full agent onboarding guide, see [`AGENT_GUIDE.md`](../AGENT_GUIDE.md) in the project root.
 
@@ -11,23 +11,23 @@ Layer 1: tools/tool_registry.py          "What tools exist and what they can do"
          tools/base_tool.py               Each tool declares: capabilities, tier, status,
                                           dependencies, cost, and agent_skills[]
 
-         â†" agent_skills[] points to â†"
+         →" agent_skills[] points to →"
 
-Layer 2: skills/                          "How OpenMontage uses these tools"
+Layer 2: skills/                          "How StudioKat uses these tools"
          Project-specific conventions:     Pipeline integration, artifact mappings,
          {core,creative,meta,pipelines}/   enhancement chain order, quality checklists
 
-         â†" references underlying tech in â†"
+         →" references underlying tech in →"
 
 Layer 3: .agents/skills/                  "How the technology itself works"
          Generic API knowledge from        Correct import paths, code patterns,
-         skills.sh (92 installed skills)   constraints, parameters â€" tech-agnostic
+         skills.sh (93 installed skills)   constraints, parameters — tech-agnostic
 ```
 
 **How the agent uses this:**
 1. The orchestrator queries Layer 1 (`tool_registry.support_envelope()`) to see what's available
 2. Each tool's `agent_skills[]` field names the Layer 3 skills it relies on
-3. Layer 2 skills (this directory) teach the agent OpenMontage-specific conventions
+3. Layer 2 skills (this directory) teach the agent StudioKat-specific conventions
 4. Layer 3 skills (`.agents/skills/`) provide generic API knowledge, loaded on-demand
 
 ## Capability Families & Tool Discovery
@@ -102,28 +102,28 @@ Key capability families to look for in the output:
 | Data Visualization | `creative/data-visualization.md` | Chart type selection, animation, label placement | `d3-viz`, `remotion-best-practices` |
 | Video Stitching | `creative/video-stitching.md` | Multi-clip assembly, AI clip chaining, spatial composition | `ffmpeg`, `video-toolkit` |
 | Video Gen Prompting | `creative/video-gen-prompting.md` | Universal video generation prompt vocabulary; **canonical 5-aspect spec** (Subject / Motion / Scene / Spatial / Camera); ~200 cinematography primitives | `ai-video-gen`, `ltx2`, `create-video` |
-| â†³ Seedance Prompting | `creative/prompting/seedance-prompting.md` | **Preferred premium default.** Seedance 2.0 8-component structure, multi-shot, lip-sync, reference-to-video | `seedance-2-0`, `ai-video-gen` |
-| â†³ Grok Prompting | `creative/prompting/grok-prompting.md` | Grok image/video prompting, edit flows, reference-image video | `grok-media` |
-| â†³ Sora Prompting | `creative/prompting/sora-prompting.md` | Sora 2 structured template, advanced fields | `ai-video-gen` |
-| â†³ VEO Prompting | `creative/prompting/veo-prompting.md` | VEO 3.1 14-component structure, art movements | `ai-video-gen` |
-| â†³ LTX Prompting | `creative/prompting/ltx-prompting.md` | LTX-2 6-element structure, audio prompting | `ltx2` |
-| â†³ HunyuanVideo Prompting | `creative/prompting/hunyuan-prompting.md` | HunyuanVideo formula, I2V best practices | â€" |
+| ↳ Seedance Prompting | `creative/prompting/seedance-prompting.md` | **Preferred premium default.** Seedance 2.0 8-component structure, multi-shot, lip-sync, reference-to-video | `seedance-2-0`, `ai-video-gen` |
+| ↳ Grok Prompting | `creative/prompting/grok-prompting.md` | Grok image/video prompting, edit flows, reference-image video | `grok-media` |
+| ↳ Sora Prompting | `creative/prompting/sora-prompting.md` | Sora 2 structured template, advanced fields | `ai-video-gen` |
+| ↳ VEO Prompting | `creative/prompting/veo-prompting.md` | VEO 3.1 14-component structure, art movements | `ai-video-gen` |
+| ↳ LTX Prompting | `creative/prompting/ltx-prompting.md` | LTX-2 6-element structure, audio prompting | `ltx2` |
+| ↳ HunyuanVideo Prompting | `creative/prompting/hunyuan-prompting.md` | HunyuanVideo formula, I2V best practices | — |
 | Commercial Product Video | `creative/commercial-product-video.md` | Physical-product ads: SKU references, shot roles, generation controls, continuity, and final-cut fidelity | — |
-| Storytelling | `creative/storytelling.md` | Narrative structure, hooks, pacing, Mayer's principles | â€" |
+| Storytelling | `creative/storytelling.md` | Narrative structure, hooks, pacing, Mayer's principles | — |
 | Sound Design | `creative/sound-design.md` | Audio ducking, LUFS targets, SFX timing, AI TTS mixing | `elevenlabs` |
-| Typography | `creative/typography.md` | Font selection, text sizing, safe zones, caption styling | â€" |
+| Typography | `creative/typography.md` | Font selection, text sizing, safe zones, caption styling | — |
 | ManimCE Usage | `creative/manim-usage.md` | Scene composition, animation timing, color usage | `manimce-best-practices` |
 | Image Gen Usage | `creative/image-gen-usage.md` | Prompt consistency, hero reference, batch strategy | `flux-best-practices`, `bfl-api` |
 | Image Provider Usage | `creative/image-provider-usage.md` | Provider selection (FLUX/Grok/OpenAI/Recraft/stock), cost-quality tradeoffs | `flux-best-practices`, `bfl-api`, `grok-media` |
 | 3D World Generation | `creative/3d-world-generation.md` | Semantic world planning, asset sourcing/generation, Blender assembly, and fidelity review | `3d-asset-generation`, `threejs-world-generation` |
 | B-Roll Planning | `creative/broll-planning.md` | Stock vs. generated decision, query construction, footage evaluation | — |
 | Stock Sourcing Usage | `creative/stock-sourcing-usage.md` | Pexels/Pixabay usage, parameters, licensing, integration | — |
-| Scene Detect Usage | `creative/scene-detect-usage.md` | Threshold tuning, algorithm selection, content presets | â€" |
+| Scene Detect Usage | `creative/scene-detect-usage.md` | Threshold tuning, algorithm selection, content presets | — |
 | Diagram Gen Usage | `creative/diagram-gen-usage.md` | Complexity limits, progressive building, themes | `beautiful-mermaid` |
 | Music Gen Usage | `creative/music-gen-usage.md` | BPM selection, prompt engineering, duration matching | `music`, `elevenlabs` |
-| Background Removal | `creative/bg-remove-usage.md` | Model selection, alpha matting, compositing workflows | â€" |
-| Upscaling | `creative/upscale-usage.md` | Scale factor, model selection, face-aware upscaling | â€" |
-| Face Restoration | `creative/face-restore-usage.md` | CodeFormer/GFPGAN selection, fidelity tuning, vs face_enhance | â€" |
+| Background Removal | `creative/bg-remove-usage.md` | Model selection, alpha matting, compositing workflows | — |
+| Upscaling | `creative/upscale-usage.md` | Scale factor, model selection, face-aware upscaling | — |
+| Face Restoration | `creative/face-restore-usage.md` | CodeFormer/GFPGAN selection, fidelity tuning, vs face_enhance | — |
 | Lip Sync | `creative/lip-sync-usage.md` | Wav2Lip model selection, dubbing workflows, input requirements | `faceswap` |
 | Talking Head Gen | `creative/talking-head-gen-usage.md` | SadTalker/MuseTalk, photo-to-video, expression tuning | `avatar-video` |
 | Video Understanding | `creative/video-understand-usage.md` | Visual QA, quality gating, scene classification | `video-understand` |
@@ -134,8 +134,8 @@ Pipeline type skills provide production guidance for specific video formats, ind
 
 | Skill | File | When to Use |
 |-------|------|-------------|
-| Short-Form | `creative/short-form.md` | TikTok, Reels, Shorts â€" vertical 9:16, under 60s |
-| Long-Form | `creative/long-form.md` | YouTube 10+ min â€" chapters, retention, end screens |
+| Short-Form | `creative/short-form.md` | TikTok, Reels, Shorts — vertical 9:16, under 60s |
+| Long-Form | `creative/long-form.md` | YouTube 10+ min — chapters, retention, end screens |
 | Screen Recording | `creative/screen-recording.md` | Code walkthroughs, tutorials, software demos |
 | Animation Pipeline | `creative/animation-pipeline.md` | Motion graphics, easing, transitions, composition |
 | 3D World Generation | `creative/3d-world-generation.md` | Continuous Three.js terrain worlds with semantic regions, explicit blockout/production tiers, licensed GLTF/PBR assets, diagnostics, and deterministic camera paths |
@@ -327,27 +327,27 @@ Load via `styles/playbook_loader.py`: `load_playbook("clean-professional")`. `li
 ## Installed Agent Skills (Layer 3)
 
 All agent skills live in `.agents/skills/` and are managed via `npx skills add`.
-`ls .agents/skills` is the authoritative list (92 skill directories as of 2026-10-25); the table below groups them by what they are for.
+`ls .agents/skills` is the authoritative list (94 skill directories as of 2026-11-20); the table below groups them by what they are for.
 Claude Code accesses them via symlinks in `.claude/skills/`.
 
 | Category | Installed Skills | Source |
 |----------|-----------------|--------|
 | **Video Composition** | `remotion-best-practices`, `remotion`, `hyperframes` (router), `hyperframes-core`, `hyperframes-creative`, `hyperframes-media`, `hyperframes-animation`, `hyperframes-cli`, `hyperframes-registry`, `media-use`, `motion-graphics`, `music-to-video`, `remotion-to-hyperframes`, `website-to-video` | `remotion-dev/skills`, `digitalsamba/claude-code-video-toolkit`, `heygen-com/hyperframes` (vendored v0.7.17, see `.agents/skills/hyperframes/PROVENANCE.md`) |
 | **Video Processing** | `ffmpeg`, `video-toolkit` | `digitalsamba/claude-code-video-toolkit` |
-| **TTS & Audio** | `text-to-speech`, `speech-to-text` (whisper, default STT), `azure-speech-to-text` (optional cloud STT), `music`, `sound-effects`, `elevenlabs`, `fish-audio-tts`, `agents`, `setup-api-key` | `elevenlabs/skills`, `digitalsamba/claude-code-video-toolkit`, local OpenMontage skill |
-| **Image Generation** | `flux-best-practices`, `bfl-api`, `grok-media` | `black-forest-labs/skills`, local OpenMontage skill |
+| **TTS & Audio** | `text-to-speech`, `speech-to-text` (whisper, default STT), `azure-speech-to-text` (optional cloud STT), `music`, `sound-effects`, `elevenlabs`, `fish-audio-tts`, `agents`, `setup-api-key` | `elevenlabs/skills`, `digitalsamba/claude-code-video-toolkit`, local StudioKat skill |
+| **Image Generation** | `flux-best-practices`, `bfl-api`, `grok-media` | `black-forest-labs/skills`, local StudioKat skill |
 | **Math Animation** | `manimce-best-practices`, `manimgl-best-practices`, `manim-composer` | `adithya-s-k/manim_skill` |
-| **3D Graphics** | `threejs-world-generation` (OpenMontage semantic-world workflow), `threejs-animation`, `threejs-fundamentals`, `threejs-geometry`, `threejs-interaction`, `threejs-lighting`, `threejs-loaders`, `threejs-materials`, `threejs-postprocessing`, `threejs-shaders`, `threejs-textures` | Local OpenMontage skill + `cloudai-x/threejs-skills` |
+| **3D Graphics** | `threejs-world-generation` (StudioKat semantic-world workflow), `threejs-animation`, `threejs-fundamentals`, `threejs-geometry`, `threejs-interaction`, `threejs-lighting`, `threejs-loaders`, `threejs-materials`, `threejs-postprocessing`, `threejs-shaders`, `threejs-textures` | Local StudioKat skill + `cloudai-x/threejs-skills` |
 | **Diagrams** | `beautiful-mermaid`, `d3-viz` | `intellectronica/agent-skills`, `davila7/claude-code-templates` |
 | **Animation** | `framer-motion`, `lottie-bodymovin` | `pproenca/dot-skills`, `dylantarre/animation-principles` |
 | **Design** | `tailwind-design-system`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` | `wshobson/agents`, `vercel-labs/agent-skills` |
 | **AI Video (HeyGen)** | `heygen`, `avatar-video`, `create-video`, `faceswap`, `ai-video-gen`, `video-download`, `video-edit`, `video-translate`, `video-understand`, `visual-style` | `heygen-com/skills` |
-| **AI Video/Image/TTS/Avatar (Kling Official)** | `kling-official` - official direct API auth, Classic/Turbo/Omni task protocols, multi-reference Omni syntax, internal Elements/Account Usage helpers, callback notes, TTS voice parameters, avatar/lip-sync face selection, error handling, and cost governance for `kling_official_video` / `kling_official_image` / `kling_tts` / `kling_avatar` / `kling_lip_sync` | Local OpenMontage skill |
-| **AI Video (Premium)** | `seedance-2-0` — preferred premium default (cinematic, trailer, multi-shot, lip-sync, synced audio); accessed via `seedance_video` (fal.ai) or `heygen_video` Avatar Shots; `seedance-2-5` — 4–30 s clips, 50 multimodal references, prompt contract (section order, `Hard cut` breakdown, continuity locks, asset method) | Local OpenMontage skill |
+| **AI Video/Image/TTS/Avatar (Kling Official)** | `kling-official` - official direct API auth, Classic/Turbo/Omni task protocols, multi-reference Omni syntax, internal Elements/Account Usage helpers, callback notes, TTS voice parameters, avatar/lip-sync face selection, error handling, and cost governance for `kling_official_video` / `kling_official_image` / `kling_tts` / `kling_avatar` / `kling_lip_sync` | Local StudioKat skill |
+| **AI Video (Premium)** | `seedance-2-0` — preferred premium default (cinematic, trailer, multi-shot, lip-sync, synced audio); accessed via `seedance_video` (fal.ai) or `heygen_video` Avatar Shots; `seedance-2-5` — 4–30 s clips, 50 multimodal references, prompt contract (section order, `Hard cut` breakdown, continuity locks, asset method) | Local StudioKat skill |
 | **Infrastructure** | `acestep`, `ltx2`, `playwright-recording` | `digitalsamba/claude-code-video-toolkit` |
 | **Animation (GSAP)** | `gsap` (router), `gsap-core`, `gsap-timeline`, `gsap-plugins`, `gsap-utils`, `gsap-react`, `gsap-performance`, `gsap-scrolltrigger`, `gsap-frameworks` | See each skill's `SKILL.md` |
-| **Character Animation** | `character-rigging`, `svg-character-animation`, `pose-library-design`, `canvas-procedural-animation`, `character-animation-qa` | Local OpenMontage skill |
-| **3D Assets** | `3d-asset-generation`, `atlas-cloud` | Local OpenMontage skill |
-| **Providers (video / image / TTS / music)** | `gemini-omni`, `minimax-h3`, `comfyui`, `dashscope`, `doubao-tts`, `azure-text-to-speech`, `lyria` | Local OpenMontage skill; see each skill's `SKILL.md` |
-| **Screen Capture** | `synthetic-screen-recording` (Remotion TerminalScene demos) | Local OpenMontage skill |
-| **Maintenance** | `provider-model-refresh`, `provider-refresh-oct23` (provider/model refresh procedures) | Local OpenMontage skill |
+| **Character Animation** | `character-rigging`, `svg-character-animation`, `pose-library-design`, `canvas-procedural-animation`, `character-animation-qa` | Local StudioKat skill |
+| **3D Assets** | `3d-asset-generation`, `atlas-cloud` | Local StudioKat skill |
+| **Providers (video / image / TTS / music)** | `gemini-omni`, `minimax-h3`, `comfyui`, `dashscope`, `doubao-tts`, `azure-text-to-speech`, `lyria` | Local StudioKat skill; see each skill's `SKILL.md` |
+| **Screen Capture** | `synthetic-screen-recording` (Remotion TerminalScene demos) | Local StudioKat skill |
+| **Maintenance** | `provider-model-refresh`, `provider-refresh-oct23` (provider/model refresh procedures) | Local StudioKat skill |

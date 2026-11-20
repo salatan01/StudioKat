@@ -1,9 +1,9 @@
 ---
-description: Produce or work on a video using the OpenMontage skills and pipeline system, for whatever task is described.
+description: Produce or work on a video using the StudioKat skills and pipeline system, for whatever task is described.
 argument-hint: <what you want made or worked on>
 ---
 
-Treat the following as a full OpenMontage production/work request and handle it using this repo's skills — do not improvise outside of them:
+Treat the following as a full StudioKat production/work request and handle it using this repo's skills — do not improvise outside of them:
 
 **Request:** $ARGUMENTS
 

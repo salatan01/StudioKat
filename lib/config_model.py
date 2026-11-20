@@ -1,4 +1,4 @@
-"""Runtime configuration model for OpenMontage.
+"""Runtime configuration model for StudioKat.
 
 Loads config.yaml, merges with env overrides, and provides typed access.
 """
