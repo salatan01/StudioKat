@@ -120,16 +120,18 @@
               echo "    FFmpeg:   $(ffmpeg -version 2>/dev/null | head -n 1)"
               ${linuxBanner}
 
-              # whisper-cpp binary is named whisper-cli in nixpkgs; create symlink for hyperframes
-              if [ -x "${pkgs.whisper-cpp}/bin/whisper-cli" ] && [ ! -x .venv/bin/whisper-cpp ]; then
-                mkdir -p .venv/bin
-                ln -sf "${pkgs.whisper-cpp}/bin/whisper-cli" .venv/bin/whisper-cpp
-              fi
-
               _om_deps_ready() {
                 [ -x .venv/bin/python ] &&
                   .venv/bin/python -c 'import requests, yaml, numpy' >/dev/null 2>&1 &&
                   [ -x remotion-composer/node_modules/.bin/remotion ]
+              }
+
+              # Only link whisper-cpp after .venv/bin exists so uv venv never
+              # sees a pre-created .venv directory on a fresh clone.
+              _om_link_whisper() {
+                if [ -d .venv/bin ] && [ -x "${pkgs.whisper-cpp}/bin/whisper-cli" ] && [ ! -L .venv/bin/whisper-cpp ]; then
+                  ln -sf "${pkgs.whisper-cpp}/bin/whisper-cli" .venv/bin/whisper-cpp
+                fi
               }
 
               # Fresh clone: an interactive `nix develop` bootstraps once, then
@@ -146,12 +148,14 @@
               if [ -f Makefile ] && [ -f flake.nix ]; then
                 if [ -f .venv/bin/activate ]; then
                   . .venv/bin/activate
+                  _om_link_whisper
                 else
                   unset VIRTUAL_ENV CONDA_PREFIX
                 fi
               fi
 
               if _om_deps_ready; then
+                _om_link_whisper
                 echo "    deps:     ready (venv active)"
               elif [ -n "''${OPENMONTAGE_SKIP_AUTO_SETUP:-}" ]; then
                 echo "    deps:     missing — run 'make setup'"
@@ -159,6 +163,7 @@
                 echo "    deps:     first run — installing (about 1–2 minutes)…"
                 if make setup && [ -f .venv/bin/activate ]; then
                   . .venv/bin/activate
+                  _om_link_whisper
                   echo "    deps:     ready (venv active)"
                 else
                   echo "    deps:     setup failed — fix the error above, then run 'make setup'"
