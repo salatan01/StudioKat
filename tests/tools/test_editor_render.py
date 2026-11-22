@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
 from tools.tool_registry import registry
-from tools.video.editor_render import EditorRender, EditorRenderError
+from tools.video.editor_render import EditorRender, EditorRenderError, _pid_alive
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -103,3 +104,30 @@ def test_preview_url_times_out():
             EditorRender._preview_url(proc, timeout_seconds=1)
     finally:
         proc.kill()
+
+
+def test_job_cancel_kills_process_group():
+    tool = EditorRender()
+    started = tool._start_job({"project_id": "demo-project"}, "render", None, ["sleep", "300"])
+    pid = started.data["pid"]
+    assert _pid_alive(pid)
+    tool._op_job_cancel({"project_id": "demo-project", "job_id": started.data["job_id"]})
+    for _ in range(20):
+        if not _pid_alive(pid):
+            break
+        time.sleep(0.1)
+    assert not _pid_alive(pid)
+
+
+def test_job_cancel_on_finished_job_is_noop():
+    tool = EditorRender()
+    started = tool._start_job({"project_id": "demo-project"}, "render", None, ["true"])
+    job_id = started.data["job_id"]
+    for _ in range(50):
+        if tool.execute({"operation": "job_status", "project_id": "demo-project",
+                         "job_id": job_id}).data["status"] != "running":
+            break
+        time.sleep(0.1)
+    result = tool._op_job_cancel({"project_id": "demo-project", "job_id": job_id})
+    assert result.success
+    assert result.data["status"] != "running"

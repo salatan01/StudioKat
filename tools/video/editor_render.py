@@ -79,7 +79,14 @@ def _pid_alive(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    return True
+    # A zombie still answers `kill(pid, 0)` but is not a running process.
+    # Treat it as dead so a finished job is never reported as still running.
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+        state = stat.rsplit(")", 1)[1].split(None, 1)[0]
+    except (OSError, IndexError):
+        return True
+    return state != "Z"
 
 
 class EditorRenderError(RuntimeError):
@@ -440,6 +447,23 @@ class EditorRender(BaseTool):
         return ToolResult(success=True, data={**payload, "job_path": str(job_path)},
                           artifacts=[str(job_path)])
 
+    @staticmethod
+    def _reap(pid: int) -> None:
+        """Collect a direct child so a cancelled job leaves no zombie behind.
+
+        Best-effort: when cancel runs in a different process than the one that
+        started the job, `waitpid` raises `ChildProcessError` (not our child)
+        and reaping falls to the parent's own cleanup.
+        """
+        for _ in range(20):
+            try:
+                reaped, _status = os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                return
+            if reaped:
+                return
+            time.sleep(0.05)
+
     def _terminate(self, pid: int) -> None:
         try:
             os.killpg(os.getpgid(pid), signal.SIGTERM)
@@ -447,9 +471,11 @@ class EditorRender(BaseTool):
             try:
                 os.kill(pid, signal.SIGTERM)
             except (ProcessLookupError, PermissionError):
+                self._reap(pid)
                 return
         time.sleep(0.5)
         if not _pid_alive(pid):
+            self._reap(pid)
             return
         try:
             os.killpg(os.getpgid(pid), signal.SIGKILL)
@@ -458,6 +484,7 @@ class EditorRender(BaseTool):
                 os.kill(pid, signal.SIGKILL)
             except (ProcessLookupError, PermissionError):
                 pass
+        self._reap(pid)
 
     # ------------------------------------------------------------------ #
     # Operations
