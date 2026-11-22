@@ -42,6 +42,22 @@ async function openPage(port) {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-chrome-'));
   const chrome = spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
     '--hide-scrollbars', '--window-size=1080,1920', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', ...(process.env.SOFTWARE_GL ? ['--use-angle=swiftshader'] : []), ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), '--disable-background-timer-throttling', '--disable-renderer-backgrounding', 'about:blank'], { stdio: 'ignore' });
+  // Guarantee Chromium dies with Node, even if Node is killed mid-render, so a
+  // terminated render can never leave an orphaned Chromium behind.
+  const killChrome = () => { try { chrome.kill('SIGKILL'); } catch {} };
+  const cleanupAndExit = (code) => { killChrome(); try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} process.exit(code); };
+  process.on('exit', killChrome);
+  process.on('SIGTERM', () => cleanupAndExit(143));
+  process.on('SIGINT', () => cleanupAndExit(130));
+  process.on('SIGHUP', () => cleanupAndExit(129));
+  process.on('uncaughtException', (e) => { console.error(e); cleanupAndExit(1); });
+  process.on('unhandledRejection', (e) => { console.error(e); cleanupAndExit(1); });
+  // Watchdog: if Node is killed hard (SIGKILL/OOM) and cannot run the handlers
+  // above, this detached process notices Node's death and kills Chromium itself.
+  try {
+    const wd = spawn('bash', ['-c', `PID=${process.pid}; CPID=${chrome.pid}; PROF=${JSON.stringify(prof)}; while [ -d /proc/$PID ]; do ST=$(awk '{print $3}' /proc/$PID/stat 2>/dev/null); [ "$ST" = "Z" ] && break; sleep 1; done; kill -KILL $CPID 2>/dev/null; rm -rf $PROF`], { detached: true, stdio: 'ignore' });
+    wd.unref();
+  } catch {}
   let dbg;
   for (let i = 0; i < 200 && !dbg; i++) { try { dbg = fs.readFileSync(path.join(prof, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim(); } catch { await sleep(100); } }
   if (!dbg) throw new Error('Chrome did not start');
@@ -57,6 +73,12 @@ async function openPage(port) {
     else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push('ERROR ' + m.params.args.map((a) => a.value ?? a.description).join(' '));
   };
   const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pend.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
+  // If Chromium dies mid-render the socket closes and no reply ever arrives:
+  // reject every in-flight request so a dead browser fails the render loudly
+  // instead of hanging forever on an unsettled promise.
+  const failPending = (err) => { for (const p of pend.values()) p.rej(err); pend.clear(); };
+  ws.onclose = () => failPending(new Error('WebSocket closed before the render finished'));
+  ws.onerror = () => failPending(new Error('WebSocket error before the render finished'));
   const ev = async (expr) => { const x = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (x.exceptionDetails) throw new Error(x.exceptionDetails.exception?.description || x.exceptionDetails.text); return x.result.value; };
   await send('Runtime.enable');
   for (let i = 0; ; i++) {
@@ -66,7 +88,8 @@ async function openPage(port) {
     if (i > 1200) throw new Error('boot timeout\n' + logs.join('\n'));
     await sleep(100);
   }
-  const close = () => { try { ws.close(); } catch {} chrome.kill('SIGKILL'); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; try { ws.close(); } catch {} killChrome(); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true }); } catch {} }, 300); };
   return { ev, logs, close };
 }
 const jpg = (d) => Buffer.from(d.slice(d.indexOf(',') + 1), 'base64');

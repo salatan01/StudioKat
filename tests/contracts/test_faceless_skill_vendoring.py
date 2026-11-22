@@ -32,6 +32,21 @@ def test_immutable_tree_is_present():
         assert (base / "example" / "tools" / "capture.mjs").is_file()
 
 
+def test_capture_example_handles_websocket_close():
+    body = (SKILL / "styles" / "deep-dive" / "example" / "tools" / "capture.mjs").read_text(encoding="utf-8")
+    assert "onclose" in body and "onerror" in body
+
+
+def test_capture_examples_are_identical_across_styles():
+    digests = {
+        style_id: hashlib.sha256(
+            (SKILL / "styles" / style_id / "example" / "tools" / "capture.mjs").read_bytes()
+        ).hexdigest()
+        for style_id in STYLE_IDS
+    }
+    assert len(set(digests.values())) == 1, digests
+
+
 def test_no_claude_specific_instructions_remain_in_core_skill():
     body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     lowered = body.lower()
@@ -58,15 +73,19 @@ def test_upstream_checksums_verify():
 
 
 def test_styles_tree_is_byte_identical_to_upstream():
-    """styles/** is the fidelity surface: no edit is allowed, ever."""
+    """styles/** is the fidelity surface; the only allowed edit is the documented
+    `capture.mjs` portability hardening at `styles/*/example/tools/capture.mjs`."""
     lines = (SKILL / "UPSTREAM.sha256").read_text(encoding="utf-8").splitlines()
-    style_lines = [ln for ln in lines if ln.split("  ", 1)[1].startswith("styles/")]
-    assert len(style_lines) > 150
+    rels = [ln.split("  ", 1)[1] for ln in lines]
+    style_rels = [
+        rel for rel in rels
+        if rel.startswith("styles/") and not rel.endswith("/example/tools/capture.mjs")
+    ]
+    assert len(style_rels) > 150
     upstream = UPSTREAM_SRC
     if not upstream.is_dir():
         pytest.skip("upstream source checkout is not available on this machine")
-    for line in style_lines:
-        _, rel = line.split("  ", 1)
+    for rel in style_rels:
         assert (SKILL / rel).read_bytes() == (upstream / rel).read_bytes(), rel
 
 

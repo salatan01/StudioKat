@@ -4,9 +4,12 @@
 - Vendored: 2026-11-19
 - Permission: the user confirmed permission to vendor this skill into OpenMontage on 2026-11-19.
 - This is a maintained fork. The tree that must stay byte-identical is `styles/**` plus
-  `scripts/**` except `scripts/py`.
+  `scripts/**` except `scripts/py` and the six `styles/*/example/tools/capture.mjs` files
+  (see below).
 - Compatibility edits are limited to `SKILL.md`, `README.md`, `references/**`, `scripts/py`,
-  and this file. The generated diff is `UPSTREAM.patch`.
+  the six `styles/*/example/tools/capture.mjs`, and this file. `UPSTREAM.patch` is the
+  vendoring-time diff (`SKILL.md`, `README.md`, `scripts/py`); the later `capture.mjs`
+  hardening is pinned by `UPSTREAM.sha256` instead.
 - Checksums: `UPSTREAM.sha256` lists every file under `scripts/` and `styles/`, including
   `scripts/py`, so an accidental edit anywhere in the engine still fails the contract test.
 
@@ -25,6 +28,16 @@ Git Bash on Windows `env` resolves `bash` off `PATH`, so that path is unaffected
 
 No engine logic, `STYLE.md`, `style-sheet.png`, or `example/` file was modified. `diff -r`
 against the source shows this as the only difference in the tree.
+
+## The sanctioned `capture.mjs` hardening (Chromium death must not hang)
+
+The six `styles/*/example/tools/capture.mjs` are the only files under `styles/**` this port
+edits, and they ship byte-identical to one another. Before the edit, an unhandled WebSocket
+close wedged `capture.mjs` forever: `send()` parks every request in a pending map that only
+settles on a reply, so when headless Chromium died mid-render the socket closed and every
+in-flight `await` hung with no timeout. The edit adds `ws.onclose`/`ws.onerror` handlers that
+reject every pending request, plus process-level cleanup and a detached watchdog so a hard
+kill of Node cannot orphan Chromium. No capture logic changed.
 
 ## Regenerate the checksums and patch from the skill root
 
