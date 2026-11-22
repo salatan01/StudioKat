@@ -550,7 +550,7 @@ class EditorRender(BaseTool):
         video = inputs.get("video_path")
         if not video:
             raise EditorRenderError("transcribe requires video_path")
-        video_path = Path(str(video)).expanduser()
+        video_path = Path(str(video)).expanduser().resolve()
         if not video_path.is_file():
             raise EditorRenderError(f"video not found: {video_path}")
         workspace = self._workspace(inputs)

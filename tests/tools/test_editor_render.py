@@ -131,3 +131,21 @@ def test_job_cancel_on_finished_job_is_noop():
     result = tool._op_job_cancel({"project_id": "demo-project", "job_id": job_id})
     assert result.success
     assert result.data["status"] != "running"
+
+
+def test_transcribe_passes_absolute_video_path(monkeypatch, tmp_path):
+    """The engine runs with cwd=SKILL_DIR, so a repo-relative video_path must be
+    resolved to absolute before it is handed to the child process."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "clip.mp4").write_bytes(b"x")
+    tool = EditorRender()
+    seen = {}
+
+    def fake_run(self, cmd, *, cwd, timeout):
+        seen["cmd"] = cmd
+        raise EditorRenderError("reached-run")
+
+    monkeypatch.setattr(EditorRender, "_run", fake_run)
+    with pytest.raises(EditorRenderError):
+        tool._op_transcribe({"project_id": "demo-project", "video_path": "clip.mp4"})
+    assert Path(seen["cmd"][2]).is_absolute()
