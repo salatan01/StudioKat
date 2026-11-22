@@ -77,7 +77,7 @@ make demo-list        # lists the zero-key demos you can render offline
 make demo             # renders them — proves the Remotion/FFmpeg path works end to end
 ```
 
-`make preflight` is the important one: it loads all **165 registered tools** and reports which providers are configured. If it prints JSON with a `total` count, the engine is up.
+`make preflight` is the important one: it loads all **166 registered tools** and reports which providers are configured. If it prints JSON with a `total` count, the engine is up.
 
 To confirm the faceless engine (local voice + captions, no API keys):
 
@@ -275,6 +275,7 @@ Each pipeline is a complete production workflow, from idea to finished video.
 | **Clip Factory** | Batch of ranked short-form clips from one long source | Repurposing long content for social media |
 | **Documentary Montage** | Thematic montage cut from a CLIP-indexed corpus of free stock footage and open archives (Pexels, Archive.org, NASA, Wikimedia, Unsplash) | Video essays, mood pieces, retrieval-first B-roll edits, real-footage videos without paid generation APIs |
 | **Faceless Short** | Vertical short-form with kinetic typography, TTS narration, BGM, stock footage — no face, no camera | TikTok/Reels/Shorts, educational shorts, fact videos, storytelling |
+| **Editor** | Raw talking-head footage edited with style-locked motion graphics (7 canvas styles, English/Bangla, 16:9/9:16/3:4) | Editing raw footage with code-drawn styles, WebResearch-free talking-head edits |
 | **Hybrid** | Source footage + AI-generated support visuals | Enhancing existing footage with graphics |
 | **Localization & Dub** | Subtitle, dub, and translate existing video | Multi-language distribution |
 | **Podcast Repurpose** | Podcast highlights to video | Podcast marketing, audiogram videos |
@@ -282,7 +283,7 @@ Each pipeline is a complete production workflow, from idea to finished video.
 | **Talking Head** | Footage-led speaker videos | Presentations, vlogs, interviews |
 | **Framework Smoke** | Minimal end-to-end smoke test for pipeline developers | CI verification, new pipeline development |
 
-**14 pipelines total.** Every pipeline follows the same structured flow:
+**15 pipelines total.** Every pipeline follows the same structured flow:
 
 ```
 research -> proposal -> script -> scene_plan -> assets -> edit -> compose
@@ -351,9 +352,9 @@ Most "free AI video" stacks quietly mean "animate still images." StudioKat can d
 Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. Animate rigged cartoon characters with GSAP. **If a production team can make it, StudioKat can orchestrate it.**
 
 - **14 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, documentary montages, character animation, faceless shorts, and more
-- **165 registered tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
-- **97 stage-director skills** — per-pipeline stage instructions with quality rubrics and self-evaluation criteria
-- **93 agent skills** — deep technology knowledge packs (Layer 3) teaching the agent how to use every provider like an expert
+- **166 registered tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **103 stage-director skills** — per-pipeline stage instructions with quality rubrics and self-evaluation criteria
+- **95 agent skills** — deep technology knowledge packs (Layer 3) teaching the agent how to use every provider like an expert
 - **5 YAML style playbooks + 6 faceless styles** — visual language, typography, motion, audio, and asset generation constraints
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Real-footage documentary creation without paid video models** — build actual edited videos from free/open motion footage and archival sources, not just Ken Burns over images
@@ -581,7 +582,7 @@ Runtime is chosen at proposal (`render_runtime`) and locked through `edit_decisi
 
 ## Style System
 
-Styles are split into two independent catalogs: **playbooks** for the general pipelines, and **faceless styles** for the `faceless-short` pipeline. The agent picks one, locks it, and applies it consistently across every generated asset.
+Styles are split into three independent catalogs: **playbooks** for the general pipelines, **faceless styles** for the `faceless-short` pipeline, and **editor canvas styles** for the `editor` pipeline. The agent picks one, locks it, and applies it consistently across every generated asset.
 
 ### Style Playbooks (6)
 

@@ -95,11 +95,11 @@ class EditorRenderError(RuntimeError):
 
 class EditorRender(BaseTool):
     name = "editor_render"
-    version = "0.1.0"
+    version = "1.0.0"
     tier = ToolTier.CORE
     capability = "video_post"
     provider = "ai-video-editor"
-    stability = ToolStability.BETA
+    stability = ToolStability.PRODUCTION
     execution_mode = ExecutionMode.SYNC
     determinism = Determinism.DETERMINISTIC
     runtime = ToolRuntime.LOCAL

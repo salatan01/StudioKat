@@ -87,7 +87,7 @@ When the user asks to make, create, produce, or generate any video content — a
    - **Ask the user:** If no style is specified, present 3-4 options matching the brief's mood (use the Mood-to-Style table in `visual-styles.md`) and get explicit approval.
 
    **Record the chosen style in the `brief` artifact** (stage `idea`) under
-   `visual_style: { system: "heygen|visual-style-md|playbook|custom|faceless", name: "...",
+   `visual_style: { system: "heygen|visual-style-md|playbook|custom|faceless|editor", name: "...",
    source: "...", style_id?: "...", engine?: "..." }`. For `faceless`, `style_id` and `engine`
    are required and the `style_lock` artifact is mandatory.
 
@@ -292,6 +292,24 @@ When the request names or describes a faceless style:
 4. If the request is generic ("3D", "cartoon", "what happens if"), ask one question with the
    candidate styles. Do not guess.
 
+### Editor Pipeline Routing (Binding)
+
+When the user wants an edited talking-head video with motion graphics in one of the seven
+`ai-video-editor` styles (Warm Canvas, Creator Motion Graphics, Clean Tech, Software
+Walkthrough, Data Story, Chalk Talk, Pop Info):
+
+1. Resolve the style with `styles/editor/loader.py` (canonical id/name/alias; ambiguity asks).
+2. The `editor` pipeline drives the vendored engine through the `editor_render` tool.
+3. The runtime is fixed: `edit_decisions.render_runtime = "editor"` and compose uses
+   `editor_render`. Never call `video_compose` for this pipeline.
+4. Present the styles with one-line descriptions — never silently pick. "Warm Canvas" is
+   the only talking-head style (A-roll); the other six replace the footage with
+   full-screen graphics beats.
+5. Environment: run inside the Nix shell (it provides Chromium and exports `CHROME`), then
+   `make setup` installs the Python deps (`playwright`, `faster-whisper`, `numpy`, `pillow`).
+   The engine honours `CHROME`, so it never downloads its own browser. Verify with
+   `editor_render` operation `check`.
+
 ## Available Pipelines
 
 | Pipeline | Best For | Stability |
@@ -305,6 +323,7 @@ When the request names or describes a faceless style:
 | `documentary-montage` | Retrieval-first montage of real footage from free stock and open archives | beta |
 | `animation` | Motion-graphics and animation-first videos | production |
 | `faceless-short` | One of six executable faceless-shorts styles (9:16, narrated, captioned) | beta |
+| `editor` | Raw talking-head footage, style-locked editing with the 7 ai-video-editor canvas styles (16:9/9:16/3:4) | production |
 | `character-animation` | Local rigged cartoon characters and reusable character acting | beta |
 | `hybrid` | Source footage plus support visuals | production |
 | `avatar-spokesperson` | Presenter-led avatar or lip-sync videos | production |
