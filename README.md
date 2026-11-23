@@ -355,7 +355,7 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 - **166 registered tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **103 stage-director skills** — per-pipeline stage instructions with quality rubrics and self-evaluation criteria
 - **95 agent skills** — deep technology knowledge packs (Layer 3) teaching the agent how to use every provider like an expert
-- **5 YAML style playbooks + 6 faceless styles** — visual language, typography, motion, audio, and asset generation constraints
+- **5 YAML style playbooks + 6 faceless styles + 7 editor canvas styles** — visual language, typography, motion, audio, and asset generation constraints
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Real-footage documentary creation without paid video models** — build actual edited videos from free/open motion footage and archival sources, not just Ken Burns over images
 - **Live web research built in** — before writing a single word of script, the agent runs 15–25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
@@ -620,6 +620,35 @@ Resolve a style from a plain-language request:
 ```
 
 The resolver matches ids and aliases (`zack d films` → `deep-dive`, `true crime` → `night-file`, `cut paper` → `paper-atlas`) and reports ambiguity rather than guessing.
+
+### Editor Canvas Styles (7)
+
+Defined in `styles/editor/*.json`, each backed by the vendored **ai-video-editor**
+engine's `style.md` contract and runnable `base.js` in `.agents/skills/ai-video-editor/`.
+They default to **16:9 at 1920×1080, 30 fps**; the `editor` pipeline accepts the
+user's chosen ratio (16:9, 9:16, 3:4). **Warm Canvas** is the only talking-head
+(A-roll) style — it keeps the speaker on screen between beats. The other six replace
+the footage with full-screen, code-drawn graphics.
+
+| Style | Name | Family | A-roll | What it makes |
+|-------|------|--------|--------|---------------|
+| `warm-canvas` | Warm Canvas | Talking Head | yes | Footage passthrough with a warm editorial canvas and PiP cards — the only style that keeps the speaker on screen |
+| `creator-motion-graphics` | Creator Motion Graphics | Kinetic Type | no | Punchy creator-style kinetic typography over the cut |
+| `clean-tech` | Clean Tech | Kinetic Type | no | Crisp, technical kinetic type for product and engineering explainers |
+| `software-walkthrough` | Software Walkthrough | Screen and UI | no | Mock app/UI screens and walkthrough callouts |
+| `data-story` | Data Story | Data | no | Charts, stat cards, and data-driven beats |
+| `chalk-talk` | Chalk Talk | Hand-Drawn | no | Hand-drawn chalkboard doodles and annotated notes |
+| `pop-info` | Pop Info | Illustrated | no | Illustrated, character-driven explainer beats |
+
+Resolve a style from a plain-language request:
+
+```bash
+.venv/bin/python -m styles.editor.loader list
+.venv/bin/python -m styles.editor.loader resolve "warm canvas"
+```
+
+The resolver matches ids, names, and aliases and reports ambiguity rather than guessing
+(the pipeline name `editor` is not a style alias).
 
 ### Also: Ink Theater
 
