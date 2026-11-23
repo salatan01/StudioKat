@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__SUBJECT__</title>
+<style>
+  html, body { margin: 0; background: #15161a; overflow: hidden; }
+  canvas { display: block; }
+
+  /* Faces come from the pinned OFL manifest
+     (.agents/skills/lemo/library/assets/fonts/manifest.json). A clip must define
+     every @font-face it draws with, loading each face from
+     /assets/fonts/<path> — the render server root is library/. No system-font
+     fallback. Add one @font-face per face the style uses; do not use a separate
+     CSS file. */
+  @font-face {
+    font-family: 'Clip Sans';
+    src: url('/assets/fonts/archivo/Archivo[wdth,wght].ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="c" width="__WIDTH__" height="__HEIGHT__"></canvas>
+  <script type="module" src="clip.js"></script>
+</body>
+</html>

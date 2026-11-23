@@ -1,0 +1,15 @@
+{
+  "clip_id": "__CLIP_ID__",
+  "style_id": "__STYLE_ID__",
+  "subject": "__SUBJECT__",
+  "one_idea": "__ONE_IDEA__",
+  "aspect": "__ASPECT__",
+  "width": "__WIDTH__",
+  "height": "__HEIGHT__",
+  "fps": "__FPS__",
+  "duration_seconds": "__DURATION__",
+  "sound": "__SOUND__",
+  "text_mode": "__TEXT_MODE__",
+  "inputs": {},
+  "facts": []
+}
