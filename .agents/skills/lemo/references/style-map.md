@@ -14,7 +14,7 @@ Verified against the tree at the time of writing.
 - **Entry:** `demo/index.html` → `demo/main.js` (module).
 - **Modules:** `demo/film.js` (whole-film timeline), `demo/engine/poster.js` (poster composition),
   `demo/engine/silk.js` (ink layers, squeegee, registration), `demo/engine/scenes.js`,
-  `demo/lines.json`, `demo/events.json`.
+  `demo/voice/lines.json`, `demo/events.json`.
 - **Native moves:** an ink layer per beat, a squeegee pull, a registration slip.
 - **Known limits:** the demo is a full film with the film's own venue/tour text; use only the print
   grammar. Flat ink only — no photographic realism or gradients.

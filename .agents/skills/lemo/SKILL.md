@@ -24,8 +24,9 @@ A **clip**, not a film. `lemo_render` caps a clip at 20 s. There are exactly two
 | Cutaway | **3–6 s** | one look plus one beat: a title, a transition, atmosphere, a single gesture |
 | Micro-explanation | **8–20 s** | a rule, process, chart or mechanism actually explained |
 
-Default length is **6 s**. A request for a 45–150 s Lemo-style film is not this skill — route it to a
-film pipeline. Never stretch a clip into a film by repeating beats.
+Default length is **6 s** unless the style manifest sets another default (`assembly-line-diagram` and
+`flat-space-explainer` default to 8 s). A request for a 45–150 s Lemo-style film is not this skill —
+route it to a film pipeline. Never stretch a clip into a film by repeating beats.
 
 ## The 15 styles (curated menu)
 
@@ -52,9 +53,12 @@ alphabetical order (`styles.lemo.loader.STYLE_IDS`) is for lookup only.
 
 Resolve a plain-language request before choosing:
 `.venv/bin/python -m styles.lemo.loader resolve "<request>"`. A canonical id or name wins; one alias
-wins; a generic phrase (`retro`, `diagram`, `data`, `cartoon`, `poster`, `tech`… or two names) raises
-**ambiguous** with the candidate list — then ask the user exactly one question and pick from the
-candidates. Never guess.
+wins. The loader treats only `retro` and `diagram` as deliberately ambiguous families — those return
+**ambiguous** with a candidate list. Every other vague word (`data`, `cartoon`, `poster`, `tech`…)
+fails as **unknown**, and a query that names two styles resolves to the first canonical match rather
+than raising. So do not rely on the loader to raise: ask the user exactly one question whenever the
+request is vague, names a style family, or names more than one style — then pick from the candidates.
+Never guess.
 
 ### When not to use a style
 

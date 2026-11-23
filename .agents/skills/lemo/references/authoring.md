@@ -89,7 +89,8 @@ Rules:
 - **Micro-explanation — 8–20 s.** A rule, process, chart or mechanism actually explained: a clear
   setup, one idea that develops, and a resolved end. Keep the pace honest — do not pad.
 
-Default is 6 s. `duration_seconds` must sit inside the style's `duration_seconds` window
+Default is 6 s unless the style manifest sets another default (e.g. `assembly-line-diagram` and
+`flat-space-explainer` default to 8 s). `duration_seconds` must sit inside the style's window
 (`styles/lemo/<id>.json`). A Lemo output is a short clip, never an entire film.
 
 ## Text bounds and the reading-time check
