@@ -1,0 +1,7 @@
+# Font binaries are large third-party files fetched by
+# `.agents/skills/lemo/scripts/setup.py --fonts`; manifest.json and licenses/
+# are committed instead.
+*.ttf
+*.otf
+*.woff2
+*.part
