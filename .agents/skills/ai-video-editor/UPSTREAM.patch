@@ -1,0 +1,124 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -1,6 +1,7 @@
+ ---
+ name: ai-video-editor
+ description: Edit a talking-head video end to end for free. Asks a few questions, cuts silent parts and mistakes (retakes, false starts) using local Whisper, adds code-drawn motion graphics in one of 7 Nafay 3D styles, and renders the final MP4. English and Bangla. Use when the user gives a video file and wants it edited, cut, or given motion graphics.
++compatibility: opencode
+ ---
+ 
+ # AI Video Editor
+@@ -17,6 +18,12 @@
+ (`python` on Windows, usually `python3` on macOS/Linux). Quote paths: video paths often contain spaces.
+ Every script prints JSON or a short report; read it before the next step.
+ 
++**Inside StudioKat** this skill is vendored at `.agents/skills/ai-video-editor/`, and OpenCode provides
++`SKILL_DIR`. Drive all six engine commands through the `editor_render` tool rather than running the scripts
++by hand: it owns the workspace at `projects/<project-id>/editor/`, sets `CHROME` to the Nix-provided Chromium,
++and returns a result envelope for the pipeline gates. The stage directors live in `skills/pipelines/editor/`.
++A Nix-provided or system Chrome is used when `CHROME` is set, so no browser is downloaded.
++
+ ## 0. Setup (first time only)
+ 
+ ```
+--- a/scripts/common.py
++++ b/scripts/common.py
+@@ -32,6 +32,20 @@
+     return path
+ 
+ 
++def chrome_executable():
++    """An explicit Chrome/Chromium binary, or None to use Playwright's own.
++
++    Honours ``CHROME`` plus the other browser variables StudioKat exports
++    (``HYPERFRAMES_BROWSER_PATH``, ``REMOTION_BROWSER_EXECUTABLE``) so a
++    system/Nix-provided browser is used instead of downloading Playwright's.
++    """
++    for name in ("CHROME", "HYPERFRAMES_BROWSER_PATH", "REMOTION_BROWSER_EXECUTABLE"):
++        value = (os.environ.get(name) or "").strip()
++        if value and os.path.isfile(value):
++            return value
++    return None
++
++
+ def run(cmd, quiet=True, **kw):
+     """Run a command, raising with its stderr on failure."""
+     p = subprocess.run(cmd, stdout=subprocess.PIPE if quiet else None, stderr=subprocess.PIPE, **kw)
+@@ -144,6 +158,18 @@
+ class _Handler(SimpleHTTPRequestHandler):
+     roots = {}
+ 
++    def do_GET(self):
++        # Chromium fetches /favicon.ico automatically on every page load. With the
++        # Nix-provided browser (see chrome_executable) that request reaches this
++        # server; a 404 would log a console error and fail render.py's story check.
++        # Answer it quietly so only real story errors are fatal.
++        if self.path.split("?", 1)[0] == "/favicon.ico":
++            self.send_response(204)
++            self.send_header("Content-Length", "0")
++            self.end_headers()
++            return
++        return super().do_GET()
++
+     def translate_path(self, path):
+         path = path.split("?", 1)[0].split("#", 1)[0]
+         for prefix, root in self.roots.items():
+--- a/scripts/render.py
++++ b/scripts/render.py
+@@ -19,7 +19,7 @@
+ import wave
+ 
+ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+-from common import SKILL_DIR, build_page, die, load_state, need, out_size, pick_fps, probe, run, save_state, serve  # noqa: E402
++from common import SKILL_DIR, build_page, chrome_executable, die, load_state, need, out_size, pick_fps, probe, run, save_state, serve  # noqa: E402
+ 
+ 
+ def frame_ranges(spans, fps, total_frames, chunk=240):
+@@ -203,7 +203,7 @@
+     errors = []
+     t0 = time.time()
+     async with async_playwright() as p:
+-        browser = await p.chromium.launch(args=["--force-color-profile=srgb", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"])
++        browser = await p.chromium.launch(executable_path=chrome_executable(), args=["--force-color-profile=srgb", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"])
+         page = await open_page(browser, base, scale, errors)
+         D = await page.evaluate("window.DURATION")
+         spans = await page.evaluate("window.SPANS")
+--- a/scripts/setup.py
++++ b/scripts/setup.py
+@@ -9,6 +9,7 @@
+ import importlib
+ import importlib.util
+ import json
++import os
+ import platform
+ import shutil
+ import subprocess
+@@ -17,6 +18,19 @@
+ PKGS = {"faster_whisper": "faster-whisper", "playwright": "playwright", "numpy": "numpy", "PIL": "pillow"}
+ 
+ 
++def chrome_executable():
++    """An explicit Chrome/Chromium binary, or None to use Playwright's own.
++
++    Honours CHROME plus StudioKat's browser variables so a Nix/system browser
++    is used instead of downloading Playwright's.
++    """
++    for name in ("CHROME", "HYPERFRAMES_BROWSER_PATH", "REMOTION_BROWSER_EXECUTABLE"):
++        value = (os.environ.get(name) or "").strip()
++        if value and os.path.isfile(value):
++            return value
++    return None
++
++
+ def ffmpeg_hint():
+     sysname = platform.system()
+     if sysname == "Windows":
+@@ -30,7 +44,7 @@
+     try:
+         from playwright.sync_api import sync_playwright
+         with sync_playwright() as p:
+-            b = p.chromium.launch()
++            b = p.chromium.launch(executable_path=chrome_executable())
+             b.close()
+         return True
+     except Exception:
