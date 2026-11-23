@@ -37,6 +37,7 @@ from tools.base_tool import (
     ToolTier,
 )
 from styles.editor.loader import STYLE_IDS, get_style, list_styles
+from tools.video.browser_env import resolve_chrome
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROJECTS_ROOT = REPO_ROOT / "projects"
@@ -222,16 +223,8 @@ class EditorRender(BaseTool):
 
     @staticmethod
     def _chrome() -> str:
-        """Find a Chrome/Chromium binary (faceless_render pattern)."""
-        for name in ("CHROME", "HYPERFRAMES_BROWSER_PATH", "REMOTION_BROWSER_EXECUTABLE"):
-            value = (os.environ.get(name) or "").strip()
-            if value and Path(value).is_file():
-                return value
-        for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
-            found = shutil.which(name)
-            if found:
-                return found
-        return ""
+        """Find a Chrome/Chromium binary (shared browser_env resolver)."""
+        return resolve_chrome()
 
     def _child_env(self) -> dict[str, str]:
         """Env for engine scripts: point CHROME at a discovered browser so the

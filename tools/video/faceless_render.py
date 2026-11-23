@@ -33,6 +33,7 @@ from tools.base_tool import (
     ToolStability,
     ToolTier,
 )
+from tools.video.browser_env import resolve_chrome
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROJECTS_ROOT = REPO_ROOT / "projects"
@@ -301,18 +302,13 @@ class FacelessRender(BaseTool):
             raise FacelessRenderError(f"{label} failed (exit {proc.returncode}): {detail}")
 
     def _chrome(self) -> str:
-        for name in ("CHROME", "HYPERFRAMES_BROWSER_PATH", "REMOTION_BROWSER_EXECUTABLE"):
-            value = (os.environ.get(name) or "").strip()
-            if value and Path(value).is_file():
-                return value
-        for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
-            found = shutil.which(name)
-            if found:
-                return found
-        raise FacelessRenderError(
-            "No Chrome/Chromium found. Set CHROME to a browser executable, or run "
-            "inside the StudioKat Nix shell where CHROME is exported."
-        )
+        chrome = resolve_chrome()
+        if not chrome:
+            raise FacelessRenderError(
+                "No Chrome/Chromium found. Set CHROME to a browser executable, or run "
+                "inside the StudioKat Nix shell where CHROME is exported."
+            )
+        return chrome
 
     def _capture_env(self, inputs: dict[str, Any]) -> dict[str, str]:
         env = os.environ.copy()
