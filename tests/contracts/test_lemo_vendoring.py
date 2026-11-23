@@ -37,6 +37,11 @@ def test_no_nc_docs_or_demo_media_are_vendored():
     assert _outside_font_dirs(LIB.rglob("*.woff2")) == []
     assert not list(LIB.rglob("stills/styleframe.jpg"))
 
+def test_no_vendored_media_outside_font_dirs():
+    for pattern in ("*.jpg", "*.jpeg", "*.png", "*.webp", "*.svg",
+                    "*.gltf", "*.glb", "*.bin", "*.hdr", "*.exr"):
+        assert _outside_font_dirs(LIB.rglob(pattern)) == [], pattern
+
 def test_clawd_and_anthropic_character_are_absent():
     hits = []
     for path in LEMO.rglob("*"):

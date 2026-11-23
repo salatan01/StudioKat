@@ -10,8 +10,10 @@ StudioKat as the `lemo` engine (`LIBRARY_DIR = .agents/skills/lemo/library`).
 - Commit: `8ca0dd805e214bcc1d30714cd5b9d21cc02a454b` (`8ca0dd8`)
   - "Licence: the copyright is now held by SecondFirst Pty Ltd, trading as LemoLab,
     which grants these licences; credit lines unchanged"
-- Licence: **MIT** for the engine code (see `LICENSE`, copied from the upstream
-  `LICENSES/MIT.txt`). Other upstream material keeps its own terms; see `NOTICE`.
+- Licence: the upstream root `LICENSE` is vendored verbatim at `LICENSE` (it names
+  LemoLab / SecondFirst Pty Ltd and maps the code to **MIT**). The MIT text itself
+  is kept at `LICENSES-MIT.txt`. Other upstream material keeps its own terms; see
+  `NOTICE`.
 
 The upstream checkout is treated as read-only and is not modified by this task.
 
@@ -22,8 +24,6 @@ The upstream checkout is treated as read-only and is not modified by this task.
   `core/render/{mux.sh,sheet.py,srt.py}`, `core/three/post.js`, `core/post/crt.js`).
 - `library/core/fonts/**` — the small OFL font asset (`f0.woff2`–`f7.woff2`,
   `fonts.css`, `OFL.md`).
-- `library/core/assets/polyhaven/**` — engine 3D/texture assets used by the
-  `teardown` style (CC0; see `NOTICE`), plus `SOURCES.txt`.
 - `library/styles/<id>/demo/**` for the 15 selected demo styles:
   `silkscreen-poster, swiss-motion, bauhaus-shapes, flat-space-explainer,
   assembly-line-diagram, midcentury-toon, living-screencast,
@@ -36,6 +36,15 @@ The upstream checkout is treated as read-only and is not modified by this task.
 
 - **Python/media tiers not needed by the engine:** `core/audio/`, `core/tts/`,
   `core/image/` are not vendored (the contract test asserts their absence).
+- **`core/assets/` — Poly Haven demo media, not vendored.** The whole
+  `core/assets/` tree (≈12 MB of CC0 HDR maps, textures, and glTF/bin models under
+  `core/assets/polyhaven/`) was removed. Vendored media is forbidden outside
+  `library/core/fonts/` and `library/assets/fonts/`. Consequence: the `teardown`
+  demo's HDR reference in `styles/teardown/demo/src/main.js`
+  (`core/assets/polyhaven/photo_studio_loft_hall_2k.hdr`) is **unshipped in this
+  port**; our Phase 2 `teardown` path is illustrative-only (see below). The
+  upstream `SOURCES.txt` provenance list for those assets is therefore not
+  vendored either.
 - **Docs:** every `*.md` except the licence text `core/fonts/OFL.md`. This drops
   `core/README.md`, demo `STYLE.md` / `DEMO.md` / `FACTS.md` / `TREATMENT.md`,
   and the upstream `README.md`.
@@ -76,12 +85,13 @@ The provenance docs here and in `NOTICE` may name them only as removed.
 The `teardown` demo is vendored as **illustrative code only** for Phase 0. It is
 not runnable as shipped: its build fetches CAD data, fonts, an HDRI, the TTS
 model, and sample libraries over the network at build time, and its required
-media and the `core/audio`/`core/tts` tiers are intentionally not vendored. The
-code is kept so per-style work in Phase 2 can re-establish its assets. The same
-"code only, media referenced but absent" rule applies to any other demo that
-references stripped assets.
+media (`core/assets/polyhaven/`, stripped) and the `core/audio`/`core/tts` tiers
+are intentionally not vendored. The code is kept so per-style work in Phase 2 can
+re-establish its assets. The same "code only, media referenced but absent" rule
+applies to any other demo that references stripped assets.
 
-## ASCII-only note
+## Provenance docs are exempt from the branded scan
 
-The test scans only `.js/.mjs/.html/.json/.sh/.py/.txt` files for the branded
-terms; provenance Markdown (`UPSTREAM.md`, `NOTICE`) is exempt by design.
+The contract test scans only `.js/.mjs/.html/.json/.sh/.py/.txt` files for the
+branded terms; provenance/legal Markdown (`UPSTREAM.md`, `NOTICE`) and the
+`LICENSE` files are exempt by design.
