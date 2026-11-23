@@ -69,6 +69,9 @@
           zlib
           nspr
           nss
+          glib
+          alsa-lib
+          udev
           libX11
           libxcb
           libXcomposite
