@@ -1,0 +1,37 @@
+# NOTICE
+
+This directory vendors the **Lemo-Opuscar** engine and 15 selected demo style
+trees, by **Lemomo (LemoLab)** — https://github.com/lemomo-ai/lemo-opuscar
+(commit `8ca0dd8`).
+
+## Code — MIT
+
+The engine code in `library/core/` and the demo code under
+`library/styles/*/demo/` is licensed under the **MIT License** (see `LICENSE`,
+copied from the upstream `LICENSES/MIT.txt`). Copyright is held by
+**SecondFirst Pty Ltd, trading as LemoLab**, which grants these licences.
+
+## Fonts — SIL Open Font License 1.1
+
+The engine font asset in `library/core/fonts/` (`f0.woff2`–`f7.woff2`,
+`fonts.css`) is licensed under the **SIL Open Font License 1.1**; the full text
+and per-family attribution are in `library/core/fonts/OFL.md`. Demo-local font
+licence texts (`styles/*/demo/fonts/*.txt`) are kept with the code they cover.
+
+## Assets — CC0 / Poly Haven
+
+The 3D models and textures in `library/core/assets/polyhaven/` are **CC0
+(public domain)** from **Poly Haven** (https://polyhaven.com). The exact
+sources are listed in `library/core/assets/polyhaven/SOURCES.txt`.
+
+## Branded material removed
+
+The upstream `living-screencast` demo was Claude/Clawd-branded. Its branded
+surface was deleted during vendoring; see `UPSTREAM.md`. Provenance docs may
+name the removed branded material, but no vendored code or text file retains it.
+
+## Third-party material
+
+Other upstream material (music, samples, footage, data, third-party marks)
+keeps its own licence or terms. Where a stripped asset is referenced by vendored
+code, the code is kept for Phase 0 and the asset is handled per-style later.
