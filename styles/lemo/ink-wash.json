@@ -1,0 +1,19 @@
+{
+  "id": "ink-wash",
+  "name": "Ink Wash",
+  "aliases": ["sumi-e", "ink painting", "wash painting"],
+  "engine": "lemo",
+  "category": "traditional-crafts",
+  "brief_md": ".agents/skills/lemo/briefs/ink-wash.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/ink-wash/demo",
+  "duration_seconds": [4, 15],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["cormorantgaramond", "cormorantsc", "mashanzheng", "zhimangxing"],
+  "native_moves": ["brushstroke paints the world", "empty paper"],
+  "not_for": "Hard-edged UI, dense diagrams, or photoreal 3D.",
+  "pilot": false
+}

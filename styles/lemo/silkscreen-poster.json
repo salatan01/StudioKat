@@ -1,0 +1,19 @@
+{
+  "id": "silkscreen-poster",
+  "name": "Silkscreen Poster",
+  "aliases": ["screen print", "screenprint", "gig poster"],
+  "engine": "lemo",
+  "category": "print",
+  "brief_md": ".agents/skills/lemo/briefs/silkscreen-poster.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/silkscreen-poster/demo",
+  "duration_seconds": [3, 12],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["bigshouldersdisplay", "outfit", "notosanssc"],
+  "native_moves": ["ink layer per beat", "squeegee pull", "registration slip"],
+  "not_for": "Photographic realism, gradients, or narrated kinetic typography.",
+  "pilot": false
+}

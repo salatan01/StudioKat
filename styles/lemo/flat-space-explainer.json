@@ -1,0 +1,19 @@
+{
+  "id": "flat-space-explainer",
+  "name": "Flat Space Explainer",
+  "aliases": ["flat explainer", "diagram explainer", "cutaway explainer"],
+  "engine": "lemo",
+  "category": "graphic-type",
+  "brief_md": ".agents/skills/lemo/briefs/flat-space-explainer.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/flat-space-explainer/demo",
+  "duration_seconds": [8, 20],
+  "default_duration_seconds": 8,
+  "aspects": ["16:9", "9:16", "1:1"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["jost", "notosanssc"],
+  "native_moves": ["one continuous zoom", "scale readout"],
+  "not_for": "Real datasets, character performance, or a static infographic.",
+  "pilot": false
+}

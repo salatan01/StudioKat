@@ -1,0 +1,19 @@
+{
+  "id": "isometric-picture-book",
+  "name": "Isometric Picture Book",
+  "aliases": ["isometric storybook", "diorama story", "picture book"],
+  "engine": "lemo",
+  "category": "3d-miniature",
+  "brief_md": ".agents/skills/lemo/briefs/isometric-picture-book.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/isometric-picture-book/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["newsreader", "notoserifsc"],
+  "native_moves": ["one isometric place", "people move in rule order"],
+  "not_for": "Photoreal 3D, motion-captured characters, or chart-led stories.",
+  "pilot": false
+}

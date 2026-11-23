@@ -1,0 +1,19 @@
+{
+  "id": "swiss-motion",
+  "name": "Swiss Motion",
+  "aliases": ["grid typography", "international style", "swiss typography"],
+  "engine": "lemo",
+  "category": "graphic-type",
+  "brief_md": ".agents/skills/lemo/briefs/swiss-motion.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/swiss-motion/demo",
+  "duration_seconds": [3, 12],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24, 30],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["archivo", "unifrakturmaguntia", "dmserifdisplay"],
+  "native_moves": ["snap to grid on the beat", "one deliberate break"],
+  "not_for": "Narrated kinetic typography, gradients, device renders.",
+  "pilot": true
+}

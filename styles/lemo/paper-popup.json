@@ -1,0 +1,19 @@
+{
+  "id": "paper-popup",
+  "name": "Paper Pop-up",
+  "aliases": ["pop-up book", "paper craft", "cut paper"],
+  "engine": "lemo",
+  "category": "3d-miniature",
+  "brief_md": ".agents/skills/lemo/briefs/paper-popup.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/paper-popup/demo",
+  "duration_seconds": [5, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["zcoolkuaile", "fredoka", "lilitaone", "imfellenglish"],
+  "native_moves": ["book opens", "paper sets pop up", "macro camera"],
+  "not_for": "Flat motion graphics, photoreal surfaces, or chart-led stories.",
+  "pilot": false
+}

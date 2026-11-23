@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/styles/lemo_style",
+  "title": "Lemo Style Manifest",
+  "description": "Selection metadata and source pointers for one lemo clip style. The look contract lives in the style brief and the vendored demo; this file never duplicates palette or engine rules.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "aliases",
+    "engine",
+    "category",
+    "brief_md",
+    "demo_dir",
+    "duration_seconds",
+    "default_duration_seconds",
+    "aspects",
+    "fps",
+    "sound",
+    "inputs",
+    "fonts",
+    "native_moves",
+    "not_for",
+    "pilot"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "enum": [
+        "silkscreen-poster",
+        "swiss-motion",
+        "bauhaus-shapes",
+        "flat-space-explainer",
+        "assembly-line-diagram",
+        "midcentury-toon",
+        "living-screencast",
+        "isometric-picture-book",
+        "briefing-board",
+        "dataviz",
+        "ink-wash",
+        "paper-popup",
+        "teardown",
+        "ascii-crt",
+        "art-deco"
+      ]
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "engine": { "const": "lemo" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "print",
+        "graphic-type",
+        "line-diagrams",
+        "cartoons",
+        "screens-ui",
+        "3d-miniature",
+        "instruments-evidence",
+        "data-maps",
+        "traditional-crafts",
+        "film-tape"
+      ]
+    },
+    "brief_md": {
+      "type": "string",
+      "pattern": "^\\.agents/skills/lemo/briefs/[a-z0-9-]+\\.md$"
+    },
+    "demo_dir": {
+      "type": "string",
+      "pattern": "^\\.agents/skills/lemo/library/styles/[a-z0-9-]+/demo$"
+    },
+    "duration_seconds": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "default_duration_seconds": { "type": "number", "minimum": 1 },
+    "aspects": {
+      "type": "array",
+      "items": { "enum": ["16:9", "9:16", "1:1", "4:5", "3:4"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "fps": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "sound": {
+      "type": "array",
+      "items": { "enum": ["none", "foley"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "enum": ["data", "cutouts", "ui_spec", "parts_spec", "facts"] },
+      "uniqueItems": true
+    },
+    "fonts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "native_moves": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "not_for": { "type": "string", "minLength": 1 },
+    "pilot": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

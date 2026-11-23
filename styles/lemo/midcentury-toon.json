@@ -1,0 +1,19 @@
+{
+  "id": "midcentury-toon",
+  "name": "Mid-century Toon",
+  "aliases": ["midcentury cartoon", "50s cartoon", "retro cartoon"],
+  "engine": "lemo",
+  "category": "cartoons",
+  "brief_md": ".agents/skills/lemo/briefs/midcentury-toon.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/midcentury-toon/demo",
+  "duration_seconds": [4, 15],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["oleoscript", "alfaslabone", "jost"],
+  "native_moves": ["held body, animated hands", "cel misregistration"],
+  "not_for": "Photoreal 3D, data charts, or dense technical diagrams.",
+  "pilot": true
+}

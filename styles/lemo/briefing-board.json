@@ -1,0 +1,19 @@
+{
+  "id": "briefing-board",
+  "name": "Briefing Board",
+  "aliases": ["evidence board", "case board", "investigation board"],
+  "engine": "lemo",
+  "category": "instruments-evidence",
+  "brief_md": ".agents/skills/lemo/briefs/briefing-board.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/briefing-board/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": ["cutouts", "facts"],
+  "fonts": ["archivo", "ibmplexmono", "lxgwmarkergothic", "notosanssc"],
+  "native_moves": ["camera travels the lines", "final pull-back"],
+  "not_for": "Invented evidence, photographic product renders, or pure typography.",
+  "pilot": false
+}

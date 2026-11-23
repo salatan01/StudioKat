@@ -1,0 +1,19 @@
+{
+  "id": "ascii-crt",
+  "name": "ASCII CRT",
+  "aliases": ["terminal", "retro computer", "text mode"],
+  "engine": "lemo",
+  "category": "film-tape",
+  "brief_md": ".agents/skills/lemo/briefs/ascii-crt.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/ascii-crt/demo",
+  "duration_seconds": [3, 15],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["vt323"],
+  "native_moves": ["character grid zooms", "phosphor and scanlines"],
+  "not_for": "Modern UI polish, photoreal imagery, or unicode-free typography.",
+  "pilot": false
+}

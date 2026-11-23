@@ -1,0 +1,19 @@
+{
+  "id": "bauhaus-shapes",
+  "name": "Bauhaus Shapes",
+  "aliases": ["bauhaus", "geometric shapes", "primary colour shapes"],
+  "engine": "lemo",
+  "category": "graphic-type",
+  "brief_md": ".agents/skills/lemo/briefs/bauhaus-shapes.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/bauhaus-shapes/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["jost", "notosanssc"],
+  "native_moves": ["point to line to plane", "area doubles"],
+  "not_for": "Photographic texture, ornate decoration, or character acting.",
+  "pilot": false
+}

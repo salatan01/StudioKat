@@ -1,0 +1,19 @@
+{
+  "id": "teardown",
+  "name": "Teardown",
+  "aliases": ["product teardown", "exploded product"],
+  "engine": "lemo",
+  "category": "line-diagrams",
+  "brief_md": ".agents/skills/lemo/briefs/teardown.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/teardown/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16"],
+  "fps": [24, 30],
+  "sound": ["none"],
+  "inputs": ["parts_spec", "facts"],
+  "fonts": [],
+  "native_moves": ["layers lift on one axis", "orbit outside, macro inside"],
+  "not_for": "Invented parts, decorative-only motion, or non-product storytelling.",
+  "pilot": false
+}

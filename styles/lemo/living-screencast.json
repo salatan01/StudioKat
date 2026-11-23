@@ -1,0 +1,19 @@
+{
+  "id": "living-screencast",
+  "name": "Living Screencast",
+  "aliases": ["animated ui", "app walkthrough", "software demo"],
+  "engine": "lemo",
+  "category": "screens-ui",
+  "brief_md": ".agents/skills/lemo/briefs/living-screencast.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/living-screencast/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5"],
+  "fps": [24, 30],
+  "sound": ["none"],
+  "inputs": ["ui_spec"],
+  "fonts": ["inter", "newsreader"],
+  "native_moves": ["cursor push-ins", "mascot acts out the feature"],
+  "not_for": "Real product logos, proprietary mascots, or live screen capture.",
+  "pilot": false
+}

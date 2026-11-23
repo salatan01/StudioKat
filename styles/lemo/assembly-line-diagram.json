@@ -1,0 +1,19 @@
+{
+  "id": "assembly-line-diagram",
+  "name": "Assembly Line Diagram",
+  "aliases": ["exploded view", "parts diagram", "disassembly"],
+  "engine": "lemo",
+  "category": "line-diagrams",
+  "brief_md": ".agents/skills/lemo/briefs/assembly-line-diagram.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/assembly-line-diagram/demo",
+  "duration_seconds": [8, 20],
+  "default_duration_seconds": 8,
+  "aspects": ["16:9", "9:16"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["notosanssc", "bigshouldersdisplay", "archivo"],
+  "native_moves": ["camera rides one cargo through stations"],
+  "not_for": "Artistic mood pieces, cartoons, or chart-led data stories.",
+  "pilot": false
+}

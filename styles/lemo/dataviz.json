@@ -1,0 +1,19 @@
+{
+  "id": "dataviz",
+  "name": "Data Visualization",
+  "aliases": ["dataviz", "chart story", "data story"],
+  "engine": "lemo",
+  "category": "data-maps",
+  "brief_md": ".agents/skills/lemo/briefs/dataviz.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/dataviz/demo",
+  "duration_seconds": [6, 20],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24, 30],
+  "sound": ["none"],
+  "inputs": ["data", "facts"],
+  "fonts": ["caveat", "ibmplexmono", "newsreader"],
+  "native_moves": ["mark lands", "axis grows", "scale changes", "series morphs"],
+  "not_for": "Decorative-only motion, fictional numbers, or character-led cartoons.",
+  "pilot": true
+}

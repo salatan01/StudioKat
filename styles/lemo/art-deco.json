@@ -1,0 +1,19 @@
+{
+  "id": "art-deco",
+  "name": "Art Deco",
+  "aliases": ["deco", "gatsby", "1920s poster"],
+  "engine": "lemo",
+  "category": "graphic-type",
+  "brief_md": ".agents/skills/lemo/briefs/art-deco.md",
+  "demo_dir": ".agents/skills/lemo/library/styles/art-deco/demo",
+  "duration_seconds": [4, 15],
+  "default_duration_seconds": 6,
+  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+  "fps": [24],
+  "sound": ["none"],
+  "inputs": [],
+  "fonts": ["limelight", "poiretone", "josefinsans", "italiana"],
+  "native_moves": ["symmetry opens from a centre axis", "bulbs count on"],
+  "not_for": "Minimal grids, photoreal footage, or dense technical diagrams.",
+  "pilot": false
+}
