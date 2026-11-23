@@ -1,7 +1,7 @@
 Engineering Briefing Board — "The Ship Decides" (library demo)
 Every third-party asset in the film, with its source and licence.
 
-PHOTOGRAPHS (Wikimedia Commons; cut out at the photo's own resolution with BiRefNet, graded, and modified as noted)
+PHOTOGRAPHS (Wikimedia Commons; cut out at the photo's own resolution, graded, and modified as noted)
 - Container ship from above (kit object "ship")
   "Containerschiffe auf der Elbe zwischen Wedel und Hamburg" by BAW_Bundesanstalt für Wasserbau,
   CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
@@ -59,7 +59,6 @@ MUSIC AND SOUND
   trombone, tuba, horn, tubular bells, glockenspiel, vibraphone)
 
 TOOLS
-- Segmentation: BiRefNet-general (MIT; ONNX export from https://github.com/danielgatis/rembg/releases), run through onnxruntime (MIT).
 - Rendering: headless Chromium (Playwright); ffmpeg.
 
 FACTS

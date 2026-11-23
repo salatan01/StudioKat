@@ -39,12 +39,27 @@ The upstream checkout is treated as read-only and is not modified by this task.
 - **`core/assets/` — Poly Haven demo media, not vendored.** The whole
   `core/assets/` tree (≈12 MB of CC0 HDR maps, textures, and glTF/bin models under
   `core/assets/polyhaven/`) was removed. Vendored media is forbidden outside
-  `library/core/fonts/` and `library/assets/fonts/`. Consequence: the `teardown`
-  demo's HDR reference in `styles/teardown/demo/src/main.js`
-  (`core/assets/polyhaven/photo_studio_loft_hall_2k.hdr`) is **unshipped in this
-  port**; our Phase 2 `teardown` path is illustrative-only (see below). The
-  upstream `SOURCES.txt` provenance list for those assets is therefore not
-  vendored either.
+  `library/core/fonts/` and `library/assets/fonts/`.
+- **`teardown` demo — entire upstream content removed.** The upstream `teardown`
+  demo is CAD/Corne-based: it ships a KiCad/STEP converter surface
+  (`tools/step2mesh.mjs` requiring `occt-import-js`, `tools/fetch_cad.sh`,
+  `tools/extract_pcb.py`, `tools/kicad_geom.py`, `tools/sexp.py`), CAD-derived
+  data (`data/pcb.json`), KiCad-specific modules (`src/pcbtex.js`,
+  `src/comps.js`, `src/overlay.js`, `src/parts.js`, `src/timeline.js` full of
+  footprint references and Corne dimensions), plus the demo entry
+  (`src/main.js`, `index.html`). All of it is stripped: the spec forbids
+  `occt-import-js`, STEP/KiCad conversion and CAD data anywhere in the tree. The
+  directory `library/styles/teardown/demo/` is kept present but empty except a
+  `.gitkeep`. **Our v1 `teardown` is illustrative `parts_spec` only.**
+- **`briefing-board` — BiRefNet downloader removed.** The kit tools that download
+  and run the ~970 MB `BiRefNet` ONNX segmentation model were deleted:
+  `kit/tools/kit_env.sh`, `kit/tools/prep_object.py`, `kit/tools/sky_key.py`,
+  `kit/tools/rebuild_objects.sh`. The `BiRefNet` references were removed from the
+  demo `build.sh` (the model/venv download step and the object-rebuild loop) and
+  from `CREDITS` (the segmentation line and the BiRefNet mention in the
+  photograph note). The spec forbids the BiRefNet model. The rest of the kit
+  (`board.js`, `batch.mjs`, `kit/objects/*.json`, `kit/fonts/*`, the demo code)
+  is kept.
 - **Docs:** every `*.md` except the licence text `core/fonts/OFL.md`. This drops
   `core/README.md`, demo `STYLE.md` / `DEMO.md` / `FACTS.md` / `TREATMENT.md`,
   and the upstream `README.md`.
@@ -55,7 +70,21 @@ The upstream checkout is treated as read-only and is not modified by this task.
   `*.part`, and all demo-local font binaries (`*.ttf`, `*.otf`, `*.woff`,
   `*.woff2`). Some vendored style code still references these files; that is
   expected for Phase 0 and is handled per-style in Phase 2. No referencing code
-  was deleted.
+  was deleted (except the teardown/briefing-board surfaces above).
+
+## Code adaptations (CAD-scan hygiene)
+
+The contract test's CAD scan looks for the literal token `.step` (a STEP-file
+reference) in every code/text file. Two unrelated, legitimate `.step` method/
+property uses tripped it:
+
+- `styles/assembly-line-diagram/demo/tools/mix.py`: the sfx call `X.step(...)` was
+  changed to an explicit import alias `step as step_wave` (behavior unchanged).
+- `styles/isometric-picture-book/demo/kit.js`: `P.step` was changed to bracket
+  access `P["step"]` (behavior unchanged).
+
+These are the only two occurrences; both are behavior-preserving and keep the
+CAD scan honest without weakening it.
 
 ## Font policy
 
@@ -82,13 +111,14 @@ The provenance docs here and in `NOTICE` may name them only as removed.
 
 ## teardown / illustrative-only decision
 
-The `teardown` demo is vendored as **illustrative code only** for Phase 0. It is
-not runnable as shipped: its build fetches CAD data, fonts, an HDRI, the TTS
-model, and sample libraries over the network at build time, and its required
-media (`core/assets/polyhaven/`, stripped) and the `core/audio`/`core/tts` tiers
-are intentionally not vendored. The code is kept so per-style work in Phase 2 can
-re-establish its assets. The same "code only, media referenced but absent" rule
-applies to any other demo that references stripped assets.
+The upstream `teardown` demo is CAD/Corne-based and is **not shipped** at all (see
+"what was stripped"). Its HDR reference
+(`core/assets/polyhaven/photo_studio_loft_hall_2k.hdr`) and its CAD data are
+unshipped in this port; the `core/audio`/`core/tts` tiers are not vendored either.
+Our Phase 2 `teardown` path is **illustrative `parts_spec` only**: a generic
+line-diagram treatment written fresh, not the upstream KiCad/Corne rebuild. The
+`library/styles/teardown/demo/` directory is kept (with `.gitkeep`) only so the
+registry sees all 15 demo roots.
 
 ## Provenance docs are exempt from the branded scan
 

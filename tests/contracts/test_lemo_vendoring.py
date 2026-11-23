@@ -42,6 +42,20 @@ def test_no_vendored_media_outside_font_dirs():
                     "*.gltf", "*.glb", "*.bin", "*.hdr", "*.exr"):
         assert _outside_font_dirs(LIB.rglob(pattern)) == [], pattern
 
+CAD_NAMES = {"step2mesh.mjs", "extract_pcb.py", "kicad_geom.py", "sexp.py",
+             "fetch_cad.sh", "pcb.json", "pcbtex.js"}
+CAD_PATTERNS = [r"occt-import-js", r"step2mesh", r"kicad", r"\.kicad_pcb", r"\.step\b"]
+
+def test_no_cad_or_occt_surface():
+    for path in LIB.rglob("*"):
+        if not path.is_file():
+            continue
+        assert path.name not in CAD_NAMES, path
+        if path.suffix in {".js", ".mjs", ".html", ".json", ".sh", ".py", ".txt"}:
+            text = path.read_text(encoding="utf-8", errors="ignore").lower()
+            for pat in CAD_PATTERNS:
+                assert not re.search(pat, text), (str(path), pat)
+
 def test_clawd_and_anthropic_character_are_absent():
     hits = []
     for path in LEMO.rglob("*"):

@@ -19,16 +19,19 @@ The engine font asset in `library/core/fonts/` (`f0.woff2`–`f7.woff2`,
 and per-family attribution are in `library/core/fonts/OFL.md`. Demo-local font
 licence texts (`styles/*/demo/fonts/*.txt`) are kept with the code they cover.
 
-## Third-party demo media — not vendored
+## Third-party demo media and CAD data — not vendored
 
-Third-party demo media was **not vendored**. This includes the Poly Haven CC0
-assets that upstream ships under `core/assets/polyhaven/` (HDRI maps, textures,
-and glTF/bin models) — the whole `core/assets/` tree was removed. The `teardown`
-demo code still references one of those HDR files, but the asset is unshipped in
-this port (Phase 2 `teardown` is illustrative-only; see `UPSTREAM.md`). Demo
-media generally (`*.jpg`, `*.png`, `*.svg`, `*.gltf`, `*.bin`, `*.hdr`,
-`*.mp4`, `*.wav`, and other binary/audio/3D assets) is stripped and handled
-per-style in a later phase.
+Third-party demo media and CAD data were **not vendored**. This includes the Poly
+Haven CC0 assets that upstream ships under `core/assets/polyhaven/` (HDRI maps,
+textures, and glTF/bin models) — the whole `core/assets/` tree was removed — and
+the entire upstream `teardown` demo (KiCad/STEP converter tools, CAD-derived
+`pcb.json`, and the Corne-specific modules), which is not shipped; our v1
+`teardown` is illustrative `parts_spec` only. The `briefing-board` BiRefNet
+segmentation downloader (`kit_env.sh`, `prep_object.py`, `sky_key.py`,
+`rebuild_objects.sh`) and its model references were also removed. Demo media
+generally (`*.jpg`, `*.png`, `*.svg`, `*.gltf`, `*.bin`, `*.hdr`, `*.mp4`,
+`*.wav`, and other binary/audio/3D assets) is stripped and handled per-style in a
+later phase.
 
 ## Branded material removed
 

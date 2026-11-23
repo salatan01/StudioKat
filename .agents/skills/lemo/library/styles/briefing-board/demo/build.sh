@@ -4,8 +4,6 @@
 # From a clean clone (library set up with `setup.sh deps voice music`) the first run also downloads:
 #   fonts (Google Fonts, OFL) → kit/fonts/                      kit/tools/fetch_fonts.py
 #   the six source photos (Commons, licences in candidates.json) kit/tools/fetch_sources.py   (~470 MB)
-#   a private venv demo/.venv (onnxruntime …) + the BiRefNet model kit/tools/kit_env.sh         (~970 MB unless cached)
-#   and cuts every object again                                   kit/tools/rebuild_objects.sh  (~3 min)
 #   the voice model and the freepats / vsco2ce / vcsl samples      tools/fetch.sh (library packs)
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -20,7 +18,6 @@ cd "$HERE"
 for f in Archivo-VF.ttf IBMPlexMono-Medium.ttf IBMPlexMono-SemiBold.ttf LXGWMarkerGothic-sub.woff2 NotoSansSC-500-sub.woff2 NotoSansSC-700-sub.woff2 NotoSansSC-900-sub.woff2; do
   [ -f "kit/fonts/$f" ] || { python3 kit/tools/fetch_fonts.py; break; }
 done
-for j in kit/objects/*.json; do [ -f "${j%.json}.png" ] || { sh kit/tools/rebuild_objects.sh; break; }; done
 [ -f "$LIB/core/tts/kokoro-v1.0.onnx" ] && [ -f "$LIB/core/tts/voices-v1.0.bin" ] || (cd "$LIB" && sh tools/fetch.sh voice)
 for l in freepats vsco2ce vcsl; do [ -d "$LIB/core/audio/instruments/$l" ] || (cd "$LIB" && sh tools/fetch.sh instruments $l); done
 [ -f audio/vo/L9.wav ] || "$PY" "$LIB/core/tts/tts.py" audio/lines.json audio/vo
