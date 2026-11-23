@@ -8,9 +8,13 @@ serves anything unexpected.
 
 Usage (through the thin CLI shim at ``.agents/skills/lemo/scripts/setup.py``)::
 
-    setup.py --fonts            # download every pinned face
-    setup.py --check            # download anything missing, then verify
-    setup.py --check --offline  # verify what is already on disk, no network
+    setup.py --fonts            # download missing/corrupt faces, then verify
+    setup.py --check            # verify only; never downloads, never uses the network
+    setup.py --fonts --offline  # forbid the network: verify and report, no download
+
+``--check`` never mutates the tree: on a fresh checkout it reports the missing
+files and exits 1. Only ``--fonts`` (or the no-flag default) downloads, and
+``--offline`` forbids that.
 """
 
 from __future__ import annotations
@@ -95,18 +99,28 @@ def download_fonts(root: Path, files: list[dict]) -> None:
     """Download any missing or corrupt font binaries named by ``files``.
 
     Files that already match their recorded hash are left untouched, so the call
-    is idempotent and cheap to re-run.
+    is idempotent and cheap to re-run. The decision is made per entry from the
+    entry's own fields — never by parsing the strings ``verify_fonts`` returns —
+    so paths containing spaces are handled correctly.
     """
     root = Path(root)
-    problems = verify_fonts(root, files)
-    if not problems:
-        return
-    bad = {line.split(": ", 1)[1].split(" ", 1)[0] for line in problems}
     for entry in files:
-        if entry["path"] not in bad:
-            continue
         dest = root / entry["path"]
+        if dest.is_file() and _sha256(dest) == entry["sha256"]:
+            continue
         _download(entry["url"], dest, entry["sha256"])
+
+
+def _finish(root: Path, files: list[dict], label: str) -> int:
+    """Verify ``files`` and print a report; return the process exit code."""
+    problems = verify_fonts(root, files)
+    if problems:
+        print("FONT PROBLEMS:")
+        for problem in problems:
+            print(f"  {problem}")
+        return 1
+    print(label)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -114,45 +128,29 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="verify the fonts and exit non-zero on any problem",
+        help="verify the fonts and exit non-zero on any problem (never downloads)",
     )
     parser.add_argument(
         "--fonts",
         action="store_true",
-        help="download every pinned font binary",
+        help="download missing or corrupt font binaries, then verify",
     )
     parser.add_argument(
         "--offline",
         action="store_true",
-        help="never use the network (verification only)",
+        help="never use the network",
     )
     args = parser.parse_args(argv)
 
     root = fonts_root()
     files = load_manifest(root)["files"]
 
+    # A check is read-only: it must never download and never touch the network,
+    # so a fresh checkout reports `missing:` rather than silently fetching 63 MiB.
     if args.check:
-        if not args.offline:
-            download_fonts(root, files)
-        problems = verify_fonts(root, files)
-        if problems:
-            print("FONT PROBLEMS:")
-            for problem in problems:
-                print(f"  {problem}")
-            return 1
-        print("FONTS OK")
-        return 0
+        return _finish(root, files, label="FONTS OK")
 
-    # Default action, and the explicit --fonts flag, download what is missing.
-    if args.offline:
-        print("--offline set; nothing to download")
-        return 0
-    download_fonts(root, files)
-    problems = verify_fonts(root, files)
-    if problems:
-        print("FONT PROBLEMS:")
-        for problem in problems:
-            print(f"  {problem}")
-        return 1
-    print(f"FONTS OK ({len(files)} files)")
-    return 0
+    # `--fonts` (or the no-flag default) downloads first, unless --offline forbids it.
+    if not args.offline:
+        download_fonts(root, files)
+    return _finish(root, files, label=f"FONTS OK ({len(files)} files)")
