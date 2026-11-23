@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import time
@@ -10,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from tools.tool_registry import registry
+from tools.video import editor_render as editor_mod
 from tools.video.editor_render import EditorRender, EditorRenderError, _pid_alive
 
 
@@ -152,6 +154,30 @@ def test_job_cancel_on_finished_job_is_noop():
     result = tool._op_job_cancel({"project_id": "demo-project", "job_id": job_id})
     assert result.success
     assert result.data["status"] != "running"
+
+
+def test_job_status_reports_an_ended_preview_as_stopped(monkeypatch):
+    """A preview that has ended is 'stopped', not 'failed' (faceless parity)."""
+    tool = EditorRender()
+    workspace = tool._workspace({"project_id": "demo-project"})
+    jobs = tool._job_dir(workspace)
+    job = {
+        "job_id": "preview-x", "kind": "preview", "status": "running",
+        "pid": 424242, "workspace": str(workspace), "command": [],
+        "log_path": str(jobs / "preview-x.log"),
+        "exit_code_path": str(jobs / "preview-x.exit"),
+        "url": "http://127.0.0.1:1234/",
+        "started_at": "2026-01-01T00:00:00+00:00", "ended_at": None,
+        "exit_code": None, "error": None,
+    }
+    (jobs / "preview-x.json").write_text(json.dumps(job), encoding="utf-8")
+    monkeypatch.setattr(editor_mod, "_pid_alive", lambda pid: False)
+
+    result = tool.execute({"operation": "job_status", "project_id": "demo-project",
+                           "job_id": "preview-x"})
+    assert result.success, result.error
+    assert result.data["status"] == "stopped"
+    assert result.data["error"] is None
 
 
 def test_transcribe_passes_absolute_video_path(monkeypatch, tmp_path):

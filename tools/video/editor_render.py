@@ -704,6 +704,7 @@ class EditorRender(BaseTool):
         jobs = self._job_dir(workspace)
         job_id = f"preview-{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}"
         log_path = jobs / f"{job_id}.log"
+        exit_path = jobs / f"{job_id}.exit"
         command = [sys.executable, str(SKILL_DIR / "scripts" / "preview.py"), str(workspace)]
         log = open(log_path, "w", encoding="utf-8")
         try:
@@ -718,12 +719,18 @@ class EditorRender(BaseTool):
         try:
             url = self._preview_url(proc)
         except EditorRenderError:
-            proc.kill()
+            self._terminate(proc.pid)
             raise
+        except ValueError as exc:
+            self._terminate(proc.pid)
+            raise EditorRenderError(
+                f"preview stdout closed before it printed a URL: {exc}"
+            ) from exc
         job_path = jobs / f"{job_id}.json"
         payload = {
-            "job_id": job_id, "status": "running", "pid": proc.pid,
-            "command": command, "log_path": str(log_path), "url": url,
+            "job_id": job_id, "kind": "preview", "status": "running", "pid": proc.pid,
+            "command": command, "log_path": str(log_path),
+            "exit_code_path": str(exit_path), "url": url,
             "started_at": _now(), "ended_at": None, "exit_code": None, "error": None,
         }
         self._write_job(job_path, payload)
@@ -762,12 +769,17 @@ class EditorRender(BaseTool):
                 exit_code = -1
             if exit_code == 0 and output_path and output_path.is_file():
                 status = "succeeded"
+            elif job.get("kind") == "preview":
+                status = "stopped"
             else:
                 status = "failed"
                 error = f"Command exited {exit_code}"
         elif not _pid_alive(int(job.get("pid") or 0)):
-            status = "failed"
-            error = "Process exited without writing an exit code"
+            if job.get("kind") == "preview":
+                status = "stopped"
+            else:
+                status = "failed"
+                error = "Process exited without writing an exit code"
 
         job["status"] = status
         job["exit_code"] = exit_code
