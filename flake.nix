@@ -125,8 +125,24 @@
 
               _om_deps_ready() {
                 [ -x .venv/bin/python ] &&
-                  .venv/bin/python -c 'import requests, yaml, numpy' >/dev/null 2>&1 &&
+                  .venv/bin/python -c 'import requests, yaml, numpy, PIL, faster_whisper, playwright' >/dev/null 2>&1 &&
                   [ -x remotion-composer/node_modules/.bin/remotion ]
+              }
+
+              # The editor pipeline's engine skill runs through editor_render.
+              # When the system Chromium exists (CHROME, exported below), the
+              # skill's own setup uses it and does not re-download a browser.
+              _om_editor_setup() {
+                if [ -x .venv/bin/python ] &&
+                   .venv/bin/python -c 'import faster_whisper, playwright' >/dev/null 2>&1; then
+                  if [ -n "''${CHROME:-}" ] && [ -x "''${CHROME}" ]; then
+                    echo "    Editor skill: ready (Chromium: ''${CHROME##*/})"
+                  else
+                    echo "    Editor skill: deps ready — set CHROME to a Chromium binary"
+                  fi
+                else
+                  echo "    Editor skill: deps missing — run 'make setup' (installs playwright; the browser is in this shell)"
+                fi
               }
 
               # Only link whisper-cpp after .venv/bin exists so uv venv never
@@ -159,14 +175,17 @@
 
               if _om_deps_ready; then
                 _om_link_whisper
+                _om_editor_setup
                 echo "    deps:     ready (venv active)"
               elif [ -n "''${OPENMONTAGE_SKIP_AUTO_SETUP:-}" ]; then
                 echo "    deps:     missing — run 'make setup'"
+                _om_editor_setup
               elif [ -f Makefile ] && { { [ -t 0 ] && [ -t 1 ]; } || [ -n "''${OPENMONTAGE_AUTO_SETUP:-}" ]; }; then
                 echo "    deps:     first run — installing (about 1–2 minutes)…"
                 if make setup && [ -f .venv/bin/activate ]; then
                   . .venv/bin/activate
                   _om_link_whisper
+                  _om_editor_setup
                   echo "    deps:     ready (venv active)"
                 else
                   echo "    deps:     setup failed — fix the error above, then run 'make setup'"

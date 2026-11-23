@@ -1633,7 +1633,7 @@ class VideoCompose(BaseTool):
                 error=(
                     f"Unknown render_runtime {render_runtime!r}. "
                     f"Valid values: remotion, hyperframes, ffmpeg "
-                    f"('faceless' is executed by faceless_render). "
+                    f"('faceless' is executed by faceless_render; 'editor' by editor_render). "
                     f"render_runtime must be set at proposal stage."
                 ),
             )

@@ -300,6 +300,156 @@ def _validate_faceless_checkpoint(
         _validate_faceless_compose_qa(artifacts.get("render_report"))
 
 
+# --------------------------------------------------------------------------- #
+# Editor pipeline (ai-video-editor styles) — mirrors the faceless pattern.
+# --------------------------------------------------------------------------- #
+
+
+def _editor_style(style_id: Any) -> dict[str, Any]:
+    """Load the registry manifest for a locked editor style."""
+    try:
+        from styles.editor.loader import get_style
+
+        return get_style(style_id)
+    except Exception as exc:
+        raise CheckpointValidationError(
+            f"editor idea checkpoint has an invalid style_lock.style_id "
+            f"{style_id!r}: {exc}"
+        ) from exc
+
+
+def _validate_editor_style_lock(
+    lock: Any,
+    status: str,
+    human_approved: bool,
+) -> None:
+    if not isinstance(lock, dict):
+        raise CheckpointValidationError(
+            "An editor idea checkpoint must include a style_lock object"
+        )
+
+    style = _editor_style(lock.get("style_id"))
+
+    if lock.get("style_name") != style["name"]:
+        raise CheckpointValidationError(
+            f"style_lock.style_name must be {style['name']!r} for style "
+            f"{style['id']!r}, got {lock.get('style_name')!r}"
+        )
+    if lock.get("engine") != style["engine"]:
+        raise CheckpointValidationError(
+            f"style_lock.engine must be {style['engine']!r} for style "
+            f"{style['id']!r}, got {lock.get('engine')!r}"
+        )
+
+    source = lock.get("source")
+    if not isinstance(source, dict):
+        raise CheckpointValidationError(
+            "style_lock.source must be an object with style_md, engine_js, and has_aroll"
+        )
+    for key in ("style_md", "engine_js"):
+        expected = style[key]
+        actual = source.get(key)
+        if actual != expected:
+            raise CheckpointValidationError(
+                f"style_lock.source.{key} must be {expected!r} for style "
+                f"{style['id']!r}, got {actual!r}"
+            )
+        if not (REPO_ROOT / expected).exists():
+            raise CheckpointValidationError(
+                f"style_lock.source.{key} does not exist: {expected}"
+            )
+
+    fmt = lock.get("format")
+    if not isinstance(fmt, dict):
+        raise CheckpointValidationError(
+            "style_lock.format must be an object with aspect, resolution, fps, and duration_seconds"
+        )
+    if fmt.get("aspect") not in ("16:9", "9:16", "3:4"):
+        raise CheckpointValidationError(
+            f"style_lock.format.aspect must be one of 16:9, 9:16, 3:4, got {fmt.get('aspect')!r}"
+        )
+    if not isinstance(fmt.get("fps"), int) or fmt["fps"] < 1:
+        raise CheckpointValidationError(
+            f"style_lock.format.fps must be a positive integer, got {fmt.get('fps')!r}"
+        )
+    duration = fmt.get("duration_seconds")
+    if (
+        not isinstance(duration, list)
+        or len(duration) != 2
+        or not all(isinstance(v, (int, float)) for v in duration)
+        or duration[0] > duration[1]
+    ):
+        raise CheckpointValidationError(
+            "style_lock.format.duration_seconds must be a two-number [min, max] list with min <= max"
+        )
+    if any(v < 1 for v in duration):
+        raise CheckpointValidationError(
+            "style_lock.format.duration_seconds entries must be >= 1 second"
+        )
+
+    confirmed = lock.get("confirmed_by_user")
+    if status == "awaiting_human" and confirmed is not False:
+        raise CheckpointValidationError(
+            "style_lock.confirmed_by_user must be false on an awaiting_human "
+            "idea checkpoint; set it true only after the user approves the style"
+        )
+    if status == "completed":
+        if confirmed is not True:
+            raise CheckpointValidationError(
+                "style_lock.confirmed_by_user must be true on a completed idea "
+                "checkpoint; the user must approve the style first"
+            )
+        if not human_approved:
+            raise CheckpointValidationError(
+                "A completed editor idea checkpoint requires human_approved=True "
+                "after the user approves the style"
+            )
+
+
+def _validate_editor_compose_qa(render_report: Any) -> None:
+    if not isinstance(render_report, dict):
+        raise CheckpointValidationError(
+            "An editor compose checkpoint must include a render_report"
+        )
+    metadata = render_report.get("metadata")
+    qa = metadata.get("editor_qa") if isinstance(metadata, dict) else None
+    if not isinstance(qa, dict):
+        raise CheckpointValidationError(
+            "render_report.metadata.editor_qa is required on an editor compose checkpoint"
+        )
+    contact_sheet = qa.get("contact_sheet")
+    if not isinstance(contact_sheet, str) or not contact_sheet.strip():
+        raise CheckpointValidationError(
+            "render_report.metadata.editor_qa.contact_sheet must be a non-empty path"
+        )
+    frames = qa.get("inspected_frames")
+    if not isinstance(frames, list) or not frames:
+        raise CheckpointValidationError(
+            "render_report.metadata.editor_qa.inspected_frames must be a non-empty list of inspected frame paths"
+        )
+    if any(not isinstance(frame, str) or not frame.strip() for frame in frames):
+        raise CheckpointValidationError(
+            "render_report.metadata.editor_qa.inspected_frames must contain only non-empty strings"
+        )
+
+
+def _validate_editor_checkpoint(
+    pipeline_type: Optional[str],
+    stage: str,
+    status: str,
+    artifacts: dict[str, Any],
+    human_approved: bool,
+) -> None:
+    if pipeline_type != "editor":
+        return
+    if status not in {"awaiting_human", "completed"}:
+        return
+    if stage == "idea":
+        _validate_editor_style_lock(artifacts.get("style_lock"), status, human_approved)
+    elif stage == "compose":
+        _validate_editor_compose_qa(artifacts.get("render_report"))
+
+
 @lru_cache(maxsize=1)
 def _load_checkpoint_schema() -> dict[str, Any]:
     with open(CHECKPOINT_SCHEMA_PATH, encoding="utf-8") as f:
@@ -385,6 +535,14 @@ def validate_checkpoint(checkpoint: dict[str, Any]) -> None:
     _validate_artifacts_for_stage(stage, status, artifacts)
 
     _validate_faceless_checkpoint(
+        pipeline_type,
+        stage,
+        status,
+        artifacts,
+        bool(checkpoint.get("human_approved")),
+    )
+
+    _validate_editor_checkpoint(
         pipeline_type,
         stage,
         status,

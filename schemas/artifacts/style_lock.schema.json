@@ -2,47 +2,97 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "openmontage/artifacts/style_lock",
   "title": "Style Lock",
-  "description": "Style identity for a faceless-short project, written at the idea stage after reading the full STYLE.md and inspecting style-sheet.png and the runnable example. The referenced STYLE.md remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
+  "description": "Style identity for a faceless-short or editor-pipeline project, written at the idea stage after reading the style contract (STYLE.md / style.md + base.js) and inspecting the referenced material. The referenced document remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
   "type": "object",
-  "required": ["version", "style_id", "style_name", "engine", "contract", "source", "format", "palette", "caption_rules", "confirmed_by_user", "resolution_note"],
+  "required": ["version", "style_id", "style_name", "engine", "contract", "source", "format", "confirmed_by_user", "resolution_note"],
+  "allOf": [
+    {
+      "if": { "properties": { "engine": { "const": "canvas-2d" } }, "required": ["engine"] },
+      "then": { "required": ["palette", "caption_rules"] }
+    },
+    {
+      "if": { "properties": { "engine": { "const": "threejs" } }, "required": ["engine"] },
+      "then": { "required": ["palette", "caption_rules"] }
+    }
+  ],
   "properties": {
     "version": { "type": "string", "const": "1.0" },
     "style_id": {
       "type": "string",
-      "enum": ["deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale"]
+      "enum": [
+        "deep-dive",
+        "night-file",
+        "inside-out",
+        "stick-story",
+        "paper-atlas",
+        "tall-tale",
+        "chalk-talk",
+        "clean-tech",
+        "creator-motion-graphics",
+        "data-story",
+        "pop-info",
+        "software-walkthrough",
+        "warm-canvas"
+      ]
     },
     "style_name": { "type": "string", "minLength": 1 },
-    "engine": { "type": "string", "enum": ["canvas-2d", "threejs"] },
+    "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] },
     "contract": {
       "type": "string",
       "minLength": 1,
       "description": "One-line playback of the style the user will see, e.g. 'Inside Out: flat 2D x-ray what-if explainer, 9:16, 25-45 s, 1-3 word captions with one yellow word.'"
     },
     "source": {
-      "type": "object",
-      "required": ["style_md", "style_sheet", "example"],
-      "properties": {
-        "style_md": {
-          "type": "string",
-          "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/STYLE\\.md$"
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["style_md", "engine_js", "has_aroll"],
+          "properties": {
+            "style_md": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/ai-video-editor/styles/[a-z0-9-]+/style\\.md$"
+            },
+            "engine_js": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/ai-video-editor/styles/[a-z0-9-]+/base\\.js$"
+            },
+            "has_aroll": {
+              "type": "boolean",
+              "description": "True when the style keeps the speaker on screen (A-roll), false when it replaces the footage with full-screen graphics."
+            }
+          },
+          "additionalProperties": false
         },
-        "style_sheet": {
-          "type": "string",
-          "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/style-sheet\\.png$"
-        },
-        "example": {
-          "type": "string",
-          "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/example$"
+        {
+          "type": "object",
+          "required": ["style_md", "style_sheet", "example"],
+          "properties": {
+            "style_md": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/STYLE\\.md$"
+            },
+            "style_sheet": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/style-sheet\\.png$"
+            },
+            "example": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/example$"
+            }
+          },
+          "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      ]
     },
     "format": {
       "type": "object",
       "required": ["aspect", "resolution", "fps", "duration_seconds"],
       "properties": {
-        "aspect": { "const": "9:16" },
-        "resolution": { "const": "1080x1920" },
+        "aspect": {
+          "enum": ["9:16", "16:9", "3:4"],
+          "description": "Output aspect ratio. Faceless styles are locked to 9:16; editor styles accept the user's chosen ratio."
+        },
+        "resolution": { "type": "string", "pattern": "^\\d+x\\d+$" },
         "fps": {
           "type": "integer",
           "minimum": 1,
@@ -102,6 +152,13 @@
       "type": "string",
       "minLength": 1,
       "description": "Why this style was selected: exact canonical-name match, alias match, or explicit user choice."
+    },
+    "language_support": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Languages the chosen style supports (editor styles: en/bn)."
     },
     "example_evidence": {
       "type": "object",

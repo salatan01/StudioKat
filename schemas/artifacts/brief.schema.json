@@ -25,21 +25,42 @@
       "properties": {
         "system": {
           "type": "string",
-          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless"]
+          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless", "editor"]
         },
         "name": { "type": "string", "minLength": 1 },
         "source": { "type": "string", "minLength": 1 },
         "style_id": {
           "type": "string",
-          "enum": ["deep-dive", "night-file", "inside-out", "stick-story", "paper-atlas", "tall-tale"]
+          "enum": [
+            "deep-dive",
+            "night-file",
+            "inside-out",
+            "stick-story",
+            "paper-atlas",
+            "tall-tale",
+            "chalk-talk",
+            "clean-tech",
+            "creator-motion-graphics",
+            "data-story",
+            "pop-info",
+            "software-walkthrough",
+            "warm-canvas"
+          ]
         },
-        "engine": { "type": "string", "enum": ["canvas-2d", "threejs"] }
+        "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] }
       },
       "additionalProperties": false,
       "allOf": [
         {
           "if": {
             "properties": { "system": { "const": "faceless" } },
+            "required": ["system"]
+          },
+          "then": { "required": ["style_id", "engine"] }
+        },
+        {
+          "if": {
+            "properties": { "system": { "const": "editor" } },
             "required": ["system"]
           },
           "then": { "required": ["style_id", "engine"] }
