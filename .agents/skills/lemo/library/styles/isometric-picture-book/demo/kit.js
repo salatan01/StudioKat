@@ -67,7 +67,7 @@ export function phraseLayout(P) {
     for (const [s, k] of line) {
       const [w, size0, col, fam] = SZ[k], size = size0 * sc;
       const units = fam ? [s] : [...s];       // numbers/latin set as one run
-      for (const ch of units) { if (ch === ' ') { u += .3 * sc; continue; } const cw = measure(w, ch, fam) * size / 100; out.push({ ch, u, v, w, size, col, cw, tc, fam, li }); u += cw + .05 * sc; tc += (P["step"] || .14) * (fam ? 2 : 1); }
+      for (const ch of units) { if (ch === ' ') { u += .3 * sc; continue; } const cw = measure(w, ch, fam) * size / 100; out.push({ ch, u, v, w, size, col, cw, tc, fam, li }); u += cw + .05 * sc; tc += (P.step || .14) * (fam ? 2 : 1); }
     }
     tc += P.lineGap ?? .2;
   });

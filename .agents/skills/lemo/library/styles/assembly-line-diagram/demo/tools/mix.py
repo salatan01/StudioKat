@@ -14,7 +14,7 @@ LIB = os.environ.get('LIB') or os.path.abspath(os.path.join(HERE, '..', '..', '.
 sys.path.insert(0, LIB)
 from core.audio import sampler as S
 from core.audio import sfx as X
-from core.audio.sfx import SR, add, bp, lp, hp, compress, limit, step as step_wave
+from core.audio.sfx import SR, add, bp, lp, hp, compress, limit
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import warp
 F, W = warp.film, warp.story        # story time (cues.json, timeline.json, the numbers below) → film time, and back
@@ -205,7 +205,7 @@ addf(fx, X.whoosh(.4, .8), K['iris'][0], .35, 0)
 addf(fx, lp(X.brown(1.2), 300) * .7, K['iris'][1] - .1, .5, .3)                        # bus engine
 addf(fx, hiss(.5, 1500, 6000, 1.0), K['iris'][2] - .45, .35, .2)                       # air-brake hiss
 addf(fx, X.whoosh(.4, .8), K['iris'][2], .3, 0)
-for i in range(10): addf(fx, step_wave(.7), K['cutWh'] + .1 + i * .13, .3, .1 * (i % 2))
+for i in range(10): addf(fx, X.step(.7), K['cutWh'] + .1 + i * .13, .3, .1 * (i % 2))
 addf(fx, X.whoosh(.9, 1.0), K['whip'][0], .75, 0)
 for ti in K['ignite']: addf(fx, X.ignite(1.0), ti, .7, 0); addf(fx, X.thump(1.0, 55), ti, .6, 0)
 for i in range(int((K['pull'][1] + 1 - K['ignite'][2]) / .35)): addf(fx, X.thump(.4, 90), K['ignite'][2] + .1 + i * .35, .25, -.2)

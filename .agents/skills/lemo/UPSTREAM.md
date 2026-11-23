@@ -72,19 +72,16 @@ The upstream checkout is treated as read-only and is not modified by this task.
   expected for Phase 0 and is handled per-style in Phase 2. No referencing code
   was deleted (except the teardown/briefing-board surfaces above).
 
-## Code adaptations (CAD-scan hygiene)
+## CAD scan and vendored-source fidelity
 
-The contract test's CAD scan looks for the literal token `.step` (a STEP-file
-reference) in every code/text file. Two unrelated, legitimate `.step` method/
-property uses tripped it:
-
-- `styles/assembly-line-diagram/demo/tools/mix.py`: the sfx call `X.step(...)` was
-  changed to an explicit import alias `step as step_wave` (behavior unchanged).
-- `styles/isometric-picture-book/demo/kit.js`: `P.step` was changed to bracket
-  access `P["step"]` (behavior unchanged).
-
-These are the only two occurrences; both are behavior-preserving and keep the
-CAD scan honest without weakening it.
+No vendored source file is modified for test convenience; every vendored file is
+byte-identical to upstream commit `8ca0dd8`. The CAD scan anchors its STEP
+pattern to a quote or a path separator
+(`(?:["'`]|/)[\w.-]*\.(?:step|stp)\b`), so ordinary `.step` method/property uses
+— e.g. `X.step(...)` in `styles/assembly-line-diagram/demo/tools/mix.py` and
+`P.step` in `styles/isometric-picture-book/demo/kit.js` — do not match. It also
+rejects any file whose extension is `.step`, `.stp`, `.kicad_pcb`, `.kicad_sch`
+or `.brd`.
 
 ## Font policy
 

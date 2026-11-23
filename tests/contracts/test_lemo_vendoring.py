@@ -44,13 +44,17 @@ def test_no_vendored_media_outside_font_dirs():
 
 CAD_NAMES = {"step2mesh.mjs", "extract_pcb.py", "kicad_geom.py", "sexp.py",
              "fetch_cad.sh", "pcb.json", "pcbtex.js"}
-CAD_PATTERNS = [r"occt-import-js", r"step2mesh", r"kicad", r"\.kicad_pcb", r"\.step\b"]
+# A STEP reference is a file path, not a JS/Python `.step` property or function call:
+# match `foo.step` only after a quote or a path separator.
+CAD_PATTERNS = [r"occt-import-js", r"step2mesh", r"kicad",
+                r"(?:[\"'`]|/)[\w.-]*\.(?:step|stp)\b"]
 
 def test_no_cad_or_occt_surface():
     for path in LIB.rglob("*"):
         if not path.is_file():
             continue
         assert path.name not in CAD_NAMES, path
+        assert path.suffix.lower() not in {".step", ".stp", ".kicad_pcb", ".kicad_sch", ".brd"}, path
         if path.suffix in {".js", ".mjs", ".html", ".json", ".sh", ".py", ".txt"}:
             text = path.read_text(encoding="utf-8", errors="ignore").lower()
             for pat in CAD_PATTERNS:
