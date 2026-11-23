@@ -17,7 +17,11 @@ def test_core_engine_files_exist():
 def test_unused_python_and_media_tiers_are_not_vendored():
     for rel in ["core/audio","core/tts","core/image"]:
         assert not (LIB / rel).exists(), rel
-    assert not (LIB / "node_modules").exists()
+
+def test_node_modules_can_be_installed_but_is_never_committed():
+    # `lemo_render setup` runs `npm ci` in library/, so the directory may exist
+    # locally; the repo-wide ignore rule is what keeps it out of the tree.
+    assert "node_modules/" in (REPO_ROOT / ".gitignore").read_text()
 
 def test_all_fifteen_demo_dirs_exist():
     for style in STYLES:
