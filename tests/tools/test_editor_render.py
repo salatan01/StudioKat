@@ -53,6 +53,27 @@ def test_editor_render_workspace_is_under_project():
     assert ws.is_dir()
 
 
+def test_editor_render_default_output_is_renders_final():
+    """The editor deliverable is `projects/<id>/renders/final.mp4` (design G1,
+    pipeline_defs/editor.yaml, compose-director) — not inside the editor workspace."""
+    tool = EditorRender()
+    p = tool._project_path({"project_id": "demo-project"}, None, "final.mp4")
+    assert p == Path("projects/demo-project/renders/final.mp4").resolve()
+
+
+def test_editor_render_report_reads_final_from_renders():
+    tool = EditorRender()
+    out = tool._project_path({"project_id": "demo-project"}, None, "final.mp4")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(b"x")
+    try:
+        result = tool.execute({"operation": "report", "project_id": "demo-project"})
+        assert result.success, result.error
+        assert str(out) in result.data["outputs"]
+    finally:
+        out.unlink(missing_ok=True)
+
+
 def test_chrome_prefers_env_binary(monkeypatch, tmp_path):
     fake = tmp_path / "chromium"
     fake.write_text("#!/bin/sh\n", encoding="utf-8")

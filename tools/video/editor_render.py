@@ -42,6 +42,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROJECTS_ROOT = REPO_ROOT / "projects"
 SKILL_DIR = REPO_ROOT / ".agents" / "skills" / "ai-video-editor"
 EDITOR_WORKSPACE_DIRNAME = "editor"
+EDITOR_RENDER_DIRNAME = "renders"
 
 PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 PROJECT_OPERATIONS = {
@@ -164,7 +165,7 @@ class EditorRender(BaseTool):
             "model": {"type": "string"},
             "height": {"type": "integer", "minimum": 1},
             "edits_path": {"type": "string", "description": "edits.json for plan/cut (default WORK/edits.json)."},
-            "output_path": {"type": "string", "description": "Final MP4 path (render). Default WORK/final.mp4."},
+            "output_path": {"type": "string", "description": "Final MP4 path (render). Default projects/<project_id>/renders/final.mp4."},
             "times": {"type": "array", "items": {"type": "number", "minimum": 0}, "minItems": 1},
             "job_id": {"type": "string"},
             "timeout_seconds": {"type": "integer", "minimum": 1},
@@ -192,7 +193,8 @@ class EditorRender(BaseTool):
     retry_policy = RetryPolicy(max_retries=0)
     side_effects = [
         "Creates projects/<project_id>/editor/ from the unmodified vendored skill engine",
-        "Writes transcript.json, edits.json, cut_plan.json, cut.mp4, transcript_edited.*, story.js, final.mp4",
+        "Writes transcript.json, edits.json, cut_plan.json, cut.mp4, transcript_edited.*, story.js under projects/<project_id>/editor/",
+        "Writes the deliverable to projects/<project_id>/renders/final.mp4",
     ]
     user_visible_verification = [
         "Read the contact sheet in WORK/stills/contact.png",
@@ -283,7 +285,7 @@ class EditorRender(BaseTool):
             candidate = Path(str(raw)).expanduser()
             resolved = candidate.resolve() if candidate.is_absolute() else (REPO_ROOT / candidate).resolve()
         else:
-            resolved = (project_dir / EDITOR_WORKSPACE_DIRNAME / default).resolve()
+            resolved = (project_dir / EDITOR_RENDER_DIRNAME / default).resolve()
         if not inside(resolved):
             raise EditorRenderError(
                 f"Output path {resolved} must stay under the project directory {project_dir}"
@@ -821,7 +823,7 @@ class EditorRender(BaseTool):
         edit = _read_json(workspace / "edit.json") if (workspace / "edit.json").is_file() else {}
         edited = _read_json(workspace / "transcript_edited.json") if (workspace / "transcript_edited.json").is_file() else {}
         cut_plan = _read_json(workspace / "cut_plan.json") if (workspace / "cut_plan.json").is_file() else None
-        final = workspace / "final.mp4"
+        final = self._project_path(inputs, None, "final.mp4")
         outputs = [str(final)] if final.is_file() else []
         style_name = ""
         if edit.get("style"):
