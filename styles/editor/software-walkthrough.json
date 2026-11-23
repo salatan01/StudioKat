@@ -1,0 +1,14 @@
+{
+  "id": "software-walkthrough",
+  "name": "Software Walkthrough",
+  "aliases": ["software walkthrough", "walkthrough", "mock screens"],
+  "engine": "editor-canvas",
+  "aspect": "16:9",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": [1, 600],
+  "has_aroll": false,
+  "style_md": ".agents/skills/ai-video-editor/styles/software-walkthrough/style.md",
+  "engine_js": ".agents/skills/ai-video-editor/styles/software-walkthrough/base.js",
+  "language_support": ["en", "bn"]
+}

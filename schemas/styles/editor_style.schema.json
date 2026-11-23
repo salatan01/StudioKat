@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/styles/editor_style",
+  "title": "Editor Style Manifest",
+  "description": "Selection metadata and source pointers for one ai-video-editor canvas style. The look contract lives in the vendored skill's style.md; this file never duplicates it.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "aliases",
+    "engine",
+    "aspect",
+    "resolution",
+    "fps",
+    "duration_seconds",
+    "has_aroll",
+    "style_md",
+    "engine_js"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "enum": [
+        "chalk-talk",
+        "clean-tech",
+        "creator-motion-graphics",
+        "data-story",
+        "pop-info",
+        "software-walkthrough",
+        "warm-canvas"
+      ]
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "engine": { "const": "editor-canvas" },
+    "aspect": { "enum": ["16:9", "9:16", "3:4"] },
+    "resolution": { "type": "string", "pattern": "^\\d+x\\d+$" },
+    "fps": { "type": "integer", "minimum": 1 },
+    "duration_seconds": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "has_aroll": { "type": "boolean" },
+    "style_md": {
+      "type": "string",
+      "pattern": "^\\.agents/skills/ai-video-editor/styles/[a-z0-9-]+/style\\.md$"
+    },
+    "engine_js": {
+      "type": "string",
+      "pattern": "^\\.agents/skills/ai-video-editor/styles/[a-z0-9-]+/base\\.js$"
+    },
+    "language_support": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

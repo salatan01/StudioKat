@@ -1,0 +1,14 @@
+{
+  "id": "creator-motion-graphics",
+  "name": "Creator Motion Graphics",
+  "aliases": ["creator motion graphics", "creator graphics"],
+  "engine": "editor-canvas",
+  "aspect": "16:9",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": [1, 600],
+  "has_aroll": false,
+  "style_md": ".agents/skills/ai-video-editor/styles/creator-motion-graphics/style.md",
+  "engine_js": ".agents/skills/ai-video-editor/styles/creator-motion-graphics/base.js",
+  "language_support": ["en", "bn"]
+}

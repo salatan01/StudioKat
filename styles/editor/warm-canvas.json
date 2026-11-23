@@ -1,0 +1,14 @@
+{
+  "id": "warm-canvas",
+  "name": "Warm Canvas",
+  "aliases": ["warm canvas"],
+  "engine": "editor-canvas",
+  "aspect": "16:9",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": [1, 600],
+  "has_aroll": true,
+  "style_md": ".agents/skills/ai-video-editor/styles/warm-canvas/style.md",
+  "engine_js": ".agents/skills/ai-video-editor/styles/warm-canvas/base.js",
+  "language_support": ["en", "bn"]
+}

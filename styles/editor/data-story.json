@@ -1,0 +1,14 @@
+{
+  "id": "data-story",
+  "name": "Data Story",
+  "aliases": ["data story"],
+  "engine": "editor-canvas",
+  "aspect": "16:9",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": [1, 600],
+  "has_aroll": false,
+  "style_md": ".agents/skills/ai-video-editor/styles/data-story/style.md",
+  "engine_js": ".agents/skills/ai-video-editor/styles/data-story/base.js",
+  "language_support": ["en", "bn"]
+}
