@@ -52,9 +52,9 @@ The camera circles the assembled form, then rides the gap between two layers.
 
 - One graphite line colour, one light metal, one shadow metal and exactly one accent for
   the part under discussion. That is the whole palette.
-- The accent marks the active layer and nothing else: the layer the narration or the
-  caption currently names takes the accent, every other layer stays neutral. It never
-  decorates.
+- The accent marks the active layer and nothing else: the layer the caption or the
+  on-screen label currently names takes the accent, every other layer stays neutral. It
+  never decorates.
 - Depth comes from the value of the fill, not a gradient: the lit face is one flat tone,
   the shadow face a darker flat tone, the cut edge between them a third. Keep it to three.
 - Contrast between a label and the plate under it must be real; pick the ink against the

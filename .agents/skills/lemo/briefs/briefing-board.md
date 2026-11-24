@@ -151,8 +151,9 @@ fully inside the frame.
 ## Inputs & proof
 
 - Required inputs: `cutouts` and `facts`. Each cut-out must be a real, sourced photograph
-  with an entry under `demo/kit/objects/` or the clip's own object folder; each number on
-  screen must be sourced in `facts`. Never invent evidence or a credit.
+  with a record in the clip's own object folder, shaped like the vendored examples under
+  `demo/kit/objects/`; each number on screen must be sourced in `facts`. Never invent
+  evidence or a credit.
 - **Real cut-outs and credits only.** Every photograph in the clip is credited, and CC BY
   material is named on screen for at least 2.5 s (see the demo's `demo/CREDITS` for the
   shape of a proper credit trail). No real product, company or place is named or readable

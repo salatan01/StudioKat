@@ -110,8 +110,9 @@ One place, one mood, one curtain.
 - `demo/main.js` — the page contract: loads the four faces, imports `film.js`, exposes
   `window.render`, `window.DUR` and `window.EV`, and renders a named gate still via
   `?scene=file.fn`.
-- `demo/chars.js` — the figure language: `drawFigure`, `drawPip`, `FACES`, `POSE`, `mixPose`
-  and the faceted-lacquer construction. The demo's cast is the demo's; invent your own.
+- `demo/chars.js` — the figure language: `drawFigure`, `drawPip`, `FACES`, `POSES`,
+  `lerpPose` and the faceted-lacquer construction. The demo's cast is the demo's; invent
+  your own.
 - `demo/frames.js` — the gate stills and the component kit (`kit`, `modelSheet`, `charTest`,
   `frameLobby`, `frameRoof`, `signTest`); read it to see the pieces assembled.
 - `demo/engine/deco.js` — palette and primitives (`C`, `goldGrad`, `goldFlat`, `gline`,
