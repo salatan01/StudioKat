@@ -5,8 +5,9 @@ Original work authored for this sample.
 PRODUCT
 - "Field Lamp FL-1", a fictional hand lamp. Invented for this sample. It is not a real
   product and was not copied from any vendor's parts diagram, teardown or spec sheet.
-- `parts_spec.json` lists six parts along one vertical axis: shell, diffuser, driver
-  board, cell x2, bracket x2, M3 bolt x4.
+- `parts_spec.json` lists six parts along a single explode axis: shell, diffuser, driver
+  board, cell x2, bracket x2, M3 bolt x4. The axis itself is chosen from the clip's
+  aspect, not fixed in the spec.
 
 ILLUSTRATIVE ONLY
 - The spec is a diagram, not a measured model. Every part, layer and count is a drawing

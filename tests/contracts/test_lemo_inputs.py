@@ -43,3 +43,53 @@ def test_briefing_board_sample_has_real_photos():
 def test_every_sample_has_credits():
     for name in ["dataviz","briefing-board","living-screencast","teardown"]:
         assert (SAMPLES/name/"CREDITS").is_file(), name
+
+# The input clip.json written by `lemo_render new` — the schema `lemo_render validate`
+# reads. Mirrors the plan's Task 10 CLIP sample values, as the input clip.
+CLIP_INPUT = {
+    "clip_id": "clip-01",
+    "style_id": "swiss-motion",
+    "subject": "A tide timetable",
+    "one_idea": "A grid makes the next tide legible.",
+    "aspect": "16:9",
+    "width": 1920,
+    "height": 1080,
+    "fps": 24,
+    "duration_seconds": 6,
+    "sound": "none",
+    "text_mode": "title",
+    "inputs": {"data": "data.csv"},
+    "facts": ["The tide turns roughly twice a day."],
+}
+
+CLIP_FIELDS = [
+    "clip_id","style_id","subject","one_idea","aspect","width","height","fps",
+    "duration_seconds","sound","text_mode","inputs","facts",
+]
+
+def test_clip_input_schema_accepts_a_realistic_clip():
+    doc = dict(CLIP_INPUT)
+    _validate("clip", doc)
+    assert list(doc) == CLIP_FIELDS
+
+def test_clip_input_schema_rejects_a_bad_aspect():
+    doc = dict(CLIP_INPUT); doc["aspect"] = "5:4"
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", doc)
+
+def test_clip_input_schema_rejects_a_non_positive_duration():
+    doc = dict(CLIP_INPUT); doc["duration_seconds"] = 0
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", doc)
+
+def test_clip_input_schema_rejects_an_empty_subject():
+    doc = dict(CLIP_INPUT); doc["subject"] = ""
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", doc)
+
+def test_clip_input_schema_rejects_a_bad_fps():
+    zero = dict(CLIP_INPUT); zero["fps"] = 0
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", zero)
+    fractional = dict(CLIP_INPUT); fractional["fps"] = 24.5
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", fractional)
+
+def test_clip_input_schema_rejects_an_extra_top_level_key():
+    doc = dict(CLIP_INPUT); doc["axis"] = "vertical"
+    with pytest.raises(jsonschema.ValidationError): _validate("clip", doc)
