@@ -161,6 +161,30 @@ For every clip that uses data, write a `data_manifest.json` beside the clip and 
 Always choose columns by their header name, not their position. Print every fact the clip
 asserts as a `facts` entry in `clip.json`.
 
+### Worked pilot — "A warming record"
+
+The shipped sample (`.agents/skills/lemo/samples/clips/dataviz/`) is a 6 s cutaway about the
+real annual mean global surface-temperature anomaly for 1996–2025, from NASA GISTEMP v4 — not
+the demo's fictional hundred summers:
+
+- The series is the 30-row `J-D` column of the public-domain GISTEMP table, sliced to the
+  most recent complete calendar years; each row lands as a value dot, its fill taken from the
+  diverging ramp pivoted on zero anomaly, so pale early years and dark recent ones read as the
+  record warms. The `data_manifest.json` cites the source URL, the retrieval date, the columns
+  by header name and the units; the axis runs 0.0–1.5 °C with rules at 0.5 and 1.0.
+- The sample draws its own cream stock and lays the chart out in screen coordinates, because
+  the vendored `engine.js` fixes its page at 1920×1080 and its camera closes over that size.
+  It then draws with the engine's coordinate-explicit primitives — `pencilStroke`, `dataDot`,
+  `inkLine`, `handText`, `setType`, `leader`, `ringPath`, `valueColor` — and blits the
+  screen-space `drawPencil` through a 1920×1080 stencil, so the pencil survives any aspect.
+- On the clock: the axis grows, the series inks left to right with each mark landing as the
+  tip passes, a red ring closes on the warmest year, and one handwritten line names it. The
+  sample reads `width`/`height` from its own `clip.json`, so one file renders at any aspect,
+  and it declares `sound: "none"`.
+
+Read the sample's `clip.js` for its exact timings — then set them aside and time your own
+clip to its own subject.
+
 ## Aspect adaptation
 
 - **16:9** is native: a wide plot box, the caption band along the bottom, leaders reaching

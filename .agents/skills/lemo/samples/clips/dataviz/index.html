@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A warming record</title>
+<style>
+  html, body { margin: 0; background: #F6F3EC; overflow: hidden; }
+  canvas { display: block; }
+
+  /* Faces come from the pinned OFL manifest
+     (.agents/skills/lemo/library/assets/fonts/manifest.json); the render
+     server root is library/, so each URL is absolute from there. */
+  @font-face { font-family: 'Newsreader'; src: url('/assets/fonts/newsreader/Newsreader[opsz,wght].ttf') format('truetype'); font-weight: 200 800; font-display: block; }
+  @font-face { font-family: 'Caveat'; src: url('/assets/fonts/caveat/Caveat[wght].ttf') format('truetype'); font-weight: 400 700; font-display: block; }
+  @font-face { font-family: 'IBM Plex Mono'; src: url('/assets/fonts/ibmplexmono/IBMPlexMono-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+  @font-face { font-family: 'IBM Plex Mono'; src: url('/assets/fonts/ibmplexmono/IBMPlexMono-Medium.ttf') format('truetype'); font-weight: 500; font-display: block; }
+</style>
+</head>
+<body>
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <script type="module" src="clip.js"></script>
+</body>
+</html>

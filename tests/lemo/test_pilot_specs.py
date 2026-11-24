@@ -18,7 +18,7 @@ from styles.lemo.loader import get_style
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLIPS = REPO_ROOT / ".agents/skills/lemo/samples/clips"
 
-PILOT_STYLES = ["swiss-motion", "midcentury-toon"]  # Task 19 appends its own
+PILOT_STYLES = ["swiss-motion", "midcentury-toon", "dataviz"]
 
 
 @pytest.mark.parametrize("style", PILOT_STYLES)
