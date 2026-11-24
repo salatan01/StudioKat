@@ -2,12 +2,12 @@
 
 Thin BaseTool wrapper around the vendored Lemo engine at
 ``.agents/skills/lemo/``. This module owns workspace layout, path guards,
-command assembly, and Chrome discovery; it never reimplements the engine and
-never substitutes FFmpeg/Remotion/HyperFrames for a Lemo render.
+command assembly, Chrome discovery, background jobs and the render probe; it
+never reimplements the engine and never substitutes FFmpeg/Remotion/HyperFrames
+for a Lemo render.
 
-``setup``, ``check``, ``styles``, ``new`` and ``validate`` are live; every
-remaining operation declared in the schema routes to a ``_op_<name>`` stub that
-raises :class:`LemoRenderError` until its own task implements it.
+Operations: ``setup``, ``check``, ``styles``, ``new``, ``validate``, ``stills``,
+``render``, ``render_start``, ``job_status``, ``job_cancel`` and ``report``.
 """
 
 from __future__ import annotations
@@ -16,9 +16,14 @@ import html
 import json
 import os
 import re
+import secrets
+import shlex
 import shutil
+import signal
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -42,8 +47,54 @@ LIBRARY_DIR = SKILL_DIR / "library"
 SETUP_SCRIPT = SKILL_DIR / "scripts" / "setup.py"
 PAGE_CHECK_SCRIPT = SKILL_DIR / "scripts" / "page_check.mjs"
 TEMPLATES_DIR = SKILL_DIR / "templates"
+VIDEO_ENGINE = LIBRARY_DIR / "core" / "render" / "video.mjs"
+STILL_ENGINE = LIBRARY_DIR / "core" / "render" / "still.mjs"
+
+# The default number of stills `stills` renders and the frames the compose gate
+# requires. Four well-spaced points show the arc of a 3-20 s clip.
+REVIEW_FRAME_COUNT = 4
+DEFAULT_WORKERS = 3
 
 PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+
+def _pid_alive(pid: int) -> bool:
+    """True when ``pid`` may still be running (mirrors faceless_render)."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    # A zombie answers `kill(pid, 0)` but is not running; treat it as dead.
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+        state = stat.rsplit(")", 1)[1].split(None, 1)[0]
+    except (OSError, IndexError):
+        return True
+    return state != "Z"
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _format_time(value: Any) -> str:
+    """A short, filesystem-safe time string (``0``, ``1.5``, ``4.25``)."""
+    text = f"{float(value):.3f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _default_times(duration: Any, count: int = REVIEW_FRAME_COUNT) -> list[float]:
+    """Evenly spaced interior sample times for a clip of ``duration`` seconds."""
+    try:
+        duration = float(duration)
+    except (TypeError, ValueError):
+        return [0.0]
+    if duration <= 0:
+        return [0.0]
+    count = max(1, int(count))
+    return [round(duration * (i + 1) / (count + 1), 3) for i in range(count)]
 
 # Native frame sizes for each supported aspect. Explicit width/height inputs
 # override these.
@@ -113,12 +164,6 @@ PROJECT_OPERATIONS = {
     "job_cancel",
     "report",
 }
-
-# Operations that are declared in the schema but still route to a stub. Routing
-# them to a clean ``success=False`` (never a crash) is intentional; they must NOT
-# read as "Unknown operation". ``new`` and ``validate`` left this set when Task
-# 12 implemented them.
-LATER_TASK_OPERATIONS = PROJECT_OPERATIONS - {"new", "validate"}
 
 
 def _positive_int(value: Any, default: int, label: str) -> int:
@@ -211,6 +256,10 @@ class LemoRender(BaseTool):
             "fps": {"type": "integer", "minimum": 1},
             "force": {"type": "boolean", "default": False},
             "timeout_seconds": {"type": "integer", "minimum": 1},
+            "workers": {"type": "integer", "minimum": 1},
+            "software_gl": {"type": "boolean", "default": False},
+            "times": {"type": "array", "items": {"type": "number", "minimum": 0}},
+            "columns": {"type": "integer", "minimum": 1},
             "output_path": {"type": "string"},
             "job_id": {"type": "string"},
         },
@@ -360,12 +409,16 @@ class LemoRender(BaseTool):
             )
         return resolved
 
-    def _chrome_env(self) -> dict[str, str]:
+    def _chrome_env(self, software_gl: bool = False) -> dict[str, str]:
         env = dict(os.environ)
         chrome = resolve_chrome()
         if chrome:
             env["CHROME"] = chrome
             env["PLAYWRIGHT_CHROME"] = chrome
+        if software_gl:
+            # The engine reads LEMO_ANGLE; swiftshader forces software rendering
+            # on machines whose GPU Chrome drops the WebGL context.
+            env["LEMO_ANGLE"] = "swiftshader"
         return env
 
     def _run(
@@ -400,6 +453,340 @@ class LemoRender(BaseTool):
             raise LemoRenderError(
                 f"{label} failed (exit {proc.returncode}): {detail}"
             )
+
+    # ------------------------------------------------------------------
+    # Engine commands, probes, and background jobs
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _node() -> str:
+        node = shutil.which("node")
+        if not node:
+            raise LemoRenderError(
+                "node not found on PATH. lemo_render needs Node.js to run the "
+                "engine. Run inside the StudioKat Nix shell or install Node.js."
+            )
+        return node
+
+    @staticmethod
+    def _load_clip(clip_dir: Path) -> dict[str, Any]:
+        from tools.video.lemo.validate_clip import load_clip
+
+        try:
+            return load_clip(clip_dir)
+        except Exception as exc:
+            raise LemoRenderError(
+                f"Could not read {clip_dir / 'clip.json'}: {exc}"
+            ) from exc
+
+    def _render_command(
+        self,
+        clip_dir: Path,
+        out: Path,
+        fps: int,
+        workers: int,
+        size: str,
+        software_gl: bool = False,
+    ) -> list[str]:
+        """argv for the vendored ``video.mjs`` render entrypoint.
+
+        ``software_gl`` does not change the argv (the engine reads
+        ``LEMO_ANGLE`` from the environment); it is accepted so callers can
+        build the command and the environment together.
+        """
+        return [
+            "node",
+            str(VIDEO_ENGINE),
+            str(clip_dir),
+            "--fps",
+            str(int(fps)),
+            "--workers",
+            str(int(workers)),
+            "--size",
+            str(size),
+            "--out",
+            str(out),
+        ]
+
+    def _stills_command(
+        self,
+        clip_dir: Path,
+        times: list[float],
+        out_dir: Path,
+        size: str,
+        prefix: str = "t_",
+    ) -> list[str]:
+        """argv for the vendored ``still.mjs`` entrypoint."""
+        cmd = ["node", str(STILL_ENGINE), str(clip_dir)]
+        cmd += [_format_time(t) for t in times]
+        cmd += ["--prefix", prefix, "--out", str(out_dir), "--size", str(size)]
+        return cmd
+
+    def _probe(self, path: Path) -> dict[str, Any]:
+        ffprobe = shutil.which("ffprobe")
+        if not ffprobe:
+            raise LemoRenderError(
+                "ffprobe not found on PATH. Run inside the StudioKat Nix shell."
+            )
+        proc = self._run(
+            [
+                ffprobe,
+                "-v",
+                "error",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                str(path),
+            ],
+            cwd=REPO_ROOT,
+            timeout=120,
+        )
+        self._output(proc, "ffprobe")
+        try:
+            return json.loads(proc.stdout or "{}")
+        except json.JSONDecodeError as exc:
+            raise LemoRenderError(f"ffprobe returned invalid JSON: {exc}") from exc
+
+    @staticmethod
+    def _rate(value: Any) -> float:
+        if isinstance(value, str) and "/" in value:
+            num, _, den = value.partition("/")
+            try:
+                return float(num) / float(den)
+            except (ValueError, ZeroDivisionError):
+                return 0.0
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @classmethod
+    def _verify_render(
+        cls,
+        probe: dict[str, Any],
+        *,
+        width: int,
+        height: int,
+        fps: int,
+        duration: Any,
+        sound: str,
+    ) -> None:
+        """Raise unless the probe is an H.264/yuv420p clip of the expected size.
+
+        Checks codec, pixel format, dimensions, frame rate, duration (within one
+        frame) and the audio contract (``sound == "none"`` means no audio stream).
+        """
+        streams = probe.get("streams") or []
+        videos = [s for s in streams if s.get("codec_type") == "video"]
+        audios = [s for s in streams if s.get("codec_type") == "audio"]
+        if not videos:
+            raise LemoRenderError("render produced no video stream")
+        video = videos[0]
+
+        codec = video.get("codec_name")
+        if codec != "h264":
+            raise LemoRenderError(f"render codec is {codec!r}, expected 'h264'")
+        # The engine screenshots JPEG frames, so libx264 tags the 4:2:0 output
+        # full-range ("yuvj420p"). Both are valid 8-bit 4:2:0; reject anything
+        # else (yuv444p, 10-bit, ...).
+        if video.get("pix_fmt") not in ("yuv420p", "yuvj420p"):
+            raise LemoRenderError(
+                f"render pixel format is {video.get('pix_fmt')!r}, expected "
+                "'yuv420p' or 'yuvj420p'"
+            )
+        if int(video.get("width") or 0) != int(width) or int(video.get("height") or 0) != int(
+            height
+        ):
+            raise LemoRenderError(
+                f"render size {video.get('width')}x{video.get('height')} does not "
+                f"match the clip {width}x{height}"
+            )
+        rate = cls._rate(video.get("avg_frame_rate") or video.get("r_frame_rate"))
+        if abs(rate - float(fps)) > 0.01:
+            raise LemoRenderError(f"render fps {rate:g} does not match the clip {fps}")
+
+        raw_duration = (probe.get("format") or {}).get("duration")
+        try:
+            actual = float(raw_duration)
+        except (TypeError, ValueError):
+            raise LemoRenderError("render has no readable duration")
+        tolerance = 1.5 / float(fps)
+        if abs(actual - float(duration)) > tolerance:
+            raise LemoRenderError(
+                f"render duration {actual:g}s is more than one frame from the "
+                f"clip's {duration}s"
+            )
+
+        if sound == "none" and audios:
+            raise LemoRenderError(
+                "clip sound is 'none' but the render has an audio stream"
+            )
+
+    # -- background jobs (same on-disk shape as faceless_render) --------
+
+    def _job_dir(self, workspace: Path) -> Path:
+        jobs = workspace / "jobs"
+        jobs.mkdir(parents=True, exist_ok=True)
+        return jobs
+
+    def _job_path(self, workspace: Path, job_id: str) -> Path:
+        if not isinstance(job_id, str) or not PROJECT_ID_RE.match(job_id):
+            raise LemoRenderError(f"Invalid job_id {job_id!r}")
+        jobs = (workspace / "jobs").resolve()
+        path = (jobs / f"{job_id}.json").resolve()
+        if path.parent != jobs:
+            raise LemoRenderError(f"Invalid job_id {job_id!r}")
+        if not path.is_file():
+            raise LemoRenderError(f"Job not found: {job_id}")
+        return path
+
+    def _write_job(self, path: Path, payload: dict[str, Any]) -> None:
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def _write_job_script(
+        self, workspace: Path, job_id: str, command: list[str]
+    ) -> tuple[Path, Path, Path]:
+        jobs = self._job_dir(workspace)
+        script_path = jobs / f"{job_id}.sh"
+        log_path = jobs / f"{job_id}.log"
+        exit_path = jobs / f"{job_id}.exit"
+        script_path.write_text(
+            "#!/usr/bin/env bash\n"
+            "set -u\n"
+            f"cd {shlex.quote(str(workspace))}\n"
+            f"{shlex.join(command)}\n"
+            "code=$?\n"
+            f"echo $code > {shlex.quote(str(exit_path))}\n"
+            "exit $code\n",
+            encoding="utf-8",
+        )
+        script_path.chmod(0o755)
+        return script_path, log_path, exit_path
+
+    def _start_job(
+        self,
+        inputs: dict[str, Any],
+        *,
+        kind: str,
+        output_path: Path,
+        command: list[str],
+        software_gl: bool = False,
+    ) -> ToolResult:
+        workspace = self._workspace(inputs)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        job_id = f"{kind}-{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}"
+        script_path, log_path, exit_path = self._write_job_script(
+            workspace, job_id, command
+        )
+        log = open(log_path, "w", encoding="utf-8")
+        try:
+            proc = subprocess.Popen(
+                ["bash", str(script_path)],
+                cwd=str(workspace),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                env=self._chrome_env(software_gl),
+            )
+        finally:
+            log.close()
+
+        job_path = self._job_dir(workspace) / f"{job_id}.json"
+        payload = {
+            "version": "1.0",
+            "job_id": job_id,
+            "kind": kind,
+            "project_id": inputs.get("project_id"),
+            "workspace": str(workspace),
+            "status": "running",
+            "pid": proc.pid,
+            "command": command,
+            "script_path": str(script_path),
+            "log_path": str(log_path),
+            "exit_code_path": str(exit_path),
+            "output_path": str(output_path),
+            "started_at": _now(),
+            "ended_at": None,
+            "exit_code": None,
+            "error": None,
+        }
+        self._write_job(job_path, payload)
+        return ToolResult(
+            success=True,
+            data={**payload, "job_path": str(job_path)},
+            artifacts=[str(job_path)],
+        )
+
+    def _job_state(self, job: dict[str, Any]) -> dict[str, Any]:
+        """Resolve a job record against the process and exit-code file.
+
+        Returns ``{"status", "exit_code", "error"}`` where status is one of
+        ``running``/``succeeded``/``failed``. A job whose pid is dead and whose
+        exit file never appeared is ``failed``.
+        """
+        status = job.get("status") or "running"
+        exit_code = job.get("exit_code")
+        error = job.get("error")
+        if status != "running":
+            return {"status": status, "exit_code": exit_code, "error": error}
+
+        exit_path = Path(str(job.get("exit_code_path") or ""))
+        output = Path(str(job.get("output_path"))) if job.get("output_path") else None
+
+        if exit_path.is_file():
+            try:
+                exit_code = int(exit_path.read_text(encoding="utf-8").strip())
+            except (OSError, ValueError):
+                exit_code = -1
+            if exit_code == 0 and output and output.is_file():
+                status = "succeeded"
+            else:
+                status = "failed"
+                error = error or f"Render exited {exit_code}"
+        elif _pid_alive(int(job.get("pid") or 0)):
+            status = "running"
+        else:
+            status = "failed"
+            error = error or "Process exited without writing an exit code"
+
+        return {"status": status, "exit_code": exit_code, "error": error}
+
+    @staticmethod
+    def _reap(pid: int) -> None:
+        for _ in range(20):
+            try:
+                reaped, _status = os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                return
+            if reaped:
+                return
+            time.sleep(0.05)
+
+    def _terminate(self, pid: int) -> None:
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                self._reap(pid)
+                return
+        time.sleep(0.5)
+        if not _pid_alive(pid):
+            self._reap(pid)
+            return
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+        self._reap(pid)
 
     # ------------------------------------------------------------------
     # Operations
@@ -778,23 +1165,257 @@ class LemoRender(BaseTool):
             artifacts=[str(clip_dir)],
         )
 
+    @staticmethod
+    def _clip_render_params(clip: dict[str, Any]) -> tuple[int, int, int, Any, str]:
+        """Validate and return (width, height, fps, duration, sound) from clip.json."""
+        width = clip.get("width")
+        height = clip.get("height")
+        fps = clip.get("fps")
+        bad = [
+            name
+            for name, value in (("width", width), ("height", height), ("fps", fps))
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1
+        ]
+        if bad:
+            raise LemoRenderError(
+                f"clip.json has invalid integer(s) for: {', '.join(bad)}"
+            )
+        sound = clip.get("sound") or "none"
+        return int(width), int(height), int(fps), clip.get("duration_seconds"), str(sound)
+
+    def _review_paths(
+        self, inputs: dict[str, Any], clip_id: str
+    ) -> tuple[Path, Path, Path]:
+        """(review dir, frames dir, contact sheet path) under the project."""
+        review = self._resolve_project_dir(inputs) / "review"
+        return review, review / clip_id, review / f"{clip_id}-contact.png"
+
     def _op_stills(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("stills is implemented in a later task")
+        self._node()
+        clip_dir = self._clip_dir(inputs)
+        clip_id = str(inputs.get("clip_id"))
+        clip = self._load_clip(clip_dir)
+        width, height, _fps, duration, _sound = self._clip_render_params(clip)
+        size = f"{width}x{height}"
+
+        times = inputs.get("times")
+        if times:
+            try:
+                times = [float(value) for value in times]
+            except (TypeError, ValueError) as exc:
+                raise LemoRenderError(f"times must be numbers: {exc}") from exc
+        else:
+            times = _default_times(duration)
+
+        review, frames_dir, contact = self._review_paths(inputs, clip_id)
+        frames_dir.mkdir(parents=True, exist_ok=True)
+        software_gl = bool(inputs.get("software_gl"))
+        proc = self._run(
+            self._stills_command(clip_dir, times, frames_dir, size),
+            cwd=LIBRARY_DIR,
+            timeout=int(inputs.get("timeout_seconds") or 900),
+            env=self._chrome_env(software_gl),
+        )
+        self._output(proc, "stills")
+
+        frames = [frames_dir / f"t_{_format_time(t)}.jpg" for t in times]
+        missing = [str(frame) for frame in frames if not frame.is_file()]
+        if missing:
+            raise LemoRenderError(
+                "stills did not produce every frame: " + ", ".join(missing)
+            )
+
+        from tools.video.lemo.contact_sheet import build as build_contact_sheet
+
+        columns = int(inputs.get("columns") or REVIEW_FRAME_COUNT)
+        labels = [f"t={_format_time(t)}s" for t in times]
+        build_contact_sheet(
+            frames, contact, columns=min(columns, len(frames)), labels=labels
+        )
+
+        return ToolResult(
+            success=True,
+            data={
+                "clip_dir": str(clip_dir),
+                "stills_dir": str(frames_dir),
+                "frames": [str(frame) for frame in frames],
+                "contact_sheet": str(contact),
+                "times": times,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=[str(contact), *[str(frame) for frame in frames]],
+        )
+
+    def _render_to(
+        self, inputs: dict[str, Any], clip_dir: Path, clip: dict[str, Any]
+    ) -> tuple[Path, list[str]]:
+        """Command + output path shared by ``render`` and ``render_start``."""
+        width, height, fps, _duration, _sound = self._clip_render_params(clip)
+        size = f"{width}x{height}"
+        output = self._project_path(
+            inputs, inputs.get("output_path"), "renders/final.mp4"
+        )
+        workers = _positive_int(inputs.get("workers"), DEFAULT_WORKERS, "workers")
+        software_gl = bool(inputs.get("software_gl"))
+        command = self._render_command(
+            clip_dir, output, fps, workers, size, software_gl
+        )
+        return output, command
 
     def _op_render(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("render is implemented in a later task")
+        self._node()
+        clip_dir = self._clip_dir(inputs)
+        clip = self._load_clip(clip_dir)
+        width, height, fps, duration, sound = self._clip_render_params(clip)
+        output, command = self._render_to(inputs, clip_dir, clip)
+
+        software_gl = bool(inputs.get("software_gl"))
+        proc = self._run(
+            command,
+            cwd=LIBRARY_DIR,
+            timeout=int(inputs.get("timeout_seconds") or 3600),
+            env=self._chrome_env(software_gl),
+        )
+        self._output(proc, "render")
+        if not output.is_file():
+            raise LemoRenderError(f"render did not write {output}")
+
+        probe = self._probe(output)
+        self._verify_render(
+            probe, width=width, height=height, fps=fps, duration=duration, sound=sound
+        )
+        return ToolResult(
+            success=True,
+            data={
+                "clip_dir": str(clip_dir),
+                "output_path": str(output),
+                "probe": probe,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=[str(output)],
+        )
 
     def _op_render_start(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("render_start is implemented in a later task")
+        self._node()
+        clip_dir = self._clip_dir(inputs)
+        clip = self._load_clip(clip_dir)
+        output, command = self._render_to(inputs, clip_dir, clip)
+        return self._start_job(
+            inputs,
+            kind="render",
+            output_path=output,
+            command=command,
+            software_gl=bool(inputs.get("software_gl")),
+        )
 
     def _op_job_status(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("job_status is implemented in a later task")
+        workspace = self._workspace(inputs)
+        job_path = self._job_path(workspace, str(inputs.get("job_id") or ""))
+        job = json.loads(job_path.read_text(encoding="utf-8"))
+        state = self._job_state(job)
+        job["status"] = state["status"]
+        job["exit_code"] = state["exit_code"]
+        job["error"] = state["error"]
+        if state["status"] != "running":
+            job["ended_at"] = _now()
+        self._write_job(job_path, job)
+
+        log_tail = ""
+        log_path = Path(str(job.get("log_path") or ""))
+        if log_path.is_file():
+            log_tail = "\n".join(
+                log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-40:]
+            )
+
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "job_path": str(job_path),
+                "job_id": job.get("job_id"),
+                "kind": job.get("kind"),
+                "status": state["status"],
+                "pid": job.get("pid"),
+                "output_path": job.get("output_path"),
+                "exit_code": state["exit_code"],
+                "error": state["error"],
+                "log_tail": log_tail,
+            },
+        )
 
     def _op_job_cancel(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("job_cancel is implemented in a later task")
+        workspace = self._workspace(inputs)
+        job_path = self._job_path(workspace, str(inputs.get("job_id") or ""))
+        job = json.loads(job_path.read_text(encoding="utf-8"))
+        if job.get("status") != "running":
+            return ToolResult(
+                success=True,
+                data={
+                    "workspace": str(workspace),
+                    "job_path": str(job_path),
+                    "job_id": job.get("job_id"),
+                    "status": job.get("status"),
+                },
+            )
+
+        pid = int(job.get("pid") or 0)
+        if pid and _pid_alive(pid):
+            self._terminate(pid)
+        job["status"] = "cancelled"
+        job["ended_at"] = _now()
+        job["error"] = "Cancelled by user request"
+        self._write_job(job_path, job)
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "job_path": str(job_path),
+                "job_id": job.get("job_id"),
+                "status": "cancelled",
+                "output_path": job.get("output_path"),
+            },
+        )
 
     def _op_report(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("report is implemented in a later task")
+        """Assemble ``metadata.lemo_qa`` for the compose checkpoint."""
+        clip_dir = self._clip_dir(inputs)
+        clip_id = str(inputs.get("clip_id"))
+        clip = self._load_clip(clip_dir)
+        _review, frames_dir, contact = self._review_paths(inputs, clip_id)
+
+        frames = sorted(frames_dir.glob("*.jpg"))
+        output = self._project_path(
+            inputs, inputs.get("output_path"), "renders/final.mp4"
+        )
+        probe = self._probe(output) if output.is_file() else None
+
+        lemo_qa = {
+            "style_id": clip.get("style_id"),
+            "clip_id": clip_id,
+            "duration_seconds": clip.get("duration_seconds"),
+            "resolution": f"{clip.get('width')}x{clip.get('height')}",
+            "fps": clip.get("fps"),
+            "contact_sheet": str(contact),
+            "frames": [str(frame) for frame in frames],
+            "probe": probe,
+            "output_path": str(output),
+        }
+        return ToolResult(
+            success=True,
+            data={
+                "lemo_qa": lemo_qa,
+                "frame_count": len(frames),
+                "warnings": []
+                if len(frames) >= REVIEW_FRAME_COUNT
+                else [
+                    f"only {len(frames)} frame(s) found; run operation='stills' "
+                    f"to produce at least {REVIEW_FRAME_COUNT}"
+                ],
+            },
+            artifacts=[str(frame) for frame in frames],
+        )
 
     # ------------------------------------------------------------------
     # Dispatch

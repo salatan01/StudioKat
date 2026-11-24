@@ -121,6 +121,13 @@ test: ensure-dev
 test-contracts: ensure-dev
 	"$(RUN_PYTHON)" -m pytest tests/contracts/ -v
 
+# ---- Lemo engine smoke ----
+
+# Renders a 1 s 320x180 MP4 with the vendored Lemo engine and probes it. Needs
+# node + Chromium, so run it inside the Nix shell: `nix develop -c bash -lc 'make lemo-smoke'`.
+lemo-smoke: ensure-venv
+	"$(RUN_PYTHON)" .agents/skills/lemo/scripts/smoke.py
+
 # ---- Utilities ----
 
 preflight: ensure-venv
