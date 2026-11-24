@@ -1,0 +1,21 @@
+# CREDITS — living-screencast sample (original app)
+
+Original work authored for this sample. Nothing here copies a real product or character.
+
+APP
+- "Cascade", a fictional board-and-tasks app. Invented for this sample. It is not a real
+  product; no real logo, trade dress or shipping interface was referenced, traced or copied.
+- The window, its panes and the list and form rows are described by `ui_spec.json` and
+  drawn flat in the clip.
+
+MASCOT
+- "Pebble", an original geometric mascot: a rounded triangle body on two stub legs, two
+  dot eyes, a curved mouth, stick arms and a scarf. Drawn for this sample.
+- No real mascot, brand character or anthropomorphic logo was used. The clip draws no
+  third party's character; Pebble is the only performer.
+
+LICENCE
+- Licence: original work, dedicated to the public domain under CC0 1.0
+  (https://creativecommons.org/publicdomain/zero/1.0/). Author: StudioKat, 2026.
+- No third-party assets are included. The UI is drawn in code; there is no screenshot and
+  no photograph.

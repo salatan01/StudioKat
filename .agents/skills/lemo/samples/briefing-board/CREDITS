@@ -1,0 +1,40 @@
+# CREDITS — briefing-board sample (NASA Skylab photographs)
+
+Every photograph pinned on this board is real and sourced. Nothing here is generated.
+The three photos document Skylab, the United States' first space station (1973-1979).
+
+Themes: a station assembled in orbit, inspected by a visiting crew, and photographed
+against the Earth. The board treats the real photographs as the evidence.
+
+PHOTOGRAPHS (NASA; all public domain)
+
+1. photos/skylab-cluster-black-sky.jpg
+   Title: "View of the Skylab space station cluster photographed against black sky"
+   NASA image id: sl3-114-1682 (Skylab 3, 1973). Source: NASA.
+   Source page: https://images.nasa.gov/details/sl3-114-1682
+   Asset URL: https://images-assets.nasa.gov/image/sl3-114-1682/sl3-114-1682~medium.jpg
+   Retrieved: 2026-11-24 (HTTP 200).
+   Change: downscaled to 512 px on the long edge; otherwise unaltered.
+
+2. photos/skylab-cluster-earth-orbit.jpg
+   Title: "View of Skylab space station cluster in Earth orbit from CSM"
+   NASA image id: sl4-143-4707 (Skylab 4, 1974). Source: NASA.
+   Source page: https://images.nasa.gov/details/sl4-143-4707
+   Asset URL: https://images-assets.nasa.gov/image/sl4-143-4707/sl4-143-4707~medium.jpg
+   Retrieved: 2026-11-24 (HTTP 200).
+   Change: downscaled to 512 px on the long edge; otherwise unaltered.
+
+3. photos/skylab-rendezvous-flyaround.jpg
+   Title: "Rendezvous and Fly Around Inspection of Skylab I Orbital Space Station"
+   NASA image id: sl2-04-248 (Skylab 2, 1973). Source: NASA.
+   Source page: https://images.nasa.gov/details/sl2-04-248
+   Asset URL: https://images-assets.nasa.gov/image/sl2-04-248/sl2-04-248~medium.jpg
+   Retrieved: 2026-11-24 (HTTP 200).
+   Change: downscaled to 512 px on the long edge; otherwise unaltered.
+
+LICENCE
+- All three are works of NASA, a U.S. Government agency, and are in the public domain.
+  NASA images are generally not copyrighted; see https://www.nasa.gov/nasa-brand-center/images-and-media/
+- Credit line for the board: "Photographs: NASA (public domain)."
+
+The whiteboard, its marker annotations and the pinned card are drawn in code.

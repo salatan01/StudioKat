@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "studiokat/lemo/ui_spec",
+  "title": "Lemo UI Spec",
+  "description": "The flat, drawn interface a living-screencast clip is built from. It names an original app, its window and its panes; the mascot is drawn by the clip, never from a real product.",
+  "type": "object",
+  "required": ["version", "app", "window", "panes"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Spec format version."
+    },
+    "app": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the invented app shown in the window."
+    },
+    "window": {
+      "type": "object",
+      "description": "The drawn application window.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "mascot": {
+      "type": "object",
+      "description": "An original geometric mascot. Never a real product logo or a third party's character.",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "shape": { "type": "string", "minLength": 1 },
+        "accent": { "type": "string", "minLength": 1 },
+        "traits": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
+    "panes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The interface panes the mascot moves between.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "kind", "items"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["list", "table", "detail", "form", "settings", "dialog", "canvas", "inspector", "toolbar"]
+          },
+          "items": {
+            "type": "array",
+            "description": "Rows or controls of the pane, in display order.",
+            "items": {
+              "oneOf": [
+                { "type": "string", "minLength": 1 },
+                {
+                  "type": "object",
+                  "required": ["id", "label"],
+                  "properties": {
+                    "id": { "type": "string", "minLength": 1 },
+                    "label": { "type": "string", "minLength": 1 },
+                    "value": { "type": ["string", "number", "boolean"] },
+                    "state": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

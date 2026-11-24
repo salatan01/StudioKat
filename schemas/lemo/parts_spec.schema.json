@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "studiokat/lemo/parts_spec",
+  "title": "Lemo Parts Spec",
+  "description": "The illustrative parts list a teardown clip is built from. It names the product and its parts and the order they separate along one axis. It is a diagram specification, never a measured engineering drawing.",
+  "type": "object",
+  "required": ["version", "product", "illustrative", "parts"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Spec format version."
+    },
+    "product": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The product the parts belong to."
+    },
+    "illustrative": {
+      "const": true,
+      "description": "Always true: the parts are a diagram, not a measured model. No dimension, tolerance or torque may be inferred from it."
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The parts, in separation order along the axis.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "layer", "count"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable identifier used by the clip."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Short noun label shown beside the part."
+          },
+          "layer": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Position of the part along the explode axis; parts sharing a layer move together."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "How many of this part: one for a plate, many for fasteners."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

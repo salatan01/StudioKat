@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "product": "Field Lamp FL-1",
+  "illustrative": true,
+  "axis": "vertical",
+  "notes": "An invented product. Every part and count is a drawing decision, not a measurement; no dimension, mass, tolerance or torque is stated or implied.",
+  "parts": [
+    { "id": "shell", "name": "shell", "layer": 0, "count": 1 },
+    { "id": "diffuser", "name": "diffuser", "layer": 1, "count": 1 },
+    { "id": "board", "name": "driver board", "layer": 2, "count": 1 },
+    { "id": "cell", "name": "cell", "layer": 3, "count": 2 },
+    { "id": "bracket", "name": "bracket", "layer": 4, "count": 2 },
+    { "id": "bolt", "name": "M3 bolt", "layer": 5, "count": 4 }
+  ]
+}

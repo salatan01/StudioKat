@@ -1,0 +1,19 @@
+# CREDITS — teardown sample (original product)
+
+Original work authored for this sample.
+
+PRODUCT
+- "Field Lamp FL-1", a fictional hand lamp. Invented for this sample. It is not a real
+  product and was not copied from any vendor's parts diagram, teardown or spec sheet.
+- `parts_spec.json` lists six parts along one vertical axis: shell, diffuser, driver
+  board, cell x2, bracket x2, M3 bolt x4.
+
+ILLUSTRATIVE ONLY
+- The spec is a diagram, not a measured model. Every part, layer and count is a drawing
+  decision. No dimension, mass, tolerance or fastener torque is supplied or implied, and
+  none may be stated on screen.
+
+LICENCE
+- Licence: original work, dedicated to the public domain under CC0 1.0
+  (https://creativecommons.org/publicdomain/zero/1.0/). Author: StudioKat, 2026.
+- No third-party CAD file, model or photograph is included. The parts are drawn in code.

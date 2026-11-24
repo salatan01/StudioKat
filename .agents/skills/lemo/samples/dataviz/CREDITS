@@ -1,0 +1,26 @@
+# CREDITS — dataviz sample (NASA GISTEMP)
+
+This sample is a real, sourced dataset for a `dataviz` clip. Nothing here is invented.
+
+SOURCE
+- NASA Goddard Institute for Space Studies (GISS), GISTEMP v4 — Global Land-Ocean
+  Temperature Index (GLB.Ts+dSST).
+  Exact URL: https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv
+- Retrieved: 2026-11-24 (HTTP 200).
+- Licence: Public domain. GISTEMP is a work of the U.S. Government (NASA), and U.S.
+  Government works are not subject to copyright in the United States.
+
+WHAT WAS TAKEN
+- `data.csv` is a 30-row slice of the source file: calendar years 1996-2025 (the most
+  recent complete years), with four columns chosen by header name — Year, J-D (annual
+  mean), JJA (June-July-August), DJF (December-January-February).
+- Every value is copied unchanged from the source. Columns are named in
+  `data_manifest.json` by their source headers, not by index.
+- The incomplete 2026 row was excluded. The source is reissued as more stations report,
+  so the values are current as of the retrieval date above.
+
+UNITS
+- Temperature anomalies in degrees Celsius, relative to the 1951-1980 mean.
+
+CREDITS LINE FOR THE END CARD
+- Data: NASA GISS Surface Temperature Analysis (GISTEMP v4), public domain.

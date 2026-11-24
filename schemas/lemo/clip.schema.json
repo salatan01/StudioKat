@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "studiokat/lemo/clip",
+  "title": "Lemo Clip Input",
+  "description": "The input clip.json written by `lemo_render new` and authored per clip. It is the source of truth `lemo_render validate` reads: the style, the format, the named inputs and the facts. It is distinct from the pipeline artifact schemas/artifacts/lemo_clip.schema.json, which records the built clip workspace.",
+  "type": "object",
+  "required": [
+    "clip_id",
+    "style_id",
+    "subject",
+    "one_idea",
+    "aspect",
+    "width",
+    "height",
+    "fps",
+    "duration_seconds",
+    "sound",
+    "text_mode",
+    "inputs",
+    "facts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "clip_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Folder name of the clip, unique within the run."
+    },
+    "style_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One of the fifteen lemo style ids."
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the clip is about, in a phrase."
+    },
+    "one_idea": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The single idea the clip must land."
+    },
+    "aspect": {
+      "type": "string",
+      "enum": ["16:9", "9:16", "1:1", "4:5", "3:4"],
+      "description": "Frame aspect, restricted to the style's supported set."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frame width in pixels."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frame height in pixels."
+    },
+    "fps": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frames per second."
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Clip length in seconds, inside the style's native window."
+    },
+    "sound": {
+      "type": "string",
+      "enum": ["none", "foley"],
+      "description": "Audio intent. v1 is silent, so this is normally \"none\"."
+    },
+    "text_mode": {
+      "type": "string",
+      "minLength": 1,
+      "description": "How on-screen text is handled for this clip (for example title-only or burned-in subtitles)."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Maps each required input name from the style manifest (data, cutouts, ui_spec, parts_spec) to a path relative to the clip folder.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Path relative to the clip directory; must stay inside it."
+      }
+    },
+    "facts": {
+      "type": "array",
+      "description": "The real, checkable claims shown in the clip. Empty when the style needs none.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

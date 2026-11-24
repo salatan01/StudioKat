@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "app": "Cascade",
+  "window": {
+    "title": "Cascade — Launch Board",
+    "width": 1280,
+    "height": 800
+  },
+  "mascot": {
+    "name": "Pebble",
+    "shape": "An original flat geometric mascot: a rounded triangle body on two stubby legs, with two dot eyes, a small curved mouth, two thin stick arms and a short scarf.",
+    "accent": "The scarf carries the single accent colour; the body stays neutral ink on the ground.",
+    "traits": [
+      "points at a control before pressing it",
+      "presses with anticipation, a fast action and a settle",
+      "reads a list row by row",
+      "reacts with a small hop when a state changes"
+    ]
+  },
+  "panes": [
+    {
+      "id": "sidebar",
+      "title": "Boards",
+      "kind": "list",
+      "items": [
+        { "id": "inbox", "label": "Inbox" },
+        { "id": "launch", "label": "Launch Board", "state": "selected" },
+        { "id": "archive", "label": "Archive" }
+      ]
+    },
+    {
+      "id": "board",
+      "title": "Launch Board",
+      "kind": "table",
+      "items": [
+        { "id": "brief", "label": "Write the brief", "state": "done" },
+        { "id": "assets", "label": "Collect the assets", "state": "todo" },
+        { "id": "review", "label": "Review the cut", "state": "todo" }
+      ]
+    },
+    {
+      "id": "composer",
+      "title": "New task",
+      "kind": "form",
+      "items": [
+        { "id": "title", "label": "Task title", "value": "Pin the source cards" },
+        { "id": "owner", "label": "Owner", "value": "Rill" },
+        { "id": "add", "label": "Add to board", "state": "idle" }
+      ]
+    }
+  ]
+}
