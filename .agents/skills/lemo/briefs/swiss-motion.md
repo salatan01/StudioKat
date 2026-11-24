@@ -128,7 +128,7 @@ every arrival on a beat.
 Read these for technique. Write your own timeline, your own words and your own signal
 element.
 
-## Worked pilot — "A tide timetable"
+### Worked pilot — "A tide timetable"
 
 The shipped sample (`.agents/skills/lemo/samples/clips/swiss-motion/`) is a 6 s cutaway about
 one day of sea-level readings, not the demo's concert poster:
