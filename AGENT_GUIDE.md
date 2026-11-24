@@ -87,9 +87,9 @@ When the user asks to make, create, produce, or generate any video content — a
    - **Ask the user:** If no style is specified, present 3-4 options matching the brief's mood (use the Mood-to-Style table in `visual-styles.md`) and get explicit approval.
 
    **Record the chosen style in the `brief` artifact** (stage `idea`) under
-   `visual_style: { system: "heygen|visual-style-md|playbook|custom|faceless|editor", name: "...",
-   source: "...", style_id?: "...", engine?: "..." }`. For `faceless`, `style_id` and `engine`
-   are required and the `style_lock` artifact is mandatory.
+   `visual_style: { system: "heygen|visual-style-md|playbook|custom|faceless|editor|lemo", name: "...",
+   source: "...", style_id?: "...", engine?: "..." }`. For `faceless`, `editor`, and `lemo`,
+   `style_id` and `engine` are required and the `style_lock` artifact is mandatory.
 
 5. **Execute stage by stage.** For EACH stage, read the stage director skill (`skills/pipelines/<pipeline>/<stage>-director.md`) BEFORE doing any work in that stage.
 6. **Read Layer 3 skills before calling tools.** Before using any tool with an `agent_skills` field, read the referenced skill in `.agents/skills/`. These contain provider-specific prompting guidance, parameter optimization, and quality techniques that dramatically improve output.
@@ -310,6 +310,26 @@ Walkthrough, Data Story, Chalk Talk, Pop Info):
    The engine honours `CHROME`, so it never downloads its own browser. Verify with
    `editor_render` operation `check`.
 
+### Lemo Pipeline Routing (Binding)
+
+When the user wants a short, code-drawn motion-graphics clip in one of the fifteen
+vendored Lemo styles (Swiss Motion, Midcentury Toon, Dataviz, ...):
+
+1. Resolve the style with `styles/lemo/loader.py` (canonical id or name first, then
+   alias; ambiguity asks one question). The registry is `styles/lemo/<id>.json`.
+2. The `lemo` pipeline drives the vendored engine through the `lemo_render` tool.
+3. The runtime is fixed: `edit_decisions.render_runtime = "lemo"` and compose uses
+   `lemo_render`. Never call `video_compose` for this pipeline.
+4. Present the fifteen styles with one-line descriptions — never silently pick. A clip
+   is a 3–20 s B-roll cutaway or micro-explanation, never a whole film.
+5. Lock `duration`, `aspect`, `sound`, and `inputs` into the `style_lock` artifact
+   (`format.duration_seconds` must equal the style manifest's window).
+6. Input-dependent styles (`dataviz`, `briefing-board`, `living-screencast`, `teardown`)
+   never invent evidence; ask once for the style's required inputs (`data`, `cutouts`,
+   `ui_spec`, `parts_spec`) and record them in `style_lock.inputs`.
+7. Environment: run inside the Nix shell (`nix develop`, which provides node and
+   Chromium and exports `CHROME`), then run `lemo_render` operation `setup` or `check`.
+
 ## Available Pipelines
 
 | Pipeline | Best For | Stability |
@@ -324,6 +344,7 @@ Walkthrough, Data Story, Chalk Talk, Pop Info):
 | `animation` | Motion-graphics and animation-first videos | production |
 | `faceless-short` | One of six executable faceless-shorts styles (9:16, narrated, captioned) | beta |
 | `editor` | Raw talking-head footage, style-locked editing with the 7 ai-video-editor canvas styles (16:9/9:16/3:4) | production |
+| `lemo` | Short code-drawn B-roll / micro-explanation clips in one of 15 vendored Lemo styles (16:9/9:16/1:1/4:5/3:4) | beta |
 | `character-animation` | Local rigged cartoon characters and reusable character acting | beta |
 | `hybrid` | Source footage plus support visuals | production |
 | `avatar-spokesperson` | Presenter-led avatar or lip-sync videos | production |

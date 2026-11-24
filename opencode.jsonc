@@ -10,6 +10,8 @@
   // extra plugin or skill registration is required.
   // Similarly, the ai-video-editor skill is vendored at .agents/skills/ai-video-editor
   // (7 canvas styles); it runs through the editor_render tool.
+  // The lemo clip engine is vendored at .agents/skills/lemo (15 styles); it runs
+  // through the lemo_render tool.
   "plugins": [
     "superpowers@git+https://github.com/obra/superpowers.git"
   ]
