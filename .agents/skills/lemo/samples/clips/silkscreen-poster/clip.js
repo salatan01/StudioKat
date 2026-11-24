@@ -185,12 +185,9 @@ window.TEXTS = (t) => {
 };
 
 // fonts: every drawn face defined and loaded before READY
-try {
-  await Promise.all([
-    document.fonts.load('900 140px "Big Shoulders Display"', HEADLINE),
-  ]);
-} catch (e) {}
+await Promise.all([
+  document.fonts.load('900 140px "Big Shoulders Display"', HEADLINE),
+]);
 await document.fonts.ready;
-
 draw(0);
 window.READY = true;
