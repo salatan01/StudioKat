@@ -5,13 +5,15 @@ Thin BaseTool wrapper around the vendored Lemo engine at
 command assembly, and Chrome discovery; it never reimplements the engine and
 never substitutes FFmpeg/Remotion/HyperFrames for a Lemo render.
 
-Task 11 lands the skeleton: ``setup``, ``check``, and ``styles`` are live, and
-every remaining operation declared in the schema routes to a ``_op_<name>``
-stub that raises :class:`LemoRenderError` until its own task implements it.
+``setup``, ``check``, ``styles``, ``new`` and ``validate`` are live; every
+remaining operation declared in the schema routes to a ``_op_<name>`` stub that
+raises :class:`LemoRenderError` until its own task implements it.
 """
 
 from __future__ import annotations
 
+import html
+import json
 import os
 import re
 import shutil
@@ -38,8 +40,52 @@ PROJECTS_ROOT = REPO_ROOT / "projects"
 SKILL_DIR = REPO_ROOT / ".agents" / "skills" / "lemo"
 LIBRARY_DIR = SKILL_DIR / "library"
 SETUP_SCRIPT = SKILL_DIR / "scripts" / "setup.py"
+PAGE_CHECK_SCRIPT = SKILL_DIR / "scripts" / "page_check.mjs"
+TEMPLATES_DIR = SKILL_DIR / "templates"
 
 PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+# Native frame sizes for each supported aspect. Explicit width/height inputs
+# override these.
+ASPECT_SIZES = {
+    "16:9": (1920, 1080),
+    "9:16": (1080, 1920),
+    "1:1": (1080, 1080),
+    "4:5": (1080, 1350),
+    "3:4": (1080, 1440),
+}
+
+# Every placeholder the three templates use. After substitution none may
+# survive in any written file.
+TEMPLATE_TOKENS = (
+    "__CLIP_ID__",
+    "__STYLE_ID__",
+    "__SUBJECT__",
+    "__ONE_IDEA__",
+    "__ASPECT__",
+    "__WIDTH__",
+    "__HEIGHT__",
+    "__FPS__",
+    "__DURATION__",
+    "__SOUND__",
+    "__TEXT_MODE__",
+)
+
+# Maps each clip.json field to the template token that stands for it.
+FIELD_TOKENS = {
+    "clip_id": "__CLIP_ID__",
+    "style_id": "__STYLE_ID__",
+    "subject": "__SUBJECT__",
+    "one_idea": "__ONE_IDEA__",
+    "aspect": "__ASPECT__",
+    "width": "__WIDTH__",
+    "height": "__HEIGHT__",
+    "fps": "__FPS__",
+    "duration_seconds": "__DURATION__",
+    "sound": "__SOUND__",
+    "text_mode": "__TEXT_MODE__",
+}
+
 
 OPERATIONS = (
     "setup",
@@ -68,10 +114,34 @@ PROJECT_OPERATIONS = {
     "report",
 }
 
-# Declared here so the tool advertises its full contract, but implemented in a
-# later task. Routing them to a clean ``success=False`` (never a crash) is the
-# skeleton's job; they must NOT read as "Unknown operation".
-LATER_TASK_OPERATIONS = PROJECT_OPERATIONS
+# Operations that are declared in the schema but still route to a stub. Routing
+# them to a clean ``success=False`` (never a crash) is intentional; they must NOT
+# read as "Unknown operation". ``new`` and ``validate`` left this set when Task
+# 12 implemented them.
+LATER_TASK_OPERATIONS = PROJECT_OPERATIONS - {"new", "validate"}
+
+
+def _positive_int(value: Any, default: int, label: str) -> int:
+    """Return a validated positive int, or ``default`` when ``value`` is None."""
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise LemoRenderError(f"{label} must be a positive integer, got {value!r}")
+    return value
+
+
+def _normalize_number(value: Any) -> Any:
+    """Keep whole numbers as int; anything else stays a float."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def _number_literal(value: Any) -> str:
+    """Render a number for a JS/JSON literal (``6`` not ``6.0``)."""
+    return repr(_normalize_number(value))
 
 
 class LemoRenderError(RuntimeError):
@@ -129,6 +199,10 @@ class LemoRender(BaseTool):
             "project_dir": {"type": "string"},
             "clip_id": {"type": "string"},
             "style_id": {"type": "string"},
+            "subject": {"type": "string"},
+            "one_idea": {"type": "string"},
+            "text_mode": {"type": "string"},
+            "sound": {"type": "string"},
             "confirm_downloads": {"type": "boolean", "default": False},
             "duration_seconds": {"type": "number", "minimum": 0},
             "aspect": {"type": "string"},
@@ -234,7 +308,12 @@ class LemoRender(BaseTool):
                 f"Invalid clip_id {clip_id!r}: use letters, numbers, '.', '_' "
                 "or '-' only, starting with a letter or number."
             )
-        clips_root = (workspace / "clips").resolve()
+        clips_root = workspace / "clips"
+        if clips_root.is_symlink():
+            raise LemoRenderError(
+                f"Lemo clips directory must not be a symlink: {clips_root}"
+            )
+        clips_root = clips_root.resolve()
         clip_dir = (clips_root / clip_id).resolve()
         try:
             clip_dir.relative_to(clips_root)
@@ -449,10 +528,255 @@ class LemoRender(BaseTool):
         )
 
     def _op_new(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("new is implemented in a later task")
+        from styles.lemo.loader import get_style
+
+        style_id = inputs.get("style_id")
+        if not isinstance(style_id, str) or not style_id:
+            raise LemoRenderError("style_id is required for operation 'new'")
+        try:
+            style = get_style(style_id)
+        except Exception as exc:
+            raise LemoRenderError(
+                f"Unknown lemo style_id {style_id!r}: {exc}"
+            ) from exc
+
+        clip_id = inputs.get("clip_id")
+        if not isinstance(clip_id, str) or not PROJECT_ID_RE.match(clip_id):
+            raise LemoRenderError(
+                f"Invalid clip_id {clip_id!r}: use letters, numbers, '.', '_' or "
+                "'-' only, starting with a letter or number."
+            )
+
+        project_dir = self._resolve_project_dir(inputs)
+        workspace = project_dir / "lemo"
+        clips_dir = workspace / "clips"
+        # Same guard ``_workspace``/``_clip_dir`` apply: neither layer may be a
+        # symlink pointing out of the project.
+        if workspace.is_symlink():
+            raise LemoRenderError(
+                f"Lemo workspace must not be a symlink: {workspace}"
+            )
+        if clips_dir.is_symlink():
+            raise LemoRenderError(
+                f"Lemo clips directory must not be a symlink: {clips_dir}"
+            )
+        clip_dir = clips_dir / clip_id
+        if clip_dir.exists() or clip_dir.is_symlink():
+            if not inputs.get("force"):
+                raise LemoRenderError(
+                    f"Clip directory already exists: {clip_dir}. Pass force=True "
+                    "to overwrite its clip.json, index.html and clip.js."
+                )
+
+        aspect = inputs.get("aspect") or style["aspects"][0]
+        if aspect not in ASPECT_SIZES:
+            raise LemoRenderError(
+                f"Unknown aspect {aspect!r}: choose one of {sorted(ASPECT_SIZES)}"
+            )
+        default_w, default_h = ASPECT_SIZES[aspect]
+        width = _positive_int(inputs.get("width"), default_w, "width")
+        height = _positive_int(inputs.get("height"), default_h, "height")
+        fps = _positive_int(inputs.get("fps"), style["fps"][0], "fps")
+        duration = self._resolve_duration(inputs.get("duration_seconds"), style)
+        sound = inputs.get("sound") or "none"
+        text_mode = inputs.get("text_mode") or "title"
+        subject = inputs.get("subject") or clip_id
+        one_idea = inputs.get("one_idea") or "One idea"
+
+        files = self._render_templates(
+            {
+                "clip_id": clip_id,
+                "style_id": style["id"],
+                "subject": subject,
+                "one_idea": one_idea,
+                "aspect": aspect,
+                "width": width,
+                "height": height,
+                "fps": fps,
+                "duration_seconds": duration,
+                "sound": sound,
+                "text_mode": text_mode,
+            }
+        )
+
+        clip_dir.mkdir(parents=True, exist_ok=True)
+        (clip_dir / "clip.json").write_text(files["clip.json"], encoding="utf-8")
+        (clip_dir / "index.html").write_text(files["index.html"], encoding="utf-8")
+        (clip_dir / "clip.js").write_text(files["clip.js"], encoding="utf-8")
+
+        return ToolResult(
+            success=True,
+            data={
+                "workspace": str(workspace),
+                "clip_dir": str(clip_dir),
+                "style_id": style["id"],
+                "clip_id": clip_id,
+                "aspect": aspect,
+                "width": width,
+                "height": height,
+                "fps": fps,
+                "duration_seconds": duration,
+            },
+            artifacts=[str(clip_dir)],
+        )
+
+    @staticmethod
+    def _resolve_duration(value: Any, style: dict[str, Any]) -> Any:
+        """Style default when unset, clamped into the style's native window."""
+        window = style.get("duration_seconds") or [0, float("inf")]
+        low, high = window[0], window[1]
+        if value is None:
+            value = style.get("default_duration_seconds", low)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise LemoRenderError(
+                f"duration_seconds must be a number, got {value!r}"
+            )
+        if value <= 0:
+            raise LemoRenderError(
+                f"duration_seconds must be positive, got {value!r}"
+            )
+        return _normalize_number(min(max(value, low), high))
+
+    @staticmethod
+    def _render_templates(fields: dict[str, Any]) -> dict[str, str]:
+        """Substitute every placeholder in the three templates.
+
+        No ``__TOKEN__`` may survive in any file; ``clip.json`` ends up with
+        integer ``width``/``height``/``fps`` (and a numeric
+        ``duration_seconds``), ``index.html`` escapes the subject, and
+        ``clip.js`` gets bare JS numbers.
+        """
+        clip_json_template = (TEMPLATES_DIR / "clip.json").read_text(encoding="utf-8")
+        index_template = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+        clip_js_template = (TEMPLATES_DIR / "clip.js").read_text(encoding="utf-8")
+
+        # clip.json: replace the *quoted* token with a JSON literal (strings are
+        # escaped, numbers come out bare), then load it back so the parsed
+        # document — and its integer fields — is the source of truth.
+        literals = {
+            FIELD_TOKENS[field]: json.dumps(value)
+            for field, value in fields.items()
+            if field in FIELD_TOKENS
+        }
+        clip_json_text = re.sub(
+            r'"__([A-Z_]+)__"',
+            lambda m: literals.get(f"__{m.group(1)}__", m.group(0)),
+            clip_json_template,
+        )
+        document = json.loads(clip_json_text)
+        document["width"] = int(document["width"])
+        document["height"] = int(document["height"])
+        document["fps"] = int(document["fps"])
+        document["duration_seconds"] = _normalize_number(document["duration_seconds"])
+        clip_json_text = json.dumps(document, indent=2) + "\n"
+
+        index_text = index_template.replace(
+            "__SUBJECT__", html.escape(str(fields["subject"]), quote=True)
+        )
+        index_text = index_text.replace("__WIDTH__", str(fields["width"]))
+        index_text = index_text.replace("__HEIGHT__", str(fields["height"]))
+
+        clip_js_text = clip_js_template.replace("__WIDTH__", str(fields["width"]))
+        clip_js_text = clip_js_text.replace("__HEIGHT__", str(fields["height"]))
+        clip_js_text = clip_js_text.replace(
+            "__DURATION__", _number_literal(fields["duration_seconds"])
+        )
+
+        rendered = {
+            "clip.json": clip_json_text,
+            "index.html": index_text,
+            "clip.js": clip_js_text,
+        }
+        for name, text in rendered.items():
+            for token in TEMPLATE_TOKENS:
+                if token in text:
+                    raise LemoRenderError(
+                        f"template placeholder {token} survived into {name}"
+                    )
+        return rendered
+
+    @staticmethod
+    def _parse_page_check(proc: subprocess.CompletedProcess) -> Optional[dict]:
+        """The last JSON object on stdout, or None if there is not one."""
+        for line in reversed((proc.stdout or "").strip().splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                return payload
+        return None
 
     def _op_validate(self, inputs: dict[str, Any]) -> ToolResult:
-        raise LemoRenderError("validate is implemented in a later task")
+        from styles.lemo.loader import get_style
+        from tools.video.lemo.validate_clip import (
+            load_clip,
+            validate_inputs,
+            validate_static,
+        )
+
+        clip_dir = self._clip_dir(inputs)
+
+        try:
+            clip = load_clip(clip_dir)
+        except Exception as exc:
+            raise LemoRenderError(
+                f"Could not read {clip_dir / 'clip.json'}: {exc}"
+            ) from exc
+
+        errors: list[str] = []
+        style: Optional[dict[str, Any]] = None
+        try:
+            style = get_style(clip.get("style_id"))
+        except Exception as exc:
+            errors.append(f"style {clip.get('style_id')!r} could not be loaded: {exc}")
+        if style is not None:
+            errors.extend(validate_static(clip, style))
+        errors.extend(validate_inputs(clip, clip_dir))
+        if errors:
+            raise LemoRenderError(
+                "validate failed:\n  - " + "\n  - ".join(errors)
+            )
+
+        duration = clip.get("duration_seconds")
+        node = shutil.which("node")
+        if not node:
+            raise LemoRenderError(
+                "node not found on PATH. lemo_render needs Node.js to run the "
+                "page check. Run inside the StudioKat Nix shell or install Node.js."
+            )
+        if not PAGE_CHECK_SCRIPT.is_file():
+            raise LemoRenderError(
+                f"Page-check script missing: {PAGE_CHECK_SCRIPT}. Restore the "
+                "vendored lemo library scripts."
+            )
+
+        proc = self._run(
+            [node, str(PAGE_CHECK_SCRIPT), str(clip_dir), _number_literal(duration)],
+            cwd=REPO_ROOT,
+            timeout=int(inputs.get("timeout_seconds") or 300),
+        )
+        payload = self._parse_page_check(proc)
+        if proc.returncode != 0 or not payload or not payload.get("ok"):
+            detail = (proc.stderr or proc.stdout or "").strip()
+            raise LemoRenderError(
+                f"Page check failed (exit {proc.returncode}): {detail or payload}"
+            )
+
+        return ToolResult(
+            success=True,
+            data={
+                "clip_dir": str(clip_dir),
+                "duration_seconds": duration,
+                "page": payload,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            },
+            artifacts=[str(clip_dir)],
+        )
 
     def _op_stills(self, inputs: dict[str, Any]) -> ToolResult:
         raise LemoRenderError("stills is implemented in a later task")
