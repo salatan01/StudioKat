@@ -7,6 +7,7 @@ checkpoints to resume pipelines and to present state at human checkpoints.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from datetime import datetime, timezone
 from pathlib import Path
@@ -450,6 +451,324 @@ def _validate_editor_checkpoint(
         _validate_editor_compose_qa(artifacts.get("render_report"))
 
 
+# --------------------------------------------------------------------------- #
+# Lemo pipeline (vendored Lemo clip engine) — mirrors the faceless pattern.
+# --------------------------------------------------------------------------- #
+
+
+def _lemo_style(style_id: Any) -> dict[str, Any]:
+    """Load the registry manifest for a locked lemo clip style."""
+    try:
+        from styles.lemo.loader import get_style
+
+        return get_style(style_id)
+    except Exception as exc:
+        raise CheckpointValidationError(
+            f"lemo checkpoint has an invalid style_id {style_id!r}: {exc}"
+        ) from exc
+
+
+def _validate_lemo_style_lock(
+    lock: Any,
+    status: str,
+    human_approved: bool,
+) -> None:
+    if not isinstance(lock, dict):
+        raise CheckpointValidationError(
+            "A lemo idea checkpoint must include a style_lock object"
+        )
+
+    style = _lemo_style(lock.get("style_id"))
+
+    if lock.get("engine") != style["engine"]:
+        raise CheckpointValidationError(
+            f"style_lock.engine must be {style['engine']!r} for lemo style "
+            f"{style['id']!r}, got {lock.get('engine')!r}"
+        )
+    if lock.get("style_name") != style["name"]:
+        raise CheckpointValidationError(
+            f"style_lock.style_name must be {style['name']!r} for lemo style "
+            f"{style['id']!r}, got {lock.get('style_name')!r}"
+        )
+
+    source = lock.get("source")
+    if not isinstance(source, dict):
+        raise CheckpointValidationError(
+            "style_lock.source must be an object with brief_md, manifest, and demo_dir"
+        )
+    expected_source = {
+        "brief_md": style["brief_md"],
+        "manifest": f"styles/lemo/{style['id']}.json",
+        "demo_dir": style["demo_dir"],
+    }
+    for key, expected in expected_source.items():
+        actual = source.get(key)
+        if actual != expected:
+            raise CheckpointValidationError(
+                f"style_lock.source.{key} must be {expected!r} for lemo style "
+                f"{style['id']!r}, got {actual!r}"
+            )
+        if not (REPO_ROOT / expected).exists():
+            raise CheckpointValidationError(
+                f"style_lock.source.{key} does not exist: {expected}"
+            )
+
+    fmt = lock.get("format")
+    if not isinstance(fmt, dict):
+        raise CheckpointValidationError(
+            "style_lock.format must be an object with aspect, resolution, fps, "
+            "and duration_seconds"
+        )
+    if fmt.get("aspect") not in style["aspects"]:
+        raise CheckpointValidationError(
+            f"style_lock.format.aspect must be one of {style['aspects']} for "
+            f"lemo style {style['id']!r}, got {fmt.get('aspect')!r}"
+        )
+    fps = fmt.get("fps")
+    if not isinstance(fps, int) or isinstance(fps, bool) or fps < 1:
+        raise CheckpointValidationError(
+            f"style_lock.format.fps must be a positive integer, got {fps!r}"
+        )
+    if fps not in style["fps"]:
+        raise CheckpointValidationError(
+            f"style_lock.format.fps must be one of {style['fps']} for lemo "
+            f"style {style['id']!r}, got {fps!r}"
+        )
+    resolution = fmt.get("resolution")
+    if not isinstance(resolution, str) or not re.fullmatch(r"\d+x\d+", resolution):
+        raise CheckpointValidationError(
+            f"style_lock.format.resolution must look like WxH, got {resolution!r}"
+        )
+    duration = fmt.get("duration_seconds")
+    if (
+        not isinstance(duration, list)
+        or len(duration) != 2
+        or not all(
+            isinstance(value, (int, float)) and not isinstance(value, bool)
+            for value in duration
+        )
+        or duration[0] > duration[1]
+    ):
+        raise CheckpointValidationError(
+            "style_lock.format.duration_seconds must be a two-number [min, max] "
+            "list with min <= max"
+        )
+    if list(duration) != list(style["duration_seconds"]):
+        raise CheckpointValidationError(
+            f"style_lock.format.duration_seconds must match the registry window "
+            f"{style['duration_seconds']} for lemo style {style['id']!r}, "
+            f"got {duration}"
+        )
+
+    sound = lock.get("sound")
+    if sound not in style["sound"]:
+        raise CheckpointValidationError(
+            f"style_lock.sound must be one of {style['sound']} for lemo style "
+            f"{style['id']!r}, got {sound!r}"
+        )
+
+    inputs = lock.get("inputs")
+    if not isinstance(inputs, list) or any(
+        not isinstance(item, str) or not item.strip() for item in inputs
+    ):
+        raise CheckpointValidationError(
+            "style_lock.inputs must be a list of non-empty input names"
+        )
+    missing_inputs = [name for name in style["inputs"] if name not in inputs]
+    if missing_inputs:
+        raise CheckpointValidationError(
+            f"style_lock.inputs must declare the lemo style's required inputs "
+            f"{style['inputs']}; {style['id']!r} is missing {missing_inputs}"
+        )
+
+    confirmed = lock.get("confirmed_by_user")
+    if status == "awaiting_human" and confirmed is not False:
+        raise CheckpointValidationError(
+            "style_lock.confirmed_by_user must be false on an awaiting_human "
+            "idea checkpoint; set it true only after the user approves the style"
+        )
+    if status == "completed":
+        if confirmed is not True:
+            raise CheckpointValidationError(
+                "style_lock.confirmed_by_user must be true on a completed idea "
+                "checkpoint; the user must approve the style first"
+            )
+        if not human_approved:
+            raise CheckpointValidationError(
+                "A completed lemo idea checkpoint requires human_approved=True "
+                "after the user approves the style"
+            )
+
+
+def _validate_lemo_clip(clip: Any, project_id: Any) -> None:
+    if not isinstance(clip, dict):
+        raise CheckpointValidationError(
+            "A lemo clip checkpoint must include a lemo_clip artifact"
+        )
+
+    style = _lemo_style(clip.get("style_id"))
+
+    duration = clip.get("duration_seconds")
+    if not isinstance(duration, (int, float)) or isinstance(duration, bool):
+        raise CheckpointValidationError(
+            f"lemo_clip.duration_seconds must be a number, got {duration!r}"
+        )
+    low, high = style["duration_seconds"]
+    if not low <= duration <= high:
+        raise CheckpointValidationError(
+            f"lemo_clip.duration_seconds {duration} is outside the "
+            f"{style['id']!r} window {style['duration_seconds']}"
+        )
+    if clip.get("aspect") not in style["aspects"]:
+        raise CheckpointValidationError(
+            f"lemo_clip.aspect must be one of {style['aspects']} for lemo style "
+            f"{style['id']!r}, got {clip.get('aspect')!r}"
+        )
+    if clip.get("fps") not in style["fps"]:
+        raise CheckpointValidationError(
+            f"lemo_clip.fps must be one of {style['fps']} for lemo style "
+            f"{style['id']!r}, got {clip.get('fps')!r}"
+        )
+    if clip.get("sound") not in style["sound"]:
+        raise CheckpointValidationError(
+            f"lemo_clip.sound must be one of {style['sound']} for lemo style "
+            f"{style['id']!r}, got {clip.get('sound')!r}"
+        )
+
+    qa = clip.get("qa")
+    if not isinstance(qa, dict) or qa.get("validate_ok") is not True:
+        raise CheckpointValidationError(
+            "lemo_clip.qa.validate_ok must be true before the clip checkpoint "
+            "can advance; run lemo_render validate on the clip workspace"
+        )
+
+    clip_id = clip.get("clip_id")
+    if not isinstance(clip_id, str) or not clip_id.strip():
+        raise CheckpointValidationError("lemo_clip.clip_id must be a non-empty string")
+
+    # Path *shape* only: validate_checkpoint also runs on read and has no
+    # pipeline_dir, so existence is lemo_render validate's job before the
+    # director writes the checkpoint.
+    base = f"projects/{project_id}/lemo/clips/{clip_id}"
+    if clip.get("workspace") != base:
+        raise CheckpointValidationError(
+            f"lemo_clip.workspace must be {base!r}, got {clip.get('workspace')!r}"
+        )
+    for key, basename in (
+        ("clip_json", "clip.json"),
+        ("clip_js", "clip.js"),
+        ("index_html", "index.html"),
+    ):
+        expected = f"{base}/{basename}"
+        actual = clip.get(key)
+        if actual != expected:
+            raise CheckpointValidationError(
+                f"lemo_clip.{key} must be {expected!r}, got {actual!r}"
+            )
+
+
+def _validate_lemo_compose_qa(render_report: Any) -> None:
+    if not isinstance(render_report, dict):
+        raise CheckpointValidationError(
+            "A lemo compose checkpoint must include a render_report"
+        )
+    metadata = render_report.get("metadata")
+    qa = metadata.get("lemo_qa") if isinstance(metadata, dict) else None
+    if not isinstance(qa, dict):
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa is required on a lemo compose checkpoint"
+        )
+
+    style = _lemo_style(qa.get("style_id"))
+
+    clip_id = qa.get("clip_id")
+    if not isinstance(clip_id, str) or not clip_id.strip():
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.clip_id must be a non-empty string"
+        )
+    duration = qa.get("duration_seconds")
+    if not isinstance(duration, (int, float)) or isinstance(duration, bool):
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.duration_seconds must be a number"
+        )
+    low, high = style["duration_seconds"]
+    if not low <= duration <= high:
+        raise CheckpointValidationError(
+            f"render_report.metadata.lemo_qa.duration_seconds {duration} is "
+            f"outside the {style['id']!r} window {style['duration_seconds']}"
+        )
+    resolution = qa.get("resolution")
+    if not isinstance(resolution, str) or not resolution.strip():
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.resolution must be a non-empty string"
+        )
+    fps = qa.get("fps")
+    if not isinstance(fps, int) or isinstance(fps, bool) or fps < 1:
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.fps must be a positive integer"
+        )
+    contact_sheet = qa.get("contact_sheet")
+    if not isinstance(contact_sheet, str) or not contact_sheet.strip():
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.contact_sheet must be a non-empty path"
+        )
+    frames = qa.get("frames")
+    if not isinstance(frames, list) or len(frames) < 4:
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.frames must list at least four "
+            "inspected frame paths"
+        )
+    if any(not isinstance(frame, str) or not frame.strip() for frame in frames):
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.frames must contain only non-empty strings"
+        )
+    probe = qa.get("probe")
+    if not isinstance(probe, dict) or not probe:
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.probe must contain the ffprobe result"
+        )
+    output_path = qa.get("output_path")
+    if not isinstance(output_path, str) or not output_path.strip():
+        raise CheckpointValidationError(
+            "render_report.metadata.lemo_qa.output_path must be a non-empty path"
+        )
+
+
+def _validate_lemo_final_review(final_review: Any) -> None:
+    if not isinstance(final_review, dict):
+        raise CheckpointValidationError(
+            "A lemo compose checkpoint must include a final_review artifact"
+        )
+    checks = final_review.get("checks")
+    promise = checks.get("promise_preservation") if isinstance(checks, dict) else None
+    runtime = promise.get("render_runtime_used") if isinstance(promise, dict) else None
+    if runtime != "lemo":
+        raise CheckpointValidationError(
+            "final_review.checks.promise_preservation.render_runtime_used must be "
+            f"'lemo' on a lemo compose checkpoint, got {runtime!r}"
+        )
+
+
+def _validate_lemo_checkpoint(checkpoint: dict[str, Any], human_approved: bool) -> None:
+    if checkpoint.get("pipeline_type") != "lemo":
+        return
+    status = checkpoint.get("status")
+    if status not in {"awaiting_human", "completed"}:
+        return
+    artifacts = checkpoint.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return
+
+    stage = checkpoint.get("stage")
+    if stage == "idea":
+        _validate_lemo_style_lock(artifacts.get("style_lock"), status, human_approved)
+    elif stage == "clip":
+        _validate_lemo_clip(artifacts.get("lemo_clip"), checkpoint.get("project_id"))
+    elif stage == "compose":
+        _validate_lemo_compose_qa(artifacts.get("render_report"))
+        _validate_lemo_final_review(artifacts.get("final_review"))
+
+
 @lru_cache(maxsize=1)
 def _load_checkpoint_schema() -> dict[str, Any]:
     with open(CHECKPOINT_SCHEMA_PATH, encoding="utf-8") as f:
@@ -549,6 +868,8 @@ def validate_checkpoint(checkpoint: dict[str, Any]) -> None:
         artifacts,
         bool(checkpoint.get("human_approved")),
     )
+
+    _validate_lemo_checkpoint(checkpoint, bool(checkpoint.get("human_approved")))
 
     try:
         jsonschema.validate(instance=checkpoint, schema=_load_checkpoint_schema())
