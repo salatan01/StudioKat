@@ -148,6 +148,29 @@ the held figure at rest beside the finished thing. One hand action per beat.
 
 Read these for technique; write your own content, presenter and timeline.
 
+### Worked pilot — "How a thermos keeps tea hot"
+
+The shipped sample (`.agents/skills/lemo/samples/clips/midcentury-toon/`) is a 6 s cutaway about
+a vacuum flask, not the demo's coffee routine. It shows one gesture on a held body:
+
+- The presenter is our own drawing — a middle-parted cap and a low bun — built on the engine's
+  own rig: `armJoints`/`drawHand` from `chars.js`, with two-bone IK solving each arm to a hand
+  target. The back arm carries the flask low against the body; the front arm lifts the lid.
+- The lift is the one hand action, stepped on twos: hold, a small anticipation down, a quick
+  stroke up easing out, a follow-through that overshoots, and a landing squarely on the beat.
+  The body never walks; only the lid arm moves.
+- Steam is the held payoff: a curled, tapered ribbon drawn from `t` alone — a soft `paperD` edge
+  under a white core — because plain white vanishes on the cream halo. It leaves the open neck,
+  fattest mid-rise, and dissolves before it reaches the type.
+- A call-out ring opens onto the hand with a leader line to a paper detail tag ("HEAT STAYS IN");
+  the caption card sits bottom-centre in every aspect.
+- The sample sets its slab face as `Slab` and fits the title *after* `document.fonts.ready` — a
+  title measured before the face loads under-measures and then overflows the frame in 9:16. It
+  reads `width`/`height` from its own `clip.json`, so one file renders at any aspect.
+
+Read the sample's `clip.js` for its exact timings — then set them aside and time your own clip to
+its own subject.
+
 ## Aspect adaptation
 
 - **16:9** is native: wide shots, side-by-side call-outs, a bottom-centre caption card.
