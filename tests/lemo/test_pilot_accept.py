@@ -4,9 +4,20 @@ Task 20 ships ``tools/video/lemo/pilot_accept.py``: ``check_renders`` looks for
 ``renders/<style>-<aspect>.mp4`` under a project and probes each one, returning a
 list of human-readable failures (empty when every clip is good). The probe is
 injectable so the format checks run without ffprobe.
+
+Task 2 adds PHASE2_STYLES, ALL_SAMPLE_STYLES, --styles, and --all-samples flags.
 """
 
-from tools.video.lemo.pilot_accept import ASPECT_SIZES, check_renders, render_name
+from tools.video.lemo.pilot_accept import (
+    ALL_SAMPLE_STYLES,
+    ASPECT_SIZES,
+    PHASE2_STYLES,
+    PILOT_ASPECTS,
+    PILOT_STYLES,
+    check_renders,
+    main,
+    render_name,
+)
 
 
 def _probe(width=1920, height=1080, **over):
@@ -101,3 +112,14 @@ def test_aspect_sizes_cover_the_pilot_aspects():
 
 def test_render_name_uses_the_plan_pattern():
     assert render_name("dataviz", "16:9") == "dataviz-16:9.mp4"
+
+
+def test_main_styles_flag_selects_styles(tmp_path, capsys):
+    rc = main(["--project-dir", str(tmp_path), "--styles", "ink-wash"])
+    out = capsys.readouterr().out
+    assert rc == 1 and "ink-wash-16:9.mp4" in out and "swiss-motion" not in out
+
+
+def test_aspects_tuple_order():
+    """Verify the aspects tuple is in expected order."""
+    assert PILOT_ASPECTS == ("16:9", "9:16")

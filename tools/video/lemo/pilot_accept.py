@@ -32,6 +32,25 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PILOT_STYLES: tuple[str, ...] = ("swiss-motion", "midcentury-toon", "dataviz")
 PILOT_ASPECTS: tuple[str, ...] = ("16:9", "9:16")
 
+# The twelve Phase 2 sample clip styles (no render work happens here, only seeding).
+PHASE2_STYLES: tuple[str, ...] = (
+    "silkscreen-poster",
+    "bauhaus-shapes",
+    "flat-space-explainer",
+    "assembly-line-diagram",
+    "living-screencast",
+    "isometric-picture-book",
+    "briefing-board",
+    "ink-wash",
+    "paper-popup",
+    "teardown",
+    "ascii-crt",
+    "art-deco",
+)
+
+# All sample clip styles used for acceptance checks (Phase 1 + Phase 2).
+ALL_SAMPLE_STYLES = PILOT_STYLES + PHASE2_STYLES
+
 # Native frame sizes for each aspect (mirrors lemo_render.ASPECT_SIZES).
 ASPECT_SIZES: dict[str, tuple[int, int]] = {
     "16:9": (1920, 1080),
@@ -168,22 +187,46 @@ def check_renders(
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    """CLI: check the six pilot renders under ``--project-dir``."""
+    """CLI: check Lemo renders (pilot or all sample clips) under ``--project-dir``."""
     parser = argparse.ArgumentParser(
         prog="pilot_accept.py",
-        description="Check the six Lemo pilot renders (three styles x two aspects).",
+        description=(
+            "Check Lemo sample clip renders (Phase 1 pilots + Phase 2 samples). "
+            "Use --styles to select specific styles, --all-samples for all, or check defaults."
+        ),
     )
     parser.add_argument("--project-dir", required=True, help="A lemo project directory.")
+    parser.add_argument(
+        "--styles",
+        type=lambda s: [x.strip() for x in s.split(",") if x.strip()],
+        default=None,
+        help="Comma-separated style list (e.g. --styles ink-wash). "
+        "Defaults to PILOT_STYLES if neither --styles nor --all-samples.",
+    )
+    parser.add_argument(
+        "--all-samples",
+        action="store_true",
+        help="Select all sample clip styles (Phase 1 + Phase 2). "
+        "Only used when --styles is not given.",
+    )
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
-    errors = check_renders(Path(args.project_dir).expanduser())
+    # Resolve styles: explicit --styles wins, else --all-samples, else PILOT_STYLES
+    if args.styles:
+        styles = args.styles
+    elif args.all_samples:
+        styles = ALL_SAMPLE_STYLES
+    else:
+        styles = PILOT_STYLES
+
+    errors = check_renders(Path(args.project_dir).expanduser(), styles=styles)
     if errors:
         print("PILOT ACCEPTANCE FAILED")
         for error in errors:
             print(f"  - {error}")
         return 1
 
-    print("PILOT ACCEPTANCE OK")
+    print(f"PILOT ACCEPTANCE OK ({len(styles)} styles: {', '.join(sorted(styles))})")
     return 0
 
 
