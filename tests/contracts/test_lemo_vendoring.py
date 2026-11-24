@@ -27,19 +27,24 @@ def test_all_fifteen_demo_dirs_exist():
     for style in STYLES:
         assert (LIB / "styles" / style / "demo").is_dir(), style
 
+def _vendored(paths):
+    # `lemo_render setup` runs `npm ci` in library/, so node_modules may exist
+    # locally; it is gitignored and not vendored, so scans must skip it.
+    return [p for p in paths if "node_modules" not in p.parts]
+
 FONT_DIRS = {LIB / "core" / "fonts", LIB / "assets" / "fonts"}
 
 def _outside_font_dirs(paths):
-    return [p for p in paths if not any(d in p.parents for d in FONT_DIRS)]
+    return [p for p in _vendored(paths) if not any(d in p.parents for d in FONT_DIRS)]
 
 def test_no_nc_docs_or_demo_media_are_vendored():
-    assert not list(LIB.rglob("STYLE.md"))
-    assert not list(LIB.rglob("DEMO.md"))
-    assert not list(LIB.rglob("*.mp4"))
-    assert not list(LIB.rglob("*.wav"))
+    assert not _vendored(LIB.rglob("STYLE.md"))
+    assert not _vendored(LIB.rglob("DEMO.md"))
+    assert not _vendored(LIB.rglob("*.mp4"))
+    assert not _vendored(LIB.rglob("*.wav"))
     assert _outside_font_dirs(LIB.rglob("*.ttf")) == []
     assert _outside_font_dirs(LIB.rglob("*.woff2")) == []
-    assert not list(LIB.rglob("stills/styleframe.jpg"))
+    assert not _vendored(LIB.rglob("stills/styleframe.jpg"))
 
 def test_no_vendored_media_outside_font_dirs():
     for pattern in ("*.jpg", "*.jpeg", "*.png", "*.webp", "*.svg",
@@ -54,7 +59,7 @@ CAD_PATTERNS = [r"occt-import-js", r"step2mesh", r"kicad",
                 r"(?:[\"'`]|/)[\w.-]*\.(?:step|stp)\b"]
 
 def test_no_cad_or_occt_surface():
-    for path in LIB.rglob("*"):
+    for path in _vendored(LIB.rglob("*")):
         if not path.is_file():
             continue
         assert path.name not in CAD_NAMES, path
@@ -66,7 +71,7 @@ def test_no_cad_or_occt_surface():
 
 def test_clawd_and_anthropic_character_are_absent():
     hits = []
-    for path in LEMO.rglob("*"):
+    for path in _vendored(LEMO.rglob("*")):
         if path.is_file() and path.suffix in {".js",".mjs",".html",".json",".sh",".py",".txt"}:
             text = path.read_text(encoding="utf-8", errors="ignore").lower()
             if re.search(r"\bclawd\b|\banthropic\b", text):
