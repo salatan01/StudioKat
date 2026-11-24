@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "openmontage/artifacts/style_lock",
   "title": "Style Lock",
-  "description": "Style identity for a faceless-short or editor-pipeline project, written at the idea stage after reading the style contract (STYLE.md / style.md + base.js) and inspecting the referenced material. The referenced document remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
+  "description": "Style identity for a faceless-short, editor-pipeline, or lemo clip-style project, written at the idea stage after reading the style contract (STYLE.md / style.md + base.js / lemo style brief + manifest) and inspecting the referenced material. The referenced document remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
   "type": "object",
   "required": ["version", "style_id", "style_name", "engine", "contract", "source", "format", "confirmed_by_user", "resolution_note"],
   "allOf": [
@@ -32,11 +32,26 @@
         "data-story",
         "pop-info",
         "software-walkthrough",
-        "warm-canvas"
+        "warm-canvas",
+        "art-deco",
+        "ascii-crt",
+        "assembly-line-diagram",
+        "bauhaus-shapes",
+        "briefing-board",
+        "dataviz",
+        "flat-space-explainer",
+        "ink-wash",
+        "isometric-picture-book",
+        "living-screencast",
+        "midcentury-toon",
+        "paper-popup",
+        "silkscreen-poster",
+        "swiss-motion",
+        "teardown"
       ]
     },
     "style_name": { "type": "string", "minLength": 1 },
-    "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] },
+    "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas", "lemo"] },
     "contract": {
       "type": "string",
       "minLength": 1,
@@ -81,6 +96,25 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["brief_md", "manifest", "demo_dir"],
+          "properties": {
+            "brief_md": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/lemo/briefs/[a-z0-9-]+\\.md$"
+            },
+            "manifest": {
+              "type": "string",
+              "pattern": "^styles/lemo/[a-z0-9-]+\\.json$"
+            },
+            "demo_dir": {
+              "type": "string",
+              "pattern": "^\\.agents/skills/lemo/library/styles/[a-z0-9-]+/demo$"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -89,8 +123,8 @@
       "required": ["aspect", "resolution", "fps", "duration_seconds"],
       "properties": {
         "aspect": {
-          "enum": ["9:16", "16:9", "3:4"],
-          "description": "Output aspect ratio. Faceless styles are locked to 9:16; editor styles accept the user's chosen ratio."
+          "enum": ["9:16", "16:9", "3:4", "1:1", "4:5"],
+          "description": "Output aspect ratio. Faceless styles are locked to 9:16; editor styles accept the user's chosen ratio; lemo styles accept the ratio declared in their manifest."
         },
         "resolution": { "type": "string", "pattern": "^\\d+x\\d+$" },
         "fps": {
@@ -168,6 +202,16 @@
         "shot_count": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
+    },
+    "sound": {
+      "type": "string",
+      "enum": ["none", "foley"],
+      "description": "Lemo-style sound design: 'none' for silent graphic pieces, 'foley' when the style ships sound effects."
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Lemo styles consume supplied inputs (e.g. screenshots, footage) instead of generating all footage; empty when none are required."
     }
   },
   "additionalProperties": false

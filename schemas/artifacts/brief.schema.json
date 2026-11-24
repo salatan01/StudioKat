@@ -20,12 +20,12 @@
     "style": { "type": "string", "description": "Style playbook name or custom description" },
     "visual_style": {
       "type": "object",
-      "description": "Structured record of the chosen visual style. The faceless system uses system='faceless' plus style_id and engine; other pipelines keep using the existing systems.",
+      "description": "Structured record of the chosen visual style. The faceless, editor, and lemo systems use an explicit style_id and engine; other pipelines keep using the existing systems.",
       "required": ["system", "name", "source"],
       "properties": {
         "system": {
           "type": "string",
-          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless", "editor"]
+          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless", "editor", "lemo"]
         },
         "name": { "type": "string", "minLength": 1 },
         "source": { "type": "string", "minLength": 1 },
@@ -44,10 +44,25 @@
             "data-story",
             "pop-info",
             "software-walkthrough",
-            "warm-canvas"
+            "warm-canvas",
+            "art-deco",
+            "ascii-crt",
+            "assembly-line-diagram",
+            "bauhaus-shapes",
+            "briefing-board",
+            "dataviz",
+            "flat-space-explainer",
+            "ink-wash",
+            "isometric-picture-book",
+            "living-screencast",
+            "midcentury-toon",
+            "paper-popup",
+            "silkscreen-poster",
+            "swiss-motion",
+            "teardown"
           ]
         },
-        "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] }
+        "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas", "lemo"] }
       },
       "additionalProperties": false,
       "allOf": [
@@ -61,6 +76,13 @@
         {
           "if": {
             "properties": { "system": { "const": "editor" } },
+            "required": ["system"]
+          },
+          "then": { "required": ["style_id", "engine"] }
+        },
+        {
+          "if": {
+            "properties": { "system": { "const": "lemo" } },
             "required": ["system"]
           },
           "then": { "required": ["style_id", "engine"] }

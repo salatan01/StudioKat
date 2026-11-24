@@ -85,8 +85,8 @@
             "renderer_family_used": { "type": "string", "description": "Creative grammar that actually ran" },
             "render_runtime_used": {
               "type": "string",
-              "enum": ["remotion", "hyperframes", "ffmpeg", "faceless", "editor"],
-              "description": "Technical runtime that actually executed the render. Must match the runtime locked at proposal unless a logged decision overrode it. 'faceless' is valid only for the faceless-short pipeline and is executed by faceless_render; 'editor' is valid only for the editor pipeline and is executed by editor_render; video_compose rejects both."
+              "enum": ["remotion", "hyperframes", "ffmpeg", "faceless", "editor", "lemo"],
+              "description": "Technical runtime that actually executed the render. Must match the runtime locked at proposal unless a logged decision overrode it. 'faceless' is valid only for the faceless-short pipeline and is executed by faceless_render; 'editor' is valid only for the editor pipeline and is executed by editor_render; 'lemo' is valid only for the lemo clip-style pipeline; video_compose rejects all three."
             },
             "runtime_swap_detected": {
               "type": "boolean",
