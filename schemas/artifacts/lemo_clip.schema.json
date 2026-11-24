@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/lemo_clip",
+  "title": "Lemo Clip",
+  "description": "A single authored lemo motion-graphics clip: the clip's identity and idea, its delivery format, the authoring workspace with its three files (clip.json, clip.js, index.html), the resolved inputs, and the per-clip QA verdict. Additional project-specific fields are allowed.",
+  "type": "object",
+  "required": [
+    "version",
+    "clip_id",
+    "style_id",
+    "subject",
+    "one_idea",
+    "duration_seconds",
+    "aspect",
+    "width",
+    "height",
+    "fps",
+    "sound",
+    "text_mode",
+    "workspace",
+    "clip_json",
+    "clip_js",
+    "index_html",
+    "inputs",
+    "qa"
+  ],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "clip_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this clip within the production, e.g. 'clip-01'."
+    },
+    "style_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The lemo style this clip is authored in, e.g. 'swiss-motion'."
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the clip is about."
+    },
+    "one_idea": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The single idea the clip must make legible."
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Clip duration in seconds."
+    },
+    "aspect": {
+      "enum": ["9:16", "16:9", "3:4", "1:1", "4:5"],
+      "description": "Output aspect ratio."
+    },
+    "width": { "type": "integer", "minimum": 1, "description": "Output width in pixels." },
+    "height": { "type": "integer", "minimum": 1, "description": "Output height in pixels." },
+    "fps": { "type": "integer", "minimum": 1, "description": "Delivery frame rate." },
+    "sound": {
+      "type": "string",
+      "description": "Sound design for the clip, e.g. 'none' or 'foley'."
+    },
+    "text_mode": {
+      "type": "string",
+      "description": "How on-screen text is used, e.g. 'title' or 'none'."
+    },
+    "workspace": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Directory holding the clip's authored files."
+    },
+    "clip_json": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the authored clip.json."
+    },
+    "clip_js": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the authored clip.js."
+    },
+    "index_html": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the clip's index.html entry point."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Resolved inputs consumed by the clip (supplied assets such as screenshots or footage); empty when the clip is fully procedural."
+    },
+    "qa": {
+      "type": "object",
+      "required": ["validate_ok"],
+      "properties": {
+        "validate_ok": {
+          "type": "boolean",
+          "description": "True when the clip passed schema and render validation."
+        }
+      },
+      "description": "Per-clip QA verdict."
+    }
+  }
+}

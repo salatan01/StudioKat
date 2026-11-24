@@ -105,9 +105,37 @@
               },
               "required": ["type", "description", "source"]
             }
+          },
+          "lemo": {
+            "type": "object",
+            "description": "Lemo motion-graphics block for this scene. Only valid on a 'broll' scene.",
+            "required": ["style_id", "subject", "duration_seconds"],
+            "properties": {
+              "style_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The lemo style this b-roll block is authored in, e.g. 'swiss-motion'."
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "description": "What the lemo clip is about."
+              },
+              "duration_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Lemo clip duration in seconds."
+              }
+            }
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "if": { "required": ["lemo"] },
+        "then": {
+          "properties": {
+            "type": { "const": "broll" }
+          }
+        }
       },
       "minItems": 1
     },
