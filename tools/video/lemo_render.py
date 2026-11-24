@@ -1,0 +1,506 @@
+"""Lemo clip-style render adapter.
+
+Thin BaseTool wrapper around the vendored Lemo engine at
+``.agents/skills/lemo/``. This module owns workspace layout, path guards,
+command assembly, and Chrome discovery; it never reimplements the engine and
+never substitutes FFmpeg/Remotion/HyperFrames for a Lemo render.
+
+Task 11 lands the skeleton: ``setup``, ``check``, and ``styles`` are live, and
+every remaining operation declared in the schema routes to a ``_op_<name>``
+stub that raises :class:`LemoRenderError` until its own task implements it.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Optional
+
+from tools.base_tool import (
+    BaseTool,
+    Determinism,
+    ExecutionMode,
+    ResourceProfile,
+    RetryPolicy,
+    ToolResult,
+    ToolRuntime,
+    ToolStability,
+    ToolTier,
+)
+from tools.video.browser_env import resolve_chrome
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PROJECTS_ROOT = REPO_ROOT / "projects"
+SKILL_DIR = REPO_ROOT / ".agents" / "skills" / "lemo"
+LIBRARY_DIR = SKILL_DIR / "library"
+SETUP_SCRIPT = SKILL_DIR / "scripts" / "setup.py"
+
+PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+OPERATIONS = (
+    "setup",
+    "check",
+    "styles",
+    "new",
+    "validate",
+    "stills",
+    "render",
+    "render_start",
+    "job_status",
+    "job_cancel",
+    "report",
+)
+
+# Operations that need a project workspace. ``setup``, ``check``, and ``styles``
+# are environment/style checks and run without one.
+PROJECT_OPERATIONS = {
+    "new",
+    "validate",
+    "stills",
+    "render",
+    "render_start",
+    "job_status",
+    "job_cancel",
+    "report",
+}
+
+# Declared here so the tool advertises its full contract, but implemented in a
+# later task. Routing them to a clean ``success=False`` (never a crash) is the
+# skeleton's job; they must NOT read as "Unknown operation".
+LATER_TASK_OPERATIONS = PROJECT_OPERATIONS
+
+
+class LemoRenderError(RuntimeError):
+    """A guard or engine command failed with an actionable message."""
+
+
+class LemoRender(BaseTool):
+    name = "lemo_render"
+    version = "0.1.0"
+    tier = ToolTier.CORE
+    capability = "video_post"
+    provider = "lemo"
+    stability = ToolStability.BETA
+    execution_mode = ExecutionMode.SYNC
+    determinism = Determinism.DETERMINISTIC
+    runtime = ToolRuntime.LOCAL
+
+    dependencies = ["cmd:node", "cmd:ffmpeg", "cmd:ffprobe"]
+    install_instructions = (
+        "Run lemo_render with operation='setup' and confirm_downloads=True: it runs "
+        "`npm ci` in .agents/skills/lemo/library and fetches the OFL fonts."
+    )
+    agent_skills = ["lemo"]
+
+    capabilities = [
+        "lemo_setup",
+        "lemo_check",
+        "lemo_styles",
+        "lemo_new",
+        "lemo_validate",
+        "lemo_stills",
+        "lemo_render",
+        "lemo_report",
+    ]
+    best_for = [
+        "One of the fifteen vendored Lemo clip styles",
+        "Short, style-locked clips rendered with the local Lemo engine",
+        "Local, zero-paid-API renders",
+    ]
+    not_good_for = [
+        "Remotion/HyperFrames compositions",
+        "Faceless-shorts or editor-pipeline runtimes",
+        "Styles that were not curated for the Lemo engine",
+    ]
+
+    input_schema = {
+        "type": "object",
+        "required": ["operation"],
+        "properties": {
+            "operation": {
+                "type": "string",
+                "enum": list(OPERATIONS),
+            },
+            "project_id": {"type": "string"},
+            "project_dir": {"type": "string"},
+            "clip_id": {"type": "string"},
+            "style_id": {"type": "string"},
+            "confirm_downloads": {"type": "boolean", "default": False},
+            "duration_seconds": {"type": "number", "minimum": 0},
+            "aspect": {"type": "string"},
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1},
+            "fps": {"type": "integer", "minimum": 1},
+            "force": {"type": "boolean", "default": False},
+            "timeout_seconds": {"type": "integer", "minimum": 1},
+            "output_path": {"type": "string"},
+            "job_id": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "operation": {"type": "string"},
+            "project_id": {"type": "string"},
+            "workspace": {"type": "string"},
+            "clip_dir": {"type": "string"},
+            "stdout": {"type": "string"},
+            "stderr": {"type": "string"},
+        },
+    }
+
+    resource_profile = ResourceProfile(cpu_cores=4, ram_mb=4096, disk_mb=2048)
+    retry_policy = RetryPolicy(max_retries=0)
+
+    side_effects = [
+        "Creates projects/<project_id>/lemo and its clips/ workspaces",
+        "Writes clip sources and renders under projects/<project_id>/lemo",
+        "setup runs `npm ci` in .agents/skills/lemo/library and downloads the OFL fonts",
+    ]
+    user_visible_verification = [
+        "Probe the rendered MP4 with ffprobe",
+        "Review the stills/contact sheet before presenting the clip",
+    ]
+
+    # ------------------------------------------------------------------
+    # Paths, workspace, and process helpers
+    # ------------------------------------------------------------------
+
+    def _resolve_project_dir(self, inputs: dict[str, Any]) -> Path:
+        project_id = inputs.get("project_id")
+        if not isinstance(project_id, str) or not PROJECT_ID_RE.match(project_id):
+            raise LemoRenderError(
+                f"Invalid project_id {project_id!r}: use letters, numbers, '.', '_' "
+                "or '-' only, starting with a letter or number."
+            )
+
+        root = PROJECTS_ROOT.resolve()
+        raw = inputs.get("project_dir")
+        if raw:
+            candidate = Path(str(raw)).expanduser()
+            if not candidate.is_absolute():
+                candidate = REPO_ROOT / candidate
+            candidate = candidate.resolve()
+        else:
+            candidate = (PROJECTS_ROOT / project_id).resolve()
+
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise LemoRenderError(
+                f"project_dir {candidate} must stay under {root}"
+            ) from exc
+
+        if candidate.name != project_id:
+            raise LemoRenderError(
+                f"project_dir {candidate} must end with project_id {project_id!r}"
+            )
+        if not candidate.is_dir():
+            raise LemoRenderError(
+                f"Project directory not found: {candidate}. Run init_project first."
+            )
+        return candidate
+
+    def _workspace(self, inputs: dict[str, Any]) -> Path:
+        project_dir = self._resolve_project_dir(inputs)
+        workspace = project_dir / "lemo"
+        if workspace.is_symlink():
+            raise LemoRenderError(
+                f"Lemo workspace must not be a symlink: {workspace}"
+            )
+        if not workspace.is_dir():
+            raise LemoRenderError(
+                f"Lemo workspace not found at {workspace}. Run operation='new' first."
+            )
+        try:
+            workspace.resolve().relative_to(project_dir.resolve())
+        except ValueError as exc:
+            raise LemoRenderError(
+                f"Lemo workspace escapes the project directory: {workspace}"
+            ) from exc
+        return workspace
+
+    def _clip_dir(self, inputs: dict[str, Any]) -> Path:
+        workspace = self._workspace(inputs)
+        clip_id = inputs.get("clip_id")
+        if not isinstance(clip_id, str) or not PROJECT_ID_RE.match(clip_id):
+            raise LemoRenderError(
+                f"Invalid clip_id {clip_id!r}: use letters, numbers, '.', '_' "
+                "or '-' only, starting with a letter or number."
+            )
+        clips_root = (workspace / "clips").resolve()
+        clip_dir = (clips_root / clip_id).resolve()
+        try:
+            clip_dir.relative_to(clips_root)
+        except ValueError as exc:
+            raise LemoRenderError(
+                f"clip_id {clip_id!r} escapes the clips directory: {clip_dir}"
+            ) from exc
+        return clip_dir
+
+    def _project_path(
+        self,
+        inputs: dict[str, Any],
+        raw: Optional[str],
+        default: str,
+    ) -> Path:
+        project_dir = self._resolve_project_dir(inputs)
+        root = project_dir.resolve()
+
+        def inside(path: Path) -> bool:
+            try:
+                path.relative_to(root)
+                return True
+            except ValueError:
+                return False
+
+        if raw:
+            candidate = Path(str(raw)).expanduser()
+            if candidate.is_absolute():
+                resolved = candidate.resolve()
+            else:
+                # Relative paths are read two ways, because both are natural:
+                # project-relative ("renders/final.mp4") and workspace-relative
+                # ("../renders/final.mp4" — the engine runs with cwd set to
+                # <project>/lemo, so that is how the path looks from there).
+                resolved = (project_dir / candidate).resolve()
+                if not inside(resolved):
+                    resolved = (project_dir / "lemo" / candidate).resolve()
+        else:
+            resolved = (project_dir / default).resolve()
+
+        if not inside(resolved):
+            raise LemoRenderError(
+                f"Output path {resolved} must stay under the project directory {root}"
+            )
+        return resolved
+
+    def _chrome_env(self) -> dict[str, str]:
+        env = dict(os.environ)
+        chrome = resolve_chrome()
+        if chrome:
+            env["CHROME"] = chrome
+            env["PLAYWRIGHT_CHROME"] = chrome
+        return env
+
+    def _run(
+        self,
+        cmd: list[str],
+        cwd: Path,
+        timeout: int,
+        env: Optional[dict[str, str]] = None,
+    ) -> subprocess.CompletedProcess:
+        try:
+            return subprocess.run(
+                cmd,
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout,
+                env=env if env is not None else self._chrome_env(),
+            )
+        except FileNotFoundError as exc:
+            raise LemoRenderError(f"Command not found: {cmd[0]}") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise LemoRenderError(
+                f"Command timed out after {timeout}s: {' '.join(cmd)}"
+            ) from exc
+
+    @staticmethod
+    def _output(proc: subprocess.CompletedProcess, label: str) -> None:
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "").strip()
+            raise LemoRenderError(
+                f"{label} failed (exit {proc.returncode}): {detail}"
+            )
+
+    # ------------------------------------------------------------------
+    # Operations
+    # ------------------------------------------------------------------
+
+    def _op_styles(self, inputs: dict[str, Any]) -> ToolResult:
+        from styles.lemo.loader import list_styles
+
+        styles = list_styles()
+        return ToolResult(
+            success=True,
+            data={"styles": styles, "count": len(styles)},
+        )
+
+    def _op_setup(self, inputs: dict[str, Any]) -> ToolResult:
+        if not inputs.get("confirm_downloads"):
+            raise LemoRenderError(
+                "setup runs `npm ci` in .agents/skills/lemo/library (Node "
+                "dependencies) and downloads the OFL font binaries. Re-run with "
+                "confirm_downloads=True."
+            )
+
+        npm = shutil.which("npm")
+        if not npm:
+            raise LemoRenderError(
+                "npm not found on PATH. Run inside the StudioKat Nix shell (it "
+                "provides Node.js and npm), or install Node.js."
+            )
+
+        npm_proc = self._run(
+            [npm, "ci"],
+            cwd=LIBRARY_DIR,
+            timeout=int(inputs.get("timeout_seconds") or 1800),
+        )
+        self._output(npm_proc, "npm ci")
+
+        font_proc = self._run(
+            [sys.executable, str(SETUP_SCRIPT), "--fonts"],
+            cwd=REPO_ROOT,
+            timeout=int(inputs.get("timeout_seconds") or 1800),
+        )
+        self._output(font_proc, "setup --fonts")
+
+        return ToolResult(
+            success=True,
+            data={
+                "library": str(LIBRARY_DIR),
+                "stdout": npm_proc.stdout + font_proc.stdout,
+                "stderr": npm_proc.stderr + font_proc.stderr,
+            },
+        )
+
+    def _op_check(self, inputs: dict[str, Any]) -> ToolResult:
+        node = shutil.which("node")
+        if not node:
+            raise LemoRenderError(
+                "node not found on PATH. lemo_render needs Node.js to run the "
+                "engine. Run inside the StudioKat Nix shell (it provides node), or "
+                "install Node.js."
+            )
+        for name in ("ffmpeg", "ffprobe"):
+            if not shutil.which(name):
+                raise LemoRenderError(
+                    f"{name} not found on PATH. Run inside the StudioKat Nix shell "
+                    "(it provides ffmpeg and ffprobe)."
+                )
+
+        chrome = resolve_chrome()
+        if not chrome:
+            raise LemoRenderError(
+                "No Chrome/Chromium found. Set CHROME to a browser executable, or "
+                "run inside the StudioKat Nix shell where CHROME is exported."
+            )
+
+        playwright = LIBRARY_DIR / "node_modules" / "playwright-core"
+        if not playwright.is_dir():
+            raise LemoRenderError(
+                f"Lemo library dependencies are missing: {playwright} not found. "
+                "Run `lemo_render` with operation='setup' and confirm_downloads=True "
+                "to install them (`npm ci` in .agents/skills/lemo/library)."
+            )
+
+        video_mjs = LIBRARY_DIR / "core" / "render" / "video.mjs"
+        if not video_mjs.is_file():
+            raise LemoRenderError(
+                f"Lemo engine entrypoint missing: {video_mjs}. Re-run `lemo_render` "
+                "operation='setup' or restore the vendored library."
+            )
+
+        from styles.lemo.loader import list_styles
+
+        try:
+            styles = list_styles()
+        except Exception as exc:
+            raise LemoRenderError(
+                f"Lemo style manifests failed to load: {exc}"
+            ) from exc
+        if len(styles) != 15:
+            raise LemoRenderError(
+                f"Expected 15 lemo style manifests, found {len(styles)}."
+            )
+
+        font_proc = self._run(
+            [sys.executable, str(SETUP_SCRIPT), "--check"],
+            cwd=REPO_ROOT,
+            timeout=int(inputs.get("timeout_seconds") or 300),
+        )
+        if font_proc.returncode != 0:
+            detail = (font_proc.stdout or font_proc.stderr or "").strip()
+            raise LemoRenderError(
+                "Fonts are not ready. Run `lemo_render` operation='setup' with "
+                f"confirm_downloads=True to fetch them.\n{detail}"
+            )
+
+        return ToolResult(
+            success=True,
+            data={
+                "node": node,
+                "ffmpeg": shutil.which("ffmpeg"),
+                "ffprobe": shutil.which("ffprobe"),
+                "chrome": chrome,
+                "library": str(LIBRARY_DIR),
+                "styles": len(styles),
+                "fonts": (font_proc.stdout or "").strip(),
+            },
+        )
+
+    def _op_new(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("new is implemented in a later task")
+
+    def _op_validate(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("validate is implemented in a later task")
+
+    def _op_stills(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("stills is implemented in a later task")
+
+    def _op_render(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("render is implemented in a later task")
+
+    def _op_render_start(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("render_start is implemented in a later task")
+
+    def _op_job_status(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("job_status is implemented in a later task")
+
+    def _op_job_cancel(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("job_cancel is implemented in a later task")
+
+    def _op_report(self, inputs: dict[str, Any]) -> ToolResult:
+        raise LemoRenderError("report is implemented in a later task")
+
+    # ------------------------------------------------------------------
+    # Dispatch
+    # ------------------------------------------------------------------
+
+    def execute(self, inputs: dict[str, Any]) -> ToolResult:
+        operation = inputs.get("operation")
+        if not isinstance(operation, str):
+            return ToolResult(success=False, error="operation is required")
+        if operation not in self.input_schema["properties"]["operation"]["enum"]:
+            return ToolResult(success=False, error=f"Unknown operation {operation!r}")
+        if operation in PROJECT_OPERATIONS and not inputs.get("project_id"):
+            return ToolResult(
+                success=False,
+                error=f"project_id is required for operation {operation!r}",
+            )
+
+        handler = getattr(self, f"_op_{operation}", None)
+        if handler is None:
+            return ToolResult(
+                success=False,
+                error=f"Operation {operation!r} is not implemented in this tool",
+            )
+        try:
+            result = handler(inputs)
+            if isinstance(result, ToolResult):
+                result.data.setdefault("operation", operation)
+                result.data.setdefault("project_id", inputs.get("project_id"))
+            return result
+        except LemoRenderError as exc:
+            return ToolResult(success=False, error=str(exc))
+        except Exception as exc:
+            return ToolResult(success=False, error=f"{type(exc).__name__}: {exc}")
