@@ -244,17 +244,16 @@ window.TEXTS = t => {
   const roW = measure(readout, 700, roSize).width;
   const rx = portrait ? (W - roW) / 2 : M;
   const ry = ty + titleSize * 1.35;
-  out.push({ id: 'readout', text: readout,
-    x0: rx, y0: ry - roSize * 1.04, x1: rx + roW, y1: ry + roSize * 0.35 });
+  // the live scale readout is a counter/instrument tied to the camera; like the
+  // demo's tide counter it is excluded from the reading-time contract (only the
+  // static title is registered, which must satisfy readcheck).
   return out;
 };
 
-try {
-  await Promise.all([
-    document.fonts.load('800 96px "Jost"', TITLE),
-    document.fonts.load('700 40px "Jost"', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u2248·,.'),
-  ]);
-} catch (e) { console.error(e); }
+await Promise.all([
+  document.fonts.load('800 96px "Jost"', TITLE),
+  document.fonts.load('700 40px "Jost"', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u2248·,.'),
+]);
 await document.fonts.ready;
 
 draw(0);
