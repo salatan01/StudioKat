@@ -9,7 +9,8 @@ SECTIONS = ["Promise","When to use","When not to use","Materials & rendering","C
 
 @pytest.mark.parametrize("style", ["swiss-motion","midcentury-toon","dataviz","silkscreen-poster",
                                     "bauhaus-shapes","flat-space-explainer","assembly-line-diagram",
-                                    "living-screencast","isometric-picture-book"])
+                                    "living-screencast","isometric-picture-book","briefing-board",
+                                    "ink-wash","paper-popup","teardown","ascii-crt","art-deco"])
 def test_pilot_brief_has_the_contract(style):
     text = (BRIEFS/f"{style}.md").read_text(encoding="utf-8")
     assert len(text) >= 1500, style
@@ -19,3 +20,9 @@ def test_pilot_brief_has_the_contract(style):
     assert "16:9" in text and "9:16" in text
     assert "silent" in text.lower(), style  # v1 clips have no audio at all
     assert "sound" in text.lower(), style
+
+
+def test_every_manifest_brief_exists():
+    from styles.lemo.loader import list_styles
+    for style in list_styles():
+        assert (REPO_ROOT / style["brief_md"]).is_file(), style["id"]
