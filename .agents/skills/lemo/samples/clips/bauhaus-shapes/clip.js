@@ -98,12 +98,13 @@ function draw(t) {
   const st = figureState(t);
   const { fw, fh, phase, tintX, tintY, tintW, tintH } = st;
 
-  // point: lands at the figure's bottom-left corner
+  // point: lands at the figure's bottom-left corner (visible at t=0, grows during the beat)
   const pp = progress(t, T_POINT);
-  if (pp > 0 && t < T_LINE) {
+  if (t < T_LINE) {
+    const r = u * (0.05 + 0.04 * pp);   // small visible base radius at t=0, grows to 0.09 u
     ctx.fillStyle = FLAT;
     ctx.beginPath();
-    ctx.arc(Math.round(ax), Math.round(ay), Math.round(u * 0.09 * pp), 0, TAU);
+    ctx.arc(Math.round(ax), Math.round(ay), Math.round(r), 0, TAU);
     ctx.fill();
   }
 
