@@ -1,0 +1,15 @@
+{
+  "clip_id": "teacup-to-galaxy",
+  "style_id": "flat-space-explainer",
+  "subject": "From a teacup to a galaxy",
+  "one_idea": "A single continuous zoom out travels sixteen orders of magnitude, from a teacup through a house, a city and Earth to the Milky Way, with a live scale readout at every step.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 8,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": {},
+  "facts": []
+}
