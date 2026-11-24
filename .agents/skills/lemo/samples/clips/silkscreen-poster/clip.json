@@ -1,0 +1,15 @@
+{
+  "clip_id": "night-market",
+  "style_id": "silkscreen-poster",
+  "subject": "A night-market poster",
+  "one_idea": "A lantern-lit stall prints itself as a flat spot-ink screen print: one ink layer per beat, one squeegee pull, a small registration slip per plate.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": {},
+  "facts": []
+}
