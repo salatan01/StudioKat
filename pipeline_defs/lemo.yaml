@@ -1,0 +1,96 @@
+name: lemo
+version: "1.0"
+description: >
+  Vendored Lemo clip engine (`.agents/skills/lemo`) for short, code-drawn B-roll and
+  micro-explanation clips in one of fifteen styles. Each clip is an agent-authored HTML/JS
+  page that imports the vendored demo modules as grammar only; headless Chrome captures
+  frames and ffmpeg writes the MP4. Local, zero-paid-API. Output is
+  projects/<id>/renders/final.mp4.
+category: animation
+stability: beta
+default_checkpoint_policy: guided
+
+required_skills:
+  - pipelines/lemo/idea-director
+  - pipelines/lemo/clip-director
+  - pipelines/lemo/compose-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+extensions:
+  custom_scripts: false
+  custom_playbooks: false
+  custom_skills: false
+  custom_tools: false
+
+stages:
+  - name: idea
+    skill: pipelines/lemo/idea-director
+    produces:
+      - brief
+      - style_lock
+      - decision_log
+    required_tools:
+      - lemo_render
+    tools_available:
+      - lemo_render
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Exactly one style is chosen from the curated fifteen; ambiguous requests asked one question
+      - The clip-not-film limit holds (cutaway 3-6 s, micro-explanation 8-20 s; never a film)
+      - duration, aspect, sound and inputs are locked into the style_lock
+      - style_lock.source carries brief_md, manifest and demo_dir paths
+      - decision_log records style_selection and the clip length mode
+    success_criteria:
+      - Schema-valid brief and style_lock artifacts
+      - style_lock.style_id is one of the fifteen lemo styles with engine "lemo"
+      - The 15-style menu and the one-idea subject were played back to the user before approval
+
+  - name: clip
+    skill: pipelines/lemo/clip-director
+    required_artifacts_in:
+      - style_lock
+    produces:
+      - lemo_clip
+    required_tools:
+      - lemo_render
+    tools_available:
+      - lemo_render
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - clip.json was written first and is the source of truth the tool validates
+      - clip.js obeys the page contract (window.DUR, window.render(t), window.READY after fonts)
+      - Demo modules are imported as grammar only; the demo story is never reused
+      - Stills were rendered and inspected at full size before approval
+    success_criteria:
+      - Schema-valid lemo_clip artifact with qa.validate_ok true
+      - lemo_render validate and stills pass for the clip workspace
+      - The clip is original work about the user's subject, not the demo's subject
+
+  - name: compose
+    skill: pipelines/lemo/compose-director
+    required_artifacts_in:
+      - lemo_clip
+    produces:
+      - render_report
+      - final_review
+    required_tools:
+      - lemo_render
+      - visual_qa
+    tools_available:
+      - lemo_render
+      - visual_qa
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - final.mp4 exists and plays; duration matches the locked clip length
+      - Contact sheet read in full; four full-size frames inspected
+      - render_report.metadata.lemo_qa names the contact sheet, inspected frames, probe and output
+      - final_review promise_preservation.render_runtime_used == "lemo"
+    success_criteria:
+      - Schema-valid render_report with metadata.lemo_qa
+      - Schema-valid final_review; render_runtime_used == "lemo"
+      - Output is projects/<id>/renders/final.mp4 and the ffprobe passes
+      - Contact sheet and at least four full-size frames exist under review/
