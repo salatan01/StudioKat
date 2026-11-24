@@ -1,0 +1,15 @@
+{
+  "clip_id": "tide-timetable",
+  "style_id": "swiss-motion",
+  "subject": "A tide timetable",
+  "one_idea": "A day of sea-level readings read as a modular grid; one red signal line traces the tide across the module tops and leaves the page on the last beat.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": {},
+  "facts": []
+}

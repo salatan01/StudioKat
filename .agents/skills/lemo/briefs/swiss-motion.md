@@ -128,6 +128,24 @@ every arrival on a beat.
 Read these for technique. Write your own timeline, your own words and your own signal
 element.
 
+## Worked pilot — "A tide timetable"
+
+The shipped sample (`.agents/skills/lemo/samples/clips/swiss-motion/`) is a 6 s cutaway about
+one day of sea-level readings, not the demo's concert poster:
+
+- Six readings stand as six plain blocks on a water-level axis; a block's height is its
+  reading, its time set below the axis. The grid is a tape measure, not a menu — the column
+  count fixes the six modules, and faint rules mark each metre on the sheet.
+- One signal-red line enters along the axis, then traces the tide. It alone is the exception:
+  it travels linearly, off the beat, pauses at each slack reading, and on the tenth beat
+  leaves the page — the single deliberate break. Nothing else borrows the red.
+- The headline wipes in from below the baseline, the blocks wipe up from the axis, and every
+  arrival lands on a whole beat. The sample sets its archivo face as `Clip Sans` and reads
+  `width`/`height` from its own `clip.json`, so one file renders at any aspect.
+
+Read the sample's `clip.js` for its exact timings — then set them aside and time your own
+clip to its own subject.
+
 ## Aspect adaptation
 
 - **16:9** is the native landscape spread: two pages side by side on a 12-column grid, the
