@@ -89,15 +89,6 @@ function draw(t) {
     const row = LINES.length - 1;
     const col = last.text.length - 1;
     glyph(g, last.text[col], (iW - s) / 2, (iH - 2 * s) / 2, s, 1, 0);
-  } else {
-    // block cursor at the end of the newest line that has started typing
-    let lastIdx = -1;
-    for (let i = LINES.length - 1; i >= 0; i--) if (t >= LINES[i].t0) { lastIdx = i; break; }
-    if (lastIdx >= 0) {
-      const L = LINES[lastIdx];
-      const n = typed(t, L);
-      if (n < L.text.length) cursor(g, n, lastIdx, { ox: grid.ox, oy: grid.oy, cw: grid.cw }, (t % 0.5) < 0.25 ? 1 : 0);
-    }
   }
 }
 
