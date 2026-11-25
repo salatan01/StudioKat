@@ -46,12 +46,16 @@ function layout() {
   const mascot = { x: 0, y: 0, w: 0, h: 0 };
   if (PORTRAIT) {
     // 9:16: window fills the width; panes stack vertically; mascot clear of controls
-    win.x = 40; win.y = 50; win.w = W - 80; win.h = H - 100;
+    // Reserve a clear bottom band for the mascot so Pebble is fully in frame.
+    const bottomBand = 170;
+    win.x = 40; win.y = 50; win.w = W - 80; win.h = H - 50 - bottomBand;
     const cx = win.x + 36; const cw = win.w - 72;
     sidebar.x = cx; sidebar.y = win.y + 105; sidebar.w = cw; sidebar.h = 300;
     board.x = cx; board.y = sidebar.y + sidebar.h + 26; board.w = cw; board.h = 540;
     composer.x = cx; composer.y = board.y + board.h + 26; composer.w = cw; composer.h = 400;
-    mascot.x = cx + cw * 0.5 - 110; mascot.y = win.y + win.h + 30; mascot.w = 220; mascot.h = 140;
+    mascot.w = 220; mascot.h = 140;
+    mascot.x = cx + (cw - mascot.w) / 2;
+    mascot.y = (win.y + win.h) + (bottomBand - mascot.h) / 2;
   } else {
     // 16:9: wide window with the mascot beside the active pane
     win.x = 250; win.y = 80; win.w = 1180; win.h = 910;
@@ -332,7 +336,9 @@ function drawComposer(t) {
   drawPaneTitle(p, composerPane.title);
   composerPane.items.forEach((it, i) => {
     const y = p.y + 100 + i * 56;
-    drawText(it.label, p.x + 24, y, 18, 500, 'Inter', C.ink);
+    if (it.id !== 'add') {
+      drawText(it.label, p.x + 24, y, 18, 500, 'Inter', C.ink);
+    }
     if (it.value !== undefined) {
       drawText(String(it.value), p.x + 24, y + 30, 18, 500, 'Inter', C.ink);
     }
