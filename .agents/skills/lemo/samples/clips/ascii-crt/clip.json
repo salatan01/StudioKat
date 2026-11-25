@@ -1,0 +1,21 @@
+{
+  "clip_id": "ascii-crt-001",
+  "style_id": "ascii-crt",
+  "subject": "A boot log that types itself",
+  "one_idea": "A fictional machine's boot log types itself one line at a time on an amber-phosphor character grid, then the camera pushes into the grid until a single glyph fills the frame.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": {},
+  "facts": [
+    "Boot log renders at 15 Latin characters per second with 1.5s trailing pad",
+    "Minimum readcheck threshold: 1.5 seconds per on-screen text block",
+    "Deterministic boot sequence: no Math.random or Date.now used",
+    "Amber phosphor with scanlines, curvature, and P3 glow",
+    "Character grid zooms from about 80 columns to full-screen detail"
+  ]
+}
