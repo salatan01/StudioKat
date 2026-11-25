@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A lighthouse opens</title>
+<style>
+  html, body { margin: 0; background: #241a14; overflow: hidden; }
+  canvas { display: block; }
+
+  /* Faces come from the pinned OFL manifest
+     (.agents/skills/lemo/library/assets/fonts/manifest.json); the render
+     server root is library/, so the URLs are absolute from there. Only the
+     faces this clip actually draws are declared. */
+  @font-face {
+    font-family: 'IM Fell English';
+    src: url('/assets/fonts/imfellenglish/IMFeENrm28P.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'IM Fell English';
+    src: url('/assets/fonts/imfellenglish/IMFeENit28P.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+    font-display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <script type="module" src="clip.js"></script>
+</body>
+</html>
