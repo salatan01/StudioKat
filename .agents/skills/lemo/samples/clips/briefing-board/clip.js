@@ -3,7 +3,10 @@
 // An evidence wall built from the three real NASA Skylab photographs. The demo
 // kit's loadObject() is demo-only (it hardcodes the vendored KIT and fetches
 // objects/<id>.png), so this clip draws its own board and pins the real photos
-// itself, importing only the kit's palette/type and the shared ease.
+// itself, importing only the kit's palette/type and the shared ease. Every
+// on-screen label is read from clip.json's `facts` — the station and span from
+// fact 0, the crew count and 1973-74 window from fact 1, and each photograph's
+// own fact (it names the file) for that mission and year.
 //
 // Original StudioKat clip: the vendored demo (bridges and ships) is read for
 // technique only; its story, subject and copy are not reused. Deterministic:
@@ -18,8 +21,10 @@ const ctx = canvas.getContext('2d');
 let META = {};
 try { META = await (await fetch('clip.json')).json(); }
 catch (e) { console.warn('clip.json not loaded; falling back to the canvas size', e); }
-const W = (META.width | 0) || canvas.width;
-const H = (META.height | 0) || canvas.height;
+// The render server sizes the viewport to --size, so window.innerWidth/Height is
+// the real frame; clip.json's width/height is only the native authoring size.
+const W = Math.round(window.innerWidth || (META.width | 0) || canvas.width);
+const H = Math.round(window.innerHeight || (META.height | 0) || canvas.height);
 canvas.width = W;
 canvas.height = H;
 
@@ -65,6 +70,32 @@ for (const id of ORDER) {
   PHOTOS.push({ rec, img: await loadPhoto(rec) });
 }
 
+// ---- the clip's words: every on-screen label is read from clip.json's facts --
+// No invented evidence. fact[0] gives the station and the 1973-1979 span, fact[1]
+// the three crews and the 1973-74 window, and each photo's own fact (it names the
+// file) gives that photograph's real mission and year.
+const FACTS = (Array.isArray(META.facts) ? META.facts : []).filter(f => typeof f === 'string' && f.trim());
+const FACT0 = FACTS[0] || '';
+const FACT1 = FACTS[1] || '';
+const yearsIn = s => [...String(s).matchAll(/\b(19\d{2})\b/g)].map(m => m[1]);
+const factFor = id => FACTS.find(f => f.includes(id)) || '';
+function labelFor(rec) {
+  const f = factFor(rec.id);
+  const m = f.match(/Skylab\s+(\d+)/i);
+  const mission = m ? `SKYLAB ${m[1]}` : String(rec.mission || 'SKYLAB').toUpperCase();
+  const ys = yearsIn(f);
+  const year = ys.length ? ys[ys.length - 1] : String(rec.year || '');
+  return `${mission} \u00B7 ${year}`;
+}
+const LABELS = PHOTOS.map(ph => labelFor(ph.rec));
+const TITLE = (FACT0.match(/[A-Za-z]+/) || ['Skylab'])[0].toUpperCase();
+const SPAN = yearsIn(FACT0);
+const SUBTITLE = SPAN.length >= 2 ? `${SPAN[0]}-${SPAN[SPAN.length - 1]}` : (SPAN[0] || '1973-1979');
+const DIM = FACT1.match(/\((\d{4})[-–](\d{2})\)/);
+const DIMLABEL = DIM ? `${DIM[1]}-${DIM[2]}` : '1973-74';
+const VERDICT1 = /\bfirst\s+space\s+station\b/i.test(FACT0) ? 'FIRST STATION' : 'ONE STATION';
+const VERDICT2 = /\bthree\s+crews\b/i.test(FACT1) ? 'THREE CREWS' : 'THE CREWS';
+
 // ---- layout, per aspect ------------------------------------------------------
 // 16:9 is native: a wide wall, a lateral track. 9:16 is a tall column: the
 // prints stack vertically, the camera drops, and the verdict sits at the foot.
@@ -73,9 +104,9 @@ function makeLayout(portrait) {
     return {
       board: { w: 4600, h: 2600 }, photoW: 430, labelSize: 110, seed: 11,
       prints: [
-        { x: 1150, y: 900, rot: -1.4, label: 'flyaround', lx: 1150, ly: 1340, align: 'center' },
-        { x: 2300, y: 1280, rot: 1.1, label: 'black sky', lx: 2300, ly: 1720, align: 'center' },
-        { x: 3450, y: 880, rot: -0.8, label: 'in orbit', lx: 3450, ly: 1340, align: 'center' },
+        { x: 1150, y: 900, rot: -1.4, label: LABELS[0], lx: 1150, ly: 1340, align: 'center' },
+        { x: 2300, y: 1280, rot: 1.1, label: LABELS[1], lx: 2300, ly: 1720, align: 'center' },
+        { x: 3450, y: 880, rot: -0.8, label: LABELS[2], lx: 3450, ly: 1340, align: 'center' },
       ],
       keys: [
         [0.0, [1080, 860, Math.log(1.12)]],
@@ -99,9 +130,9 @@ function makeLayout(portrait) {
   return {
     board: { w: 2400, h: 4800 }, photoW: 380, labelSize: 104, seed: 29,
     prints: [
-      { x: 1200, y: 1250, rot: -1.2, label: 'flyaround', lx: 1200, ly: 1640, align: 'center' },
-      { x: 1200, y: 2550, rot: 1.0, label: 'black sky', lx: 1200, ly: 2940, align: 'center' },
-      { x: 1200, y: 3850, rot: -0.9, label: 'in orbit', lx: 1200, ly: 4240, align: 'center' },
+      { x: 1200, y: 1250, rot: -1.2, label: LABELS[0], lx: 1200, ly: 1640, align: 'center' },
+      { x: 1200, y: 2550, rot: 1.0, label: LABELS[1], lx: 1200, ly: 2940, align: 'center' },
+      { x: 1200, y: 3850, rot: -0.9, label: LABELS[2], lx: 1200, ly: 4240, align: 'center' },
     ],
     keys: [
       [0.0, [1200, 1180, Math.log(1.2)]],
@@ -379,21 +410,21 @@ function drawLabels(t) {
   });
 }
 function drawHeader(t) {
-  drawMarker('SKYLAB', L.title.x, L.title.y, L.title.size, C.ink, seg(t, 3.40, 3.74), 'left', 'title');
+  drawMarker(TITLE, L.title.x, L.title.y, L.title.size, C.ink, seg(t, 3.40, 3.74), 'left', 'title');
   const tp = bease(seg(t, 3.50, 3.90), 1.6, 2.4);
   if (tp > 0) {
-    const w = markerLayout('SKYLAB', L.title.size, 'title').width * 0.5;
+    const w = markerLayout(TITLE, L.title.size, 'title').width * 0.5;
     ctx.save(); ctx.strokeStyle = C.red; ctx.lineWidth = L.title.size * 0.06; ctx.lineCap = 'round'; ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.moveTo(L.title.x, L.title.y + L.title.size * 0.34);
     ctx.lineTo(L.title.x + w * tp, L.title.y + L.title.size * 0.34);
     ctx.stroke(); ctx.restore();
   }
-  drawMarker('1973-1979', L.subtitle.x, L.subtitle.y, L.subtitle.size, C.grey, seg(t, 3.46, 3.80), 'left', 'subtitle');
+  drawMarker(SUBTITLE, L.subtitle.x, L.subtitle.y, L.subtitle.size, C.grey, seg(t, 3.46, 3.80), 'left', 'subtitle');
 }
 function drawDimLabel(t) {
   const d = L.dimLabel;
-  drawMarker('1973-74', d.x, d.y, d.size, C.red, seg(t, 3.30, 3.64), d.align, 'dim');
+  drawMarker(DIMLABEL, d.x, d.y, d.size, C.red, seg(t, 3.30, 3.64), d.align, 'dim');
 }
 function drawCard(t) {
   const c = L.card;
@@ -408,8 +439,8 @@ function drawCard(t) {
   magnet(ctx, -c.w / 2 + c.w * 0.10, -c.h / 2 + c.h * 0.11, c.w * 0.026, 'red');
   magnet(ctx, c.w / 2 - c.w * 0.10, -c.h / 2 + c.h * 0.11, c.w * 0.026, 'graphite');
   ctx.restore();
-  drawMarker('ONE STATION', c.x, c.y - c.h * 0.12, c.size, C.ink, seg(t, 3.50, 3.84), 'center', 'v1');
-  drawMarker('THREE CREWS', c.x, c.y + c.h * 0.24, c.size, C.ink, seg(t, 3.55, 3.89), 'center', 'v2');
+  drawMarker(VERDICT1, c.x, c.y - c.h * 0.12, c.size, C.ink, seg(t, 3.50, 3.84), 'center', 'v1');
+  drawMarker(VERDICT2, c.x, c.y + c.h * 0.24, c.size, C.ink, seg(t, 3.55, 3.89), 'center', 'v2');
 }
 function drawVignette() {
   const g = ctx.createRadialGradient(W * 0.5, H * 0.46, Math.min(W, H) * 0.34, W * 0.5, H * 0.5, Math.max(W, H) * 0.72);
@@ -468,16 +499,16 @@ window.render = t => draw(clamp(t, 0, window.DUR));
 
 // ---- readable text: every on-screen string a viewer must read ----------------
 const TEXTDEFS = [
-  { id: 'title', text: 'SKYLAB', size: L.title.size, x: L.title.x, y: L.title.y, align: 'left', seed: 'title', t0: 3.40 },
-  { id: 'subtitle', text: '1973-1979', size: L.subtitle.size, x: L.subtitle.x, y: L.subtitle.y, align: 'left', seed: 'subtitle', t0: 3.46 },
-  { id: 'dim', text: '1973-74', size: L.dimLabel.size, x: L.dimLabel.x, y: L.dimLabel.y, align: L.dimLabel.align, seed: 'dim', t0: 3.30 },
+  { id: 'title', text: TITLE, size: L.title.size, x: L.title.x, y: L.title.y, align: 'left', seed: 'title', t0: 3.40 },
+  { id: 'subtitle', text: SUBTITLE, size: L.subtitle.size, x: L.subtitle.x, y: L.subtitle.y, align: 'left', seed: 'subtitle', t0: 3.46 },
+  { id: 'dim', text: DIMLABEL, size: L.dimLabel.size, x: L.dimLabel.x, y: L.dimLabel.y, align: L.dimLabel.align, seed: 'dim', t0: 3.30 },
 ];
 GEOM.forEach((g, i) => {
   const p = L.prints[i];
   TEXTDEFS.push({ id: 'lbl' + i, text: p.label, size: L.labelSize, x: p.lx, y: p.ly, align: p.align, seed: 'label' + i, t0: 3.40 + i * 0.05 });
 });
-TEXTDEFS.push({ id: 'verdict1', text: 'ONE STATION', size: L.card.size, x: L.card.x, y: L.card.y - L.card.h * 0.12, align: 'center', seed: 'v1', t0: 3.50 });
-TEXTDEFS.push({ id: 'verdict2', text: 'THREE CREWS', size: L.card.size, x: L.card.x, y: L.card.y + L.card.h * 0.24, align: 'center', seed: 'v2', t0: 3.55 });
+TEXTDEFS.push({ id: 'verdict1', text: VERDICT1, size: L.card.size, x: L.card.x, y: L.card.y - L.card.h * 0.12, align: 'center', seed: 'v1', t0: 3.50 });
+TEXTDEFS.push({ id: 'verdict2', text: VERDICT2, size: L.card.size, x: L.card.x, y: L.card.y + L.card.h * 0.24, align: 'center', seed: 'v2', t0: 3.55 });
 
 window.TEXTS = t => {
   const c = camAt(t), out = [];
@@ -494,7 +525,7 @@ window.TEXTS = t => {
 };
 
 // ---- fonts + board, then READY -----------------------------------------------
-const SAMPLE = 'SKYLAB1973-74 black sky in orbit flyaround ONE STATION THREE CREWS Photographs: NASA (public domain). ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const SAMPLE = `${TITLE} ${SUBTITLE} ${DIMLABEL} ${VERDICT1} ${VERDICT2} ${LABELS.join(' ')} Photographs: NASA (public domain). ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`;
 await Promise.all([
   document.fonts.load(`400 100px "${FONT.marker}"`, SAMPLE),
   document.fonts.load(`500 40px "${FONT.sc}"`, SAMPLE),
