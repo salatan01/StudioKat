@@ -1,0 +1,22 @@
+{
+  "clip_id": "skylab-evidence-wall",
+  "style_id": "briefing-board",
+  "subject": "Skylab: assembling a station in orbit",
+  "one_idea": "Three real NASA photographs of Skylab are pinned on an evidence wall and joined by marker lines that read left to right through 1973-74, arguing one station seen by three crews.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": { "cutouts": "cutouts/objects.json" },
+  "facts": [
+    "Skylab was the United States' first space station; it was occupied in 1973 and re-entered Earth's atmosphere in 1979.",
+    "Skylab was visited by three crews: Skylab 2 (1973), Skylab 3 (1973) and Skylab 4 (1973-74).",
+    "skylab-rendezvous-flyaround.jpg is NASA image sl2-04-248, photographed during the Skylab 2 rendezvous and fly-around inspection in 1973.",
+    "skylab-cluster-black-sky.jpg is NASA image sl3-114-1682, photographed during the Skylab 3 mission in 1973.",
+    "skylab-cluster-earth-orbit.jpg is NASA image sl4-143-4707, photographed from the Skylab 4 command and service module in 1974.",
+    "All three photographs are works of NASA, a U.S. Government agency, and are in the public domain; the credit line reads \"Photographs: NASA (public domain).\""
+  ]
+}

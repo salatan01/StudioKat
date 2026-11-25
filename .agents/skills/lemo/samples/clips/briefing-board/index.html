@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skylab — an evidence wall</title>
+<style>
+  html, body { margin: 0; background: #8f8b83; overflow: hidden; }
+  canvas { display: block; }
+
+  /* Faces come from the pinned OFL manifest
+     (.agents/skills/lemo/library/assets/fonts/manifest.json); the render
+     server root is library/, so these URLs are absolute from there. */
+  @font-face {
+    font-family: 'LXGW Marker Gothic';
+    src: url('/assets/fonts/lxgwmarkergothic/LXGWMarkerGothic-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'Noto Sans SC';
+    src: url('/assets/fonts/notosanssc/NotoSansSC[wght].ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'Archivo';
+    src: url('/assets/fonts/archivo/Archivo[wdth,wght].ttf') format('truetype');
+    font-weight: 100 900;
+    font-stretch: 62% 125%;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'Plex Mono';
+    src: url('/assets/fonts/ibmplexmono/IBMPlexMono-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: 'Plex Mono';
+    src: url('/assets/fonts/ibmplexmono/IBMPlexMono-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <script type="module" src="clip.js"></script>
+</body>
+</html>
