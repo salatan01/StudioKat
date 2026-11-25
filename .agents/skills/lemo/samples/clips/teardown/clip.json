@@ -1,0 +1,20 @@
+{
+  "clip_id": "field-lamp-fl1-teardown",
+  "style_id": "teardown",
+  "subject": "Field Lamp FL-1 opens along one axis",
+  "one_idea": "The Field Lamp FL-1 is opened up like a museum specimen: its six illustrated layers lift along a single axis in order — shell, diffuser, driver board, cell ×2, bracket ×2, M3 bolt ×4 — settle as a labelled stack, and hold, with the accent marking the active layer only.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": { "parts_spec": "parts_spec.json" },
+  "facts": [
+    "Field Lamp FL-1 is drawn as a six-layer exploded diagram; every plate is a drawing decision, not a measurement.",
+    "The layers lift in the order the specification lists: shell, diffuser, driver board, cell ×2, bracket ×2, M3 bolt ×4.",
+    "Each layer travels along one axis and settles; the accent marks only the layer that is active at that moment.",
+    "No dimension, tolerance or engineering unit appears — the parts spec is illustrative."
+  ]
+}
