@@ -22,10 +22,12 @@ import { mk, draw as inkDraw, blot, TONE } from '/styles/ink-wash/demo/ink.js';
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
+// The render server sizes the viewport to --size, so window.innerWidth/Height is
+// the real frame; clip.json's width/height is only the native authoring fallback.
 let META = {};
 try { META = await (await fetch('clip.json')).json(); } catch {}
-const W = (META.width | 0) || canvas.width;
-const H = (META.height | 0) || canvas.height;
+const W = Math.round(window.innerWidth || (META.width | 0) || canvas.width);
+const H = Math.round(window.innerHeight || (META.height | 0) || canvas.height);
 canvas.width = W;
 canvas.height = H;
 
