@@ -1,0 +1,15 @@
+{
+  "clip_id": "morning-bus-queue",
+  "style_id": "isometric-picture-book",
+  "subject": "The morning bus queue",
+  "one_idea": "At one isometric bus stop, commuters arrive one by one and join a single-file queue in order of arrival - first come, first served - each stepping into the next free place back.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "signs",
+  "inputs": {},
+  "facts": []
+}
