@@ -3,7 +3,8 @@
 // A closed book sits on a warm desk. Its board cover swings open and back to
 // stand as the backdrop; out of the spread a paper lighthouse and a layered
 // paper sea spring up, each cut-out carrying a cream border, a cardboard edge
-// and a real cast shadow. A macro lens pushes in across the six seconds.
+// and a real cast shadow. A macro lens pushes in across the six seconds, with a
+// shallow focus that keeps the lighthouse sharp and the spread behind it soft.
 //
 // Original StudioKat clip. The vendored demo is a Three.js/WebGL paper-book
 // adventure; it is not vendored as a drawing engine, so this clip is a bespoke
@@ -16,7 +17,7 @@
 import { mulberry, clamp, lerp, seg, ss, eio, spring, vnoise } from '/core/lib.js';
 
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
 
 // The render server sizes the viewport to --size, so window.innerWidth/Height
 // give 1920x1080 or 1080x1920; clip.json is only a fallback.
@@ -90,6 +91,30 @@ function withCam(t, depth, fn) {
   ctx.restore();
 }
 const BOOK_DEPTH = 0.7, SEA_DEPTH = 0.92, TOWER_DEPTH = 1.05;
+
+// ---- shallow macro focus ---------------------------------------------------
+// The book behind the pop-ups is drawn to its own canvas, then composited with
+// a small animated blur, so the macro lens keeps the paper lighthouse (and the
+// sea in front of it) sharp while the spread behind it goes soft. N is ~0 while
+// the closed cover is the subject and rises as the focus settles on the tower.
+const bookCv = document.createElement('canvas');
+bookCv.width = W; bookCv.height = H;
+const bookCtx = bookCv.getContext('2d');
+const dofBlur = t => 4.6 * ss(seg(t, 0.9, 4.2));   // px, follows the push-in
+function drawFarLayer(t) {
+  const main = ctx;
+  ctx = bookCtx;
+  try {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'none';
+    ctx.clearRect(0, 0, W, H);
+    withCam(t, BOOK_DEPTH, () => drawBook(t));
+  } finally {
+    ctx = main;
+  }
+}
 
 // ---- paper grain: one seeded tile, overlaid at the end ---------------------
 const grain = (() => {
@@ -480,7 +505,15 @@ function draw(t) {
 
   drawBg();
 
-  withCam(t, BOOK_DEPTH, () => { drawBook(t); drawTitle(t); });
+  // the book layer, defocused by the macro lens; the pop-up sets stay sharp
+  drawFarLayer(t);
+  const blur = dofBlur(t);
+  ctx.save();
+  ctx.filter = `blur(${blur.toFixed(2)}px)`;
+  ctx.drawImage(bookCv, 0, 0, W, H);
+  ctx.restore();
+
+  withCam(t, BOOK_DEPTH, () => drawTitle(t));
   withCam(t, SEA_DEPTH, () => drawSea(t));
   withCam(t, TOWER_DEPTH, () => drawLighthouse(t));
 
