@@ -294,14 +294,12 @@ function drawSea(t) {
 }
 
 // ---- the lighthouse: striped tower, lamp room, sweeping beam ---------------
-function towerGeom() {
-  const p = clamp(spring(seg(towerT, 1.55, 3.05), 8, 0.34), 0, 1.08);
-  return p;
+function towerP(t) {
+  // one spring rise per piece: overshoot past 1, then settle — paper weight
+  return clamp(spring(seg(t, 1.55, 3.05), 8, 0.34), 0, 1.08);
 }
-let towerT = 0;   // current time for towerGeom (set each frame before drawing)
 function drawLighthouse(t) {
-  towerT = t;
-  const p = towerGeom();
+  const p = towerP(t);
   if (p <= 0.001) return;
   const bx = L.lightBase.x, by = L.lightBase.y;
   const h = (by - L.towerTop) * p;
