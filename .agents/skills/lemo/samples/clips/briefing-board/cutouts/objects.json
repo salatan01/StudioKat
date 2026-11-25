@@ -1,0 +1,75 @@
+{
+  "style_id": "briefing-board",
+  "subject": "Skylab: assembling a station in orbit",
+  "credits": "Photographs: NASA (public domain).",
+  "source_credits": ".agents/skills/lemo/samples/briefing-board/CREDITS",
+  "note": "Every photograph pinned on this board is real and sourced. Nothing here is generated. The whiteboard, its marker annotations and the pinned card are drawn in code.",
+  "objects": [
+    {
+      "id": "skylab-rendezvous-flyaround",
+      "w": 508,
+      "h": 512,
+      "photo": "photos/skylab-rendezvous-flyaround.jpg",
+      "file": "cutouts/skylab-rendezvous-flyaround.jpg",
+      "title": "Rendezvous and Fly Around Inspection of Skylab I Orbital Space Station",
+      "nasa_id": "sl2-04-248",
+      "mission": "Skylab 2",
+      "year": 1973,
+      "source": "NASA",
+      "source_url": "https://images.nasa.gov/details/sl2-04-248",
+      "asset_url": "https://images-assets.nasa.gov/image/sl2-04-248/sl2-04-248~medium.jpg",
+      "credit": "NASA (public domain)",
+      "prep": {
+        "kind": "print",
+        "cut": "none",
+        "border": "white photo-paper border, 22 board units",
+        "saturation": 1.0,
+        "note": "Uncut, mounted whole on a white paper border with an offset shadow. Downscaled to 512 px on the long edge; otherwise unaltered."
+      }
+    },
+    {
+      "id": "skylab-cluster-black-sky",
+      "w": 512,
+      "h": 512,
+      "photo": "photos/skylab-cluster-black-sky.jpg",
+      "file": "cutouts/skylab-cluster-black-sky.jpg",
+      "title": "View of the Skylab space station cluster photographed against black sky",
+      "nasa_id": "sl3-114-1682",
+      "mission": "Skylab 3",
+      "year": 1973,
+      "source": "NASA",
+      "source_url": "https://images.nasa.gov/details/sl3-114-1682",
+      "asset_url": "https://images-assets.nasa.gov/image/sl3-114-1682/sl3-114-1682~medium.jpg",
+      "credit": "NASA (public domain)",
+      "prep": {
+        "kind": "print",
+        "cut": "none",
+        "border": "white photo-paper border, 22 board units",
+        "saturation": 1.0,
+        "note": "Uncut, mounted whole on a white paper border with an offset shadow. Downscaled to 512 px on the long edge; otherwise unaltered."
+      }
+    },
+    {
+      "id": "skylab-cluster-earth-orbit",
+      "w": 512,
+      "h": 506,
+      "photo": "photos/skylab-cluster-earth-orbit.jpg",
+      "file": "cutouts/skylab-cluster-earth-orbit.jpg",
+      "title": "View of Skylab space station cluster in Earth orbit from CSM",
+      "nasa_id": "sl4-143-4707",
+      "mission": "Skylab 4",
+      "year": 1974,
+      "source": "NASA",
+      "source_url": "https://images.nasa.gov/details/sl4-143-4707",
+      "asset_url": "https://images-assets.nasa.gov/image/sl4-143-4707/sl4-143-4707~medium.jpg",
+      "credit": "NASA (public domain)",
+      "prep": {
+        "kind": "print",
+        "cut": "none",
+        "border": "white photo-paper border, 22 board units",
+        "saturation": 1.0,
+        "note": "Uncut, mounted whole on a white paper border with an offset shadow. Downscaled to 512 px on the long edge; otherwise unaltered."
+      }
+    }
+  ]
+}
