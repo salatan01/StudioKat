@@ -1,0 +1,18 @@
+{
+  "clip_id": "living-screencast-16x9",
+  "style_id": "living-screencast",
+  "subject": "Pebble files a task in the Cascade UI",
+  "one_idea": "The original mascot Pebble presses “Add to board” inside the invented Cascade interface and a new task row lands on the board.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": { "ui_spec": "ui_spec.json" },
+  "facts": [
+    "Pebble files a task called “Pin the source cards” to the Launch Board in Cascade.",
+    "Pressing “Add to board” adds a new todo row to the board."
+  ]
+}
