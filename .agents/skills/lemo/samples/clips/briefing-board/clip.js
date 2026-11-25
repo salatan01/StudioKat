@@ -34,6 +34,9 @@ const PORTRAIT = H > W;
 const D2R = Math.PI / 180;
 const C = { ink: THEME.graphite, blue: THEME.blue, red: THEME.red, grey: THEME.grey };
 const CREDIT = 'Photographs: NASA (public domain).';
+// The board is a curated sample: the composition (not the photographs) is
+// illustrative. Constant, deterministic footer caption, drawn in screen space.
+const SAMPLE_NOTE = 'Illustrative sample';
 
 // ---- the real, sourced photographs (records live in cutouts/objects.json) ----
 const OBJ = await (await fetch('cutouts/objects.json')).json();
@@ -455,6 +458,16 @@ function creditGeom() {
   const y = H - Math.round(size * 1.3);
   return { size, y, x0: W / 2 - w / 2 - 4, x1: W / 2 + w / 2 + 4 };
 }
+// The "Illustrative sample" footer caption: same face and size as the credit,
+// left-aligned at the bottom-left so it stays clear of the centred credit line.
+function sampleGeom() {
+  const size = Math.round(Math.min(W, H) * 0.024);
+  mctx.font = `500 ${size}px "${FONT.sans}"`;
+  const w = mctx.measureText(SAMPLE_NOTE).width;
+  const x0 = Math.round(size * 1.6);
+  const y = H - Math.round(size * 1.3);
+  return { size, y, x0, x1: x0 + w };
+}
 function drawCredit(t) {
   if (t < 3.4) return;
   const { size, y } = creditGeom();
@@ -465,6 +478,18 @@ function drawCredit(t) {
   ctx.shadowColor = 'rgba(255,255,255,.85)'; ctx.shadowBlur = 8;
   ctx.fillStyle = '#464B52';
   ctx.fillText(CREDIT, W / 2, y);
+  ctx.restore();
+}
+function drawSampleNote(t) {
+  if (t < 0.5) return;   // on screen from early, held to the end
+  const { size, y, x0 } = sampleGeom();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.font = `500 ${size}px "${FONT.sans}"`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,255,255,.85)'; ctx.shadowBlur = 8;
+  ctx.fillStyle = '#464B52';
+  ctx.fillText(SAMPLE_NOTE, x0, y);
   ctx.restore();
 }
 
@@ -493,6 +518,7 @@ function draw(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawVignette();
   drawCredit(t);
+  drawSampleNote(t);
   ctx.globalAlpha = 1;
 }
 window.render = t => draw(clamp(t, 0, window.DUR));
@@ -520,6 +546,10 @@ window.TEXTS = t => {
   if (t >= 3.4) {
     const { size, y, x0, x1 } = creditGeom();
     out.push({ id: 'credit', text: CREDIT, x0, y0: y - size * 0.95, x1, y1: y + size * 0.2, pass: true });
+  }
+  if (t >= 0.5) {
+    const { size, y, x0, x1 } = sampleGeom();
+    out.push({ id: 'sample-note', text: SAMPLE_NOTE, x0, y0: y - size * 0.95, x1, y1: y + size * 0.2 });
   }
   return out;
 };
