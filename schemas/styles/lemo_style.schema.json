@@ -100,6 +100,8 @@
       "minItems": 1,
       "uniqueItems": true
     },
+    "foley": { "type": "boolean" },
+    "foley_module": { "type": "string", "minLength": 1 },
     "inputs": {
       "type": "array",
       "items": { "enum": ["data", "cutouts", "ui_spec", "parts_spec", "facts"] },
