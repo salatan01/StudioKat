@@ -24,20 +24,17 @@ const scene = document.createElement('canvas'); // offscreen: the character grid
 scene.width = iW;
 scene.height = iH;
 const g = scene.getContext('2d');
-const crtOut = document.createElement('canvas'); // visible: the phosphor screen
-crtOut.width = iW;
-crtOut.height = iH;
-const crt = makeCRT(crtOut);
+const crt = makeCRT(canvas); // the CRT post-process draws into the visible canvas
 
 await document.fonts.load('160px VT323');
 await initTerm();
 
 // ---- the clip's own boot log (original text; the demo's lines are not reused) --
-const RATE = 15; // Latin characters typed per second
+const RATE = 24; // terminal types one glyph per frame at 24 fps
 const LINES = [
-  { id: 'boot-0', text: 'VOIDBYTE BIOS v4.2',    t0: 0.70 }, // 15 chars
-  { id: 'boot-1', text: 'MEMORY ......... 65536K', t0: 1.80 }, // 19 chars
-  { id: 'boot-2', text: 'KERNEL ....... LOADED',  t0: 3.05 }, // 16 chars
+  { id: 'boot-0', text: 'VOIDBYTE BIOS v4.2', t0: 1.00 },
+  { id: 'boot-1', text: 'MEMORY 64K',         t0: 1.85 },
+  { id: 'boot-2', text: 'READY',              t0: 2.35 },
 ];
 const ZOOM0 = 4.60, ZOOM1 = 5.70; // character-grid zoom window
 
@@ -70,7 +67,7 @@ function draw(t) {
       if (t < L.t0) continue;
       const n = typed(t, L);
       if (n <= 0) continue;
-      text(g, L.text.slice(0, n), i, { ox: grid.ox, oy: grid.oy, cw: grid.cw }, 1 - i * 0.18);
+      text(g, L.text.slice(0, n), 0, i, { ox: grid.ox, oy: grid.oy, cw: grid.cw }, 1 - i * 0.18);
     }
 
     // block cursor at the end of the newest line that has started typing
@@ -86,7 +83,6 @@ function draw(t) {
   if (z > 0.0001) {
     // the character-grid zoom: camera pushes into the grid until the glyph fills the frame
     const last = LINES[LINES.length - 1];
-    const row = LINES.length - 1;
     const col = last.text.length - 1;
     glyph(g, last.text[col], (iW - s) / 2, (iH - 2 * s) / 2, s, 1, 0);
   }
@@ -97,7 +93,7 @@ window.render = t => {
   crt.render(scene, Math.round(t * 24), { power: seg(t, 0.30, 0.95), off: seg(t, 5.80, 6.00) });
 };
 
-window.TEXTS = t => LINES.filter(L => t >= L.t0).map(L => {
+window.TEXTS = t => t < ZOOM0 ? LINES.filter(L => t >= L.t0).map(L => {
   const i = LINES.indexOf(L);
   return {
     id: L.id,
@@ -107,7 +103,7 @@ window.TEXTS = t => LINES.filter(L => t >= L.t0).map(L => {
     x1: Math.round(grid.ox + L.text.length * grid.cw),
     y1: Math.round(rowTop(i) + grid.cw * 2),
   };
-});
+}) : [];
 
 await document.fonts.load('160px VT323');
 await initTerm();

@@ -12,7 +12,7 @@
   "text_mode": "title",
   "inputs": {},
   "facts": [
-    "Boot log renders at 15 Latin characters per second with 1.5s trailing pad",
+    "Boot log types at 24 glyphs per second; each complete line holds for its readcheck threshold",
     "Minimum readcheck threshold: 1.5 seconds per on-screen text block",
     "Deterministic boot sequence: no Math.random or Date.now used",
     "Amber phosphor with scanlines, curvature, and P3 glow",
