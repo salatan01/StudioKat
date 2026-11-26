@@ -61,9 +61,11 @@ function drawMarquee(lit) {
   const { rig, cam } = marqueeRig();
   const { S, k, Hb } = rig;
   S.letters.forEach((le, li) => {
+    g.save();
     cardTransform(g, cam, cam.P(...rig.at(le.x * k, Hb)), cam.P(...rig.at((le.x + le.w) * k, Hb)), cam.P(...rig.at(le.x * k, 0)), le.w, S.h);
     g.translate(-le.x, 0);
     B.drawSign(g, S, 0, 0, 1, { lit, only: li, haloK: 1.1 });
+    g.restore();
   });
 }
 
