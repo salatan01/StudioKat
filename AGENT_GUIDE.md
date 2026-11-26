@@ -330,6 +330,19 @@ vendored Lemo styles (Swiss Motion, Midcentury Toon, Dataviz, ...):
 7. Environment: run inside the Nix shell (`nix develop`, which provides node and
    Chromium and exports `CHROME`), then run `lemo_render` operation `setup` or `check`.
 
+#### Lemo B-roll inside a host pipeline
+
+The `editor` and `animated-explainer` pipelines may use a scene with `type: "broll"`
+and a `lemo` block for a code-drawn cutaway. Render that scene with `lemo_render`,
+record the MP4 as a `lemo_render` B-roll asset, and place that asset at the scene's
+`start_seconds`/`end_seconds`. This does **not** change the host pipeline's
+`edit_decisions.render_runtime` or route the host composition through Lemo; Lemo renders
+the input clip, while the host keeps its own renderer.
+
+Foley is not currently available: the vendored demos do not provide a standalone
+procedural-foley-only module, so all styles accept `sound: "none"` only. Do not request or
+label a clip as foley until a compatible style module is added and declared in its manifest.
+
 ## Available Pipelines
 
 | Pipeline | Best For | Stability |
