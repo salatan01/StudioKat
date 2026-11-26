@@ -31,6 +31,18 @@ Build a timeline map:
 ...
 ```
 
+### Lemo B-roll placement
+
+For every Lemo-backed `broll` scene, match the rendered asset-manifest entry by `scene_id` and
+place its asset id as the cut's `source` (not the MP4 path). Use the scene's `start_seconds` and
+`end_seconds` for the cut's `in_seconds` and `out_seconds`, reconciling the range to the final
+script/edit timeline if earlier stages changed timing. Include the Lemo cut alongside other
+visual cuts and verify it covers the planned scene interval.
+
+This does not change `edit_decisions.render_runtime`: retain the runtime selected for the
+animated-explainer host composition. `lemo_render` rendered a B-roll asset; the host runtime
+still assembles the finished explainer.
+
 ### Step 2: Define Cuts
 
 Each cut defines what visual is shown and when:

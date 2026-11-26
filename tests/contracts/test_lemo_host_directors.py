@@ -18,3 +18,23 @@ def test_editor_edit_director_places_lemo_without_changing_runtime():
     text = (EDITOR / "edit-director.md").read_text(encoding="utf-8")
     assert "start_seconds" in text and "end_seconds" in text
     assert "render_runtime" in text and '"editor"' in text
+
+
+EXPLAINER = REPO_ROOT / "skills/pipelines/explainer"
+
+
+def test_explainer_scene_director_documents_lemo_broll():
+    text = (EXPLAINER / "scene-director.md").read_text(encoding="utf-8")
+    assert "lemo" in text and "broll" in text and "host_wiring" in text
+    assert "style_selection" in text
+
+
+def test_explainer_asset_director_renders_lemo():
+    text = (EXPLAINER / "asset-director.md").read_text(encoding="utf-8")
+    assert "lemo_render" in text and "subtype" in text and "broll" in text
+
+
+def test_explainer_edit_director_places_lemo_without_changing_runtime():
+    text = (EXPLAINER / "edit-director.md").read_text(encoding="utf-8")
+    assert "start_seconds" in text and "end_seconds" in text
+    assert "render_runtime" in text and "lemo" in text

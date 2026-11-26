@@ -36,6 +36,24 @@ Quick routing for common explainer needs:
 
 ## Process
 
+### Lemo B-roll assets
+
+For each scene carrying a `lemo` block, read `.agents/skills/lemo/SKILL.md` and that style's
+brief before rendering. Gather any required source inputs and verified facts; never fabricate
+metrics, claims, UI, cutouts, or product parts. Keep the input files within the generated clip
+folder as required by the Lemo input contract.
+
+Use `lemo_render` for the clip lifecycle: `new` with the project id and a stable clip id from the
+scene id plus its style, subject, duration, aspect, sound, and inputs; author `clip.js` to the
+style brief; run `validate` and fix all errors; then run `render` with `output_path` under
+`projects/<id>/assets/video/`. Confirm the rendered path and probe metadata.
+
+Record the output in `asset_manifest.assets[]` using
+`tools.video.lemo.host_wiring.lemo_broll_asset(scene_id, asset_id, path, duration_seconds=..., resolution=...)`.
+The entry must be a video with `source_tool: "lemo_render"`, `subtype: "broll"`, a project-relative
+path, and the originating scene id. Lemo is the asset renderer, not the explainer's composition
+runtime.
+
 ### Step 1: Inventory Required Assets
 
 Walk every scene in the scene plan. For each `required_assets` entry, create an asset task:

@@ -92,6 +92,19 @@ description; the Edit stage converts that intent into `cut.type`.
 | `broll` | Context, real-world examples | Stock or generated footage | 3-6s |
 | `screen_recording` | Code demos, UI walkthroughs | Recorded or simulated | 5-15s |
 
+#### Lemo B-roll scenes
+
+When an explainer beat benefits from a short, self-contained, code-drawn motion-graphics
+cutaway, use a `broll` scene with a `lemo` block instead of describing a generated-footage
+asset. Resolve the style with `styles.lemo.loader`, then read its brief and manifest to check
+the duration window, aspect, sound mode, and required inputs. Do not select an input-dependent
+style until its real data, UI, cutouts, parts, and/or checkable facts have been provided.
+
+Build the schema-valid scene with `tools.video.lemo.host_wiring.lemo_scene(...)`; preserve the
+scene's script-aligned `start_seconds` and `end_seconds`. Record a `style_selection` decision
+with the chosen style, alternatives considered, and rationale. Lemo renders only this B-roll
+asset; the explainer's approved `render_runtime` remains the host composition runtime.
+
 **Zero-key scene selection:** When no image/video generation is available,
 plan `text_card`, `animation`, or `diagram` scenes and name an appropriate
 downstream template (`hero_title`, `stat_card`, charts, `comparison`,
