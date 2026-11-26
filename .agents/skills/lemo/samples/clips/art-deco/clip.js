@@ -16,7 +16,6 @@ import * as D from '/styles/art-deco/demo/engine/deco.js';
 import * as T from '/styles/art-deco/demo/engine/type.js';
 import * as B from '/styles/art-deco/demo/engine/bulbs.js';
 import { makeCam, cardTransform } from '/styles/art-deco/demo/engine/cam.js';
-import { signRig } from '/styles/art-deco/demo/scenes/roof.js';
 
 const canvas = document.getElementById('c');
 const g = canvas.getContext('2d');
@@ -39,6 +38,21 @@ const sign = B.buildSign(SIGN_TEXT, { font: 'Poiret', size: portrait ? 110 : 140
 const LETTER_T = Array.from({ length: sign.letters.length }, (_, i) => SIGN_T0 + i * BULB_STAGGER);
 const CHASE_FROM = LETTER_T[sign.letters.length - 1] + 0.9;
 
+function makeSignRig() {
+  const S = sign;
+  const height = portrait ? 1.0 : 1.5;
+  const k = height / S.size;
+  const theta = 0.62;
+  const Dv = [Math.cos(theta), 0, -Math.sin(theta)];
+  const Nv = [Math.sin(theta), 0, Math.cos(theta)];
+  const near = [4.6, 2.2, 6.6];
+  const L = S.w * k;
+  const O = [near[0] - Dv[0] * L, near[1], near[2] - Dv[2] * L];
+  const Hb = S.h * k;
+  const at = (u, y = 0, n = 0) => [O[0] + Dv[0] * u + Nv[0] * n, O[1] + y, O[2] + Dv[2] * u + Nv[2] * n];
+  return { S, k, L, Hb, O, Dv, Nv, at };
+}
+
 await Promise.all([
   document.fonts.load('80px Limelight', TITLE),
   document.fonts.load('80px Poiret', SIGN_TEXT),
@@ -53,8 +67,8 @@ const TITLE_SIZE = portrait ? 110 : 96;
 const TITLE_CY = portrait ? 890 : 900;
 
 const marqueeRig = () => ({
-  rig: signRig({ height: portrait ? 1.0 : 1.5, theta: 0.62, near: [4.6, 2.2, 6.6] }),
-  cam: makeCam({ x: 0, y: 0, z: 0, f: portrait ? 700 : 1100, oy: portrait ? 1100 : 800, W, H }),
+  rig: makeSignRig(),
+  cam: makeCam({ x: 0, y: 0, z: 0, f: portrait ? 700 : 1100, oy: portrait ? 850 : 800, W, H }),
 });
 
 function drawMarquee(lit) {
@@ -62,7 +76,7 @@ function drawMarquee(lit) {
   const { S, k, Hb } = rig;
   S.letters.forEach((le, li) => {
     g.save();
-    cardTransform(g, cam, cam.P(...rig.at(le.x * k, Hb)), cam.P(...rig.at((le.x + le.w) * k, Hb)), cam.P(...rig.at(le.x * k, 0)), le.w, S.h);
+    cardTransform(g, cam, rig.at(le.x * k, Hb), rig.at((le.x + le.w) * k, Hb), rig.at(le.x * k, 0), le.w, S.h);
     g.translate(-le.x, 0);
     B.drawSign(g, S, 0, 0, 1, { lit, only: li, haloK: 1.1 });
     g.restore();
