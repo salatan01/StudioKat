@@ -69,6 +69,24 @@ the detailed beat plan goes in `metadata.editor.beats` (open object).
 }
 ```
 
+### Lemo B-roll beats
+
+When a beat is clearer as a self-contained, code-drawn motion-graphics cutaway than as an
+editor-style overlay, you may plan it as Lemo B-roll. Resolve the style through
+`styles.lemo.loader` (canonical id/name first; ask if ambiguous), then check its brief and
+manifest for supported aspects, duration, required inputs, sound, and visual constraints.
+Do not invent evidence for input-dependent styles; gather the required facts/data or source
+material before selecting them.
+
+Build the scene entry with `tools.video.lemo.host_wiring.lemo_scene(...)`. It must be a
+schema-valid `type: "broll"` scene with a `lemo` block, and its `start_seconds` / `end_seconds`
+remain on the raw transcript timeline used by this plan. Keep the selected style and subject
+in the `lemo` block; the beat description should say what the viewer learns or sees.
+
+Append the choice to the project's `decision_log` as a `style_selection` decision, including
+the chosen Lemo style, the alternatives considered, and why it best serves this beat. Do not
+change the host pipeline's render runtime: Lemo renders the B-roll asset, not the host edit.
+
 ### Step 4. Human check-in (the gate)
 
 Show the beat list as a table (time range + one line each). Wait for the user to say the

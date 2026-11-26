@@ -57,6 +57,18 @@ var EDIT = {
 };
 ```
 
+### Lemo B-roll placement
+
+For each rendered Lemo asset linked to a `scene_plan` scene, place its asset-manifest id in
+`edit_decisions.cuts[]` as a video cut with `source` set to the asset id. Preserve the scene's
+approved range in the host edit: set `in_seconds` from the scene's `start_seconds` and
+`out_seconds` from its `end_seconds`, reconciling those boundaries against the edited timeline
+when transcript cuts have shifted the scene. Do not substitute the MP4 path for the manifest id.
+
+This adds a B-roll asset to the editor cut; it does **not** change the host pipeline runtime.
+Keep `edit_decisions.render_runtime` equal to `"editor"` and render the finished host edit with
+`editor_render`. `lemo_render` only produced the individual B-roll clip.
+
 ### Step 3. Prove it renders
 
 ```
@@ -97,7 +109,7 @@ Validate `edit_decisions` against the schema, write the checkpoint.
 ## Quality Gate
 
 - `editor_render story` printed ok with spans matching the scene plan.
-- `edit_decisions.render_runtime == "editor"`.
+- `edit_decisions.render_runtime == "editor"`; adding Lemo B-roll never changes the host runtime.
 
 ## Gate Reminder (Binding)
 

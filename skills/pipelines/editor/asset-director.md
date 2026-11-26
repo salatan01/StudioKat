@@ -16,6 +16,29 @@ compose stages will consume.
 
 ## Process
 
+### Lemo B-roll assets
+
+For every `scene_plan.scenes[]` entry with a `lemo` block, render a separate video asset before
+writing the manifest. Read `.agents/skills/lemo/SKILL.md` and the selected style brief first.
+Collect any required style inputs and verified facts; keep input files inside the generated clip
+folder as required by the Lemo input contract. Do not fabricate data, cutouts, UI, parts, or claims.
+
+Use `lemo_render` for the clip lifecycle:
+
+1. `new` with the project id, a stable clip id derived from the scene id, and the scene's style,
+   subject, duration, aspect, sound, and inputs.
+2. Author the clip's `clip.js` from the selected style brief and any approved source material.
+3. `validate` the clip; resolve every reported error before continuing.
+4. `render` with `output_path` under `projects/<id>/assets/video/` (for example,
+   `projects/<id>/assets/video/<scene_id>-lemo.mp4`). Confirm the tool's reported path and metadata.
+
+Record the rendered clip in `asset_manifest.assets[]` with
+`tools.video.lemo.host_wiring.lemo_broll_asset(scene_id, asset_id, path, duration_seconds=..., resolution=...)`.
+The entry is a video with `source_tool: "lemo_render"` and `subtype: "broll"`; keep the path
+relative to the project directory, and link it to the originating scene id. Use the render
+metadata for duration and resolution. Do not mark the host edit's `render_runtime` as `lemo` —
+this asset is consumed by the host pipeline.
+
 ### Step 1. Find mistakes in the transcript
 
 Read `projects/<id>/editor/transcript.txt`. Look for the skill's mistake patterns:
