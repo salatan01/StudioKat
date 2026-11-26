@@ -1,0 +1,21 @@
+{
+  "clip_id": "art-deco-001",
+  "style_id": "art-deco",
+  "subject": "A launch invitation",
+  "one_idea": "A grand theatre's launch invitation: the title bar unfolds symmetrically from the centre axis while the bulb marquee counts on.",
+  "aspect": "16:9",
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "duration_seconds": 6,
+  "sound": "none",
+  "text_mode": "title",
+  "inputs": {},
+  "facts": [
+    "Title bar unfolds symmetrically from the centre axis while the bulb marquee counts on",
+    "Minimum readcheck threshold: 1.5 seconds per on-screen text block",
+    "Deterministic launch sequence: no Math.random or Date.now used",
+    "Banded gold gradient with sliding sheen and engraved shadow on gold type",
+    "Bulb marquee counts letters on with a flash and settle, then chases"
+  ]
+}
