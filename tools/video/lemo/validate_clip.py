@@ -95,10 +95,15 @@ def validate_static(clip: dict[str, Any], style: dict[str, Any]) -> list[str]:
             f"sound {clip.get('sound')!r} is not supported by {style_id!r}; "
             f"choose one of {sound}"
         )
-    if clip.get("sound") == "foley" and not style.get("foley"):
-        errors.append(
-            f"sound 'foley' requires an explicit foley capability in {style_id!r}"
-        )
+    if clip.get("sound") == "foley":
+        if not style.get("foley"):
+            errors.append(
+                f"sound 'foley' requires an explicit foley capability in {style_id!r}"
+            )
+        elif not isinstance(style.get("foley_module"), str) or not style["foley_module"].strip():
+            errors.append(
+                f"sound 'foley' requires a declared foley_module in {style_id!r}"
+            )
 
     return errors
 

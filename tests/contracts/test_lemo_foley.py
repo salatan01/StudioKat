@@ -43,6 +43,21 @@ def test_foley_sound_requires_explicit_style_capability():
     assert any("foley" in error for error in validate_static(clip, style))
 
 
+def test_foley_sound_requires_a_declared_module():
+    style = copy.deepcopy(get_style("swiss-motion"))
+    style["sound"] = ["none", "foley"]
+    style["foley"] = True
+    clip = {
+        "style_id": "swiss-motion",
+        "duration_seconds": 6,
+        "aspect": "16:9",
+        "fps": 24,
+        "sound": "foley",
+    }
+
+    assert any("foley_module" in error for error in validate_static(clip, style))
+
+
 def test_style_schema_accepts_declared_foley_capability():
     style = copy.deepcopy(get_style("swiss-motion"))
     style["sound"] = ["none", "foley"]
