@@ -1,10 +1,11 @@
-"""Silent delivery for a Lemo clip's sound-design plan.
+"""Delivery for a Lemo clip's sound-design plan.
 
 ``lemo_sound_design`` turns an agent-authored plan (see
-``tools.video.lemo.sound_design``) into a final MP4 under the project. This
-task owns the silent path: a ``silent_no_match`` or ``disabled`` plan copies
-the verified silent master byte-for-byte to the planned output. The
-``selected`` cue-mixing branch is added in Task 3.
+``tools.video.lemo.sound_design``) into a final MP4 under the project. A
+``silent_no_match`` or ``disabled`` plan copies the verified silent master
+byte-for-byte to the planned output. A ``selected`` plan mixes its resolved
+bundled cues with ``AudioMixer`` and muxes that mix under a copied video
+stream, never re-encoding the picture.
 
 The tool reuses ``LemoRender`` for workspace path rules, ``clip.json`` loading
 and the single silent-master contract check; it never reimplements them.
@@ -20,6 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from tools.audio.audio_mixer import AudioMixer
 from tools.base_tool import (
     BaseTool,
     Determinism,
@@ -283,6 +285,107 @@ class LemoSoundDesign(BaseTool):
         finally:
             temp.unlink(missing_ok=True)
 
+    def _mix(
+        self,
+        cues: list[dict[str, Any]],
+        target_duration: float,
+        mix_path: Path,
+    ) -> None:
+        mix_path.parent.mkdir(parents=True, exist_ok=True)
+        tracks = [
+            {
+                "path": str(cue["path"]),
+                "role": "sfx",
+                "volume": cue["volume"],
+                "start_seconds": cue["start_seconds"],
+            }
+            for cue in cues
+        ]
+        try:
+            result = AudioMixer().execute(
+                {
+                    "operation": "full_mix",
+                    "tracks": tracks,
+                    "normalize": False,
+                    "ducking": {"enabled": False},
+                    "output_path": str(mix_path),
+                    "target_duration": target_duration,
+                }
+            )
+        except ToolCommandError as exc:
+            raise SoundDesignError(f"SFX mix failed: {exc}") from exc
+        except SoundDesignError:
+            raise
+        except Exception as exc:
+            raise SoundDesignError(
+                f"SFX mix failed: {type(exc).__name__}: {exc}"
+            ) from exc
+
+        if not result.success:
+            raise SoundDesignError(f"SFX mix failed: {result.error}")
+        if not mix_path.is_file():
+            raise SoundDesignError(f"SFX mix produced no file at {mix_path}")
+
+        probe = self._probe(mix_path)
+        try:
+            mix_duration = float((probe.get("format") or {})["duration"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SoundDesignError(
+                f"SFX mix has no readable duration: {mix_path}"
+            ) from exc
+        if abs(mix_duration - target_duration) > 0.05:
+            raise SoundDesignError(
+                f"SFX mix duration {mix_duration:g}s does not match the "
+                f"expected {target_duration:g}s"
+            )
+
+    def _mux(
+        self,
+        master: Path,
+        mix: Path,
+        output: Path,
+        target_duration: float,
+    ) -> None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temp = output.with_name(
+            f".{output.stem}.sound-design-{time.time_ns()}{output.suffix}"
+        )
+        try:
+            try:
+                self.run_command(
+                    [
+                        "ffmpeg",
+                        "-y",
+                        "-i",
+                        str(master),
+                        "-i",
+                        str(mix),
+                        "-map",
+                        "0:v:0",
+                        "-map",
+                        "1:a:0",
+                        "-c:v",
+                        "copy",
+                        "-c:a",
+                        "aac",
+                        "-b:a",
+                        "192k",
+                        "-af",
+                        "apad",
+                        "-t",
+                        str(target_duration),
+                        "-movflags",
+                        "+faststart",
+                        str(temp),
+                    ],
+                    timeout=600,
+                )
+            except ToolCommandError as exc:
+                raise SoundDesignError(f"SFX mux failed: {exc}") from exc
+            os.replace(temp, output)
+        finally:
+            temp.unlink(missing_ok=True)
+
     def _verify_final(
         self,
         probe: dict[str, Any],
@@ -400,35 +503,65 @@ class LemoSoundDesign(BaseTool):
         master_probe = self._probe(master)
         self._verify_master(master_probe, clip)
 
-        if status == "selected":
-            # Task 3 replaces this branch with the cue mix.
-            raise SoundDesignError("selected-cue mixing is added in Task 3")
-        if status not in ("silent_no_match", "disabled"):
-            raise SoundDesignError(f"unknown selection status {status!r}")
+        # The probed master duration, not the authored clip duration, caps the
+        # final so a muxed output can never outlast the picture.
+        try:
+            target_duration = float((master_probe.get("format") or {})["duration"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SoundDesignError(
+                f"silent master has no readable duration: {master}"
+            ) from exc
 
-        self._copy_silent(master, output)
-        final_probe = self._probe(output)
-        self._verify_final(
-            final_probe,
-            width=clip["width"],
-            height=clip["height"],
-            fps=clip["fps"],
-            master_duration=clip_duration,
-            expect_audio=False,
-        )
+        mix_path: Path | None = None
+        if status == "selected":
+            mix_path = self._project_path(
+                project_dir,
+                f"assets/audio/{clip_id}-sfx.wav",
+                f"assets/audio/{clip_id}-sfx.wav",
+                "Mix path",
+            )
+            self._mix(cues, target_duration, mix_path)
+            self._mux(master, mix_path, output, target_duration)
+            final_probe = self._probe(output)
+            self._verify_final(
+                final_probe,
+                width=clip["width"],
+                height=clip["height"],
+                fps=clip["fps"],
+                master_duration=target_duration,
+                expect_audio=True,
+            )
+            final_status = "mixed"
+            audio_expected = True
+        elif status in ("silent_no_match", "disabled"):
+            self._copy_silent(master, output)
+            final_probe = self._probe(output)
+            self._verify_final(
+                final_probe,
+                width=clip["width"],
+                height=clip["height"],
+                fps=clip["fps"],
+                master_duration=target_duration,
+                expect_audio=False,
+            )
+            final_status = status
+            audio_expected = False
+        else:
+            raise SoundDesignError(f"unknown selection status {status!r}")
 
         return ToolResult(
             success=True,
             artifacts=[str(output)],
             data={
-                "status": status,
+                "status": final_status,
                 "mode": plan["mode"],
                 "master_path": str(master),
                 "final_path": str(output),
                 "cue_plan_path": str(plan_path),
                 "cues": self._cue_summary(cues),
                 "manifest_sha256": manifest_sha256(),
-                "audio_expected": False,
+                "mix_path": str(mix_path) if mix_path is not None else None,
+                "audio_expected": audio_expected,
                 "master_probe": master_probe,
                 "final_probe": final_probe,
             },

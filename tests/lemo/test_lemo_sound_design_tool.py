@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from tools.audio.audio_mixer import AudioMixer
 from tools.video.lemo.sound_design import manifest_sha256
 from tools.video.lemo_sound_design import LemoSoundDesign
 
@@ -166,3 +167,76 @@ def test_manifest_hash_mismatch_is_rejected(project):
     assert not result.success
     assert "manifest" in result.error.lower()
     assert not (project / "renders/final.mp4").exists()
+
+
+def test_selected_cue_mixes_and_muxes_audio(project):
+    write_plan(project, cues=[{
+        "catalog_key": "whoosh-short", "start_seconds": 0.5,
+        "volume": 0.2, "rationale": "title lands",
+    }], status="selected", reason="one accent on the title")
+    result = run(project)
+    assert result.success, result.error
+    assert result.data["status"] == "mixed"
+    final = project / "renders/final.mp4"
+    master = project / "renders/visual-master.mp4"
+    assert streams(final, "audio")[0]["codec_name"] == "aac"
+    assert streams(final, "video")[0]["codec_name"] == "h264"
+    assert streams(final, "video")[0]["width"] == 320
+    assert streams(final, "video")[0]["height"] == 180
+    assert streams(final, "video")[0]["avg_frame_rate"] == "24/1"
+    assert float(probe(final)["format"]["duration"]) <= (
+        float(probe(master)["format"]["duration"]) + 0.05
+    )
+    assert Path(result.data["mix_path"]).is_file()
+
+
+def test_long_cue_is_trimmed_to_master_duration(project):
+    write_plan(project, cues=[{
+        "catalog_key": "riser", "start_seconds": 0.0,
+        "volume": 0.1, "rationale": "opening lift",
+    }], status="selected", reason="one long riser")
+    result = run(project)
+    assert result.success, result.error
+    final = project / "renders/final.mp4"
+    assert streams(final, "audio")
+    assert float(probe(final)["format"]["duration"]) <= 2.05
+
+
+def test_mix_request_disables_normalization_and_ducking(project, monkeypatch):
+    captured = {}
+
+    def fake_execute(self, inputs):
+        captured.update(inputs)
+        Path(inputs["output_path"]).write_bytes(b"RIFF")
+        from tools.base_tool import ToolResult
+        return ToolResult(success=True, data={})
+
+    monkeypatch.setattr(AudioMixer, "execute", fake_execute)
+    tool = LemoSoundDesign()
+    monkeypatch.setattr(
+        tool, "_probe", lambda path: {"format": {"duration": "2.0"}}
+    )
+    cues = [{
+        "path": project / "renders/visual-master.mp4",
+        "start_seconds": 0.5, "volume": 0.2,
+    }]
+    tool._mix(cues, 2.0, project / "assets/audio/clip-01-sfx.wav")
+    assert captured["normalize"] is False
+    assert captured["ducking"] == {"enabled": False}
+    assert captured["target_duration"] == 2.0
+    assert captured["tracks"][0]["role"] == "sfx"
+    assert captured["tracks"][0]["start_seconds"] == 0.5
+
+
+def test_sound_design_modules_do_not_import_network_or_paid_clients():
+    root = Path(__file__).resolve().parents[2]
+    sources = [
+        (root / "tools/video/lemo/sound_design.py").read_text(encoding="utf-8"),
+        (root / "tools/video/lemo_sound_design.py").read_text(encoding="utf-8"),
+    ]
+    for source in sources:
+        for token in (
+            "requests", "urllib", "http.client", "socket",
+            "heygen", "music_gen", "minicut_sfx",
+        ):
+            assert token not in source
