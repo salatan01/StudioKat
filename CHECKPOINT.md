@@ -48,9 +48,11 @@ spec.
   - `cddb97e` — Task 2: tool skeleton, path safety, silent delivery. **Complete, review clean.**
   - `e5e0408` — Task 3: SFX mixing + muxing. **Implemented; review returned "needs fixes".**
 - Working tree was clean before the checkpoint commit.
-- `master` is **86 commits ahead of `origin/master`**. A fresh machine cloning
-  GitHub will NOT have this work. The user must push (`git push origin master`)
-  or transfer the repo. Pushing was not done by the agent.
+- `master` is far ahead of `origin/master` (check
+  `git rev-list --count origin/master..HEAD`; it was 88 at handoff time). A
+  fresh machine cloning GitHub will NOT have this work. The user must push
+  (`git push origin master`) or transfer the repo. Pushing was not done by the
+  agent.
 - Commit style: `git -c commit.gpgsign=false commit`.
 - `docs/superpowers/` and `.superpowers/` are still listed in `.gitignore`.
   The process files for this feature, every historical `docs/superpowers/`
@@ -311,3 +313,20 @@ Not yet touched (Task 4): Lemo skills, `pipeline_defs/lemo.yaml`,
    historical checkpoint unless the user says otherwise).
 
 Do not run `git clean -fdx`; the process workspace lives under `.superpowers/`.
+
+---
+
+## 11. Not in git (regenerable)
+
+These are intentionally not committed; none are required to resume:
+
+- `projects/` — generated Lemo clips, renders, stills, and test projects.
+- `output/`, `pipeline/`, `tests/qa/output/` — pipeline run artifacts.
+- `.venv/`, Nix store paths, `__pycache__/`, `.pytest_cache/`, and other caches.
+- Downloaded corpora, `music_library/`, and stray media downloads.
+- Local `.env` / credentials.
+
+The sound-design tests generate their own synthetic 320x180 master with
+ffmpeg, and real-clip acceptance re-renders from the authored clip workspace.
+If a real render is needed for listening, recreate the project with
+`lemo_render`; there is no committed media to restore.
