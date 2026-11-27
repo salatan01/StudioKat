@@ -1,0 +1,601 @@
+# Review package: 5fad7a6a37f45be23a46cde9c2bb690975fda06e..HEAD
+
+## Commits
+89ee707 feat(lemo): add a local sound-design cue plan and resolver
+
+## Files changed
+ schemas/lemo/sound_design.schema.json |  55 +++++++
+ tests/lemo/test_sound_design_plan.py  | 224 ++++++++++++++++++++++++++
+ tools/video/lemo/sound_design.py      | 292 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 571 insertions(+)
+
+## Diff
+diff --git a/schemas/lemo/sound_design.schema.json b/schemas/lemo/sound_design.schema.json
+new file mode 100644
+index 0000000..891be08
+--- /dev/null
++++ b/schemas/lemo/sound_design.schema.json
+@@ -0,0 +1,55 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "studiokat/lemo/sound_design",
++  "title": "Lemo Sound Design Plan",
++  "type": "object",
++  "additionalProperties": false,
++  "required": [
++    "version", "clip_id", "mode", "duration_seconds",
++    "master_path", "output_path", "library", "cues", "selection"
++  ],
++  "properties": {
++    "version": { "type": "string", "const": "1.0" },
++    "clip_id": { "type": "string", "minLength": 1 },
++    "mode": { "type": "string", "enum": ["auto", "quiet", "off"] },
++    "duration_seconds": { "type": "number", "exclusiveMinimum": 0 },
++    "master_path": { "type": "string", "minLength": 1 },
++    "output_path": { "type": "string", "minLength": 1 },
++    "library": {
++      "type": "object",
++      "additionalProperties": false,
++      "required": ["manifest", "sha256"],
++      "properties": {
++        "manifest": { "type": "string", "minLength": 1 },
++        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
++      }
++    },
++    "cues": {
++      "type": "array",
++      "maxItems": 3,
++      "items": {
++        "type": "object",
++        "additionalProperties": false,
++        "required": ["catalog_key", "start_seconds", "volume", "rationale"],
++        "properties": {
++          "catalog_key": { "type": "string", "minLength": 1 },
++          "start_seconds": { "type": "number", "minimum": 0 },
++          "volume": { "type": "number", "minimum": 0, "maximum": 0.25 },
++          "rationale": { "type": "string", "minLength": 1 }
++        }
++      }
++    },
++    "selection": {
++      "type": "object",
++      "additionalProperties": false,
++      "required": ["status", "reason"],
++      "properties": {
++        "status": {
++          "type": "string",
++          "enum": ["selected", "silent_no_match", "disabled"]
++        },
++        "reason": { "type": "string", "minLength": 1 }
++      }
++    }
++  }
++}
+diff --git a/tests/lemo/test_sound_design_plan.py b/tests/lemo/test_sound_design_plan.py
+new file mode 100644
+index 0000000..8c4403c
+--- /dev/null
++++ b/tests/lemo/test_sound_design_plan.py
+@@ -0,0 +1,224 @@
++import json
++
++import pytest
++
++from tools.video.lemo.sound_design import (
++    SFX_DIR,
++    SoundDesignError,
++    load_manifest,
++    load_plan,
++    manifest_sha256,
++    resolve_cues,
++)
++
++CANONICAL_MANIFEST = ".agents/skills/hyperframes-media/assets/sfx/manifest.json"
++
++
++def plan(cues=(), mode="auto", status="selected", duration=6.0, reason="chosen beats"):
++    return {
++        "version": "1.0",
++        "clip_id": "clip-01",
++        "mode": mode,
++        "duration_seconds": duration,
++        "master_path": "renders/visual-master.mp4",
++        "output_path": "renders/final.mp4",
++        "library": {"manifest": CANONICAL_MANIFEST, "sha256": manifest_sha256()},
++        "cues": list(cues),
++        "selection": {"status": status, "reason": reason},
++    }
++
++
++def cue(key="whoosh-short", start=0.5, volume=0.2, rationale="title lands"):
++    return {
++        "catalog_key": key,
++        "start_seconds": start,
++        "volume": volume,
++        "rationale": rationale,
++    }
++
++
++def test_manifest_matches_bundled_files():
++    manifest = load_manifest()
++    files = {p.name for p in SFX_DIR.glob("*.mp3")}
++    assert {entry["file"] for entry in manifest.values()} == files
++    assert len(manifest) == 19
++
++
++def test_resolve_cues_sorts_and_resolves_paths():
++    resolved = resolve_cues(
++        plan([cue("click", 1.0), cue("whoosh-short", 0.2)]),
++        load_manifest(),
++        6.0,
++    )
++    assert [c["catalog_key"] for c in resolved] == ["whoosh-short", "click"]
++    assert all(c["path"].is_file() for c in resolved)
++    assert all(SFX_DIR.resolve() in c["path"].parents for c in resolved)
++
++
++def test_selected_with_no_cues_is_rejected():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([], status="selected"), load_manifest(), 6.0)
++
++
++def test_silent_no_match_requires_a_reason_and_no_cues():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([], status="silent_no_match", reason=""),
++            load_manifest(),
++            6.0,
++        )
++    assert resolve_cues(
++        plan([], status="silent_no_match", reason="no fitting cue"),
++        load_manifest(),
++        6.0,
++    ) == []
++
++
++def test_off_mode_requires_disabled_and_no_cues():
++    assert resolve_cues(
++        plan([], mode="off", status="disabled"), load_manifest(), 6.0
++    ) == []
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([cue()], mode="off", status="disabled"),
++            load_manifest(),
++            6.0,
++        )
++
++
++def test_cue_at_or_past_clip_end_is_rejected():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue(start=6.0)]), load_manifest(), 6.0)
++
++
++def test_long_cue_is_clamped_to_the_clip_end():
++    resolved = resolve_cues(
++        plan([cue("riser", start=5.0, volume=0.1)]),
++        load_manifest(),
++        6.0,
++    )
++    assert resolved[0]["source_duration_seconds"] > 6.0
++    assert resolved[0]["end_seconds"] == 6.0
++
++
++def test_at_most_two_cues_may_overlap():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([cue("click", 1.0), cue("whoosh-short", 1.0), cue("pop", 1.0)]),
++            load_manifest(),
++            6.0,
++        )
++    assert len(
++        resolve_cues(
++            plan([cue("click", 1.0), cue("whoosh-short", 1.0)]),
++            load_manifest(),
++            6.0,
++        )
++    ) == 2
++
++
++def test_volume_caps_are_enforced():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue(volume=0.3)]), load_manifest(), 6.0)
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([cue(volume=0.2)], mode="quiet"),
++            load_manifest(),
++            6.0,
++        )
++    assert resolve_cues(
++        plan([cue(volume=0.12)], mode="quiet"), load_manifest(), 6.0
++    )[0]["volume"] == 0.12
++
++
++def test_unknown_catalog_key_is_rejected():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue("not-a-real-cue")]), load_manifest(), 6.0)
++
++
++def test_manifest_file_escape_is_rejected(tmp_path):
++    fake = {"bad": {"file": "../escape.mp3", "duration": 1.0, "description": "x"}}
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue("bad")]), fake, 6.0, sfx_dir=tmp_path)
++
++
++def test_cue_symlink_escape_is_rejected(tmp_path):
++    outside = tmp_path / "outside.mp3"
++    outside.write_bytes(b"not audio")
++    sfx = tmp_path / "sfx"
++    sfx.mkdir()
++    (sfx / "bad.mp3").symlink_to(outside)
++    fake = {"bad": {"file": "bad.mp3", "duration": 1.0, "description": "x"}}
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue("bad")]), fake, 6.0, sfx_dir=sfx)
++
++
++def test_plan_hash_must_match_the_manifest(tmp_path):
++    bad = plan([], status="silent_no_match", reason="no cue")
++    bad["library"]["sha256"] = "0" * 64
++    path = tmp_path / "plan.json"
++    path.write_text(json.dumps(bad), encoding="utf-8")
++    with pytest.raises(SoundDesignError):
++        load_plan(path)
++
++
++def test_plan_duration_must_match_the_clip():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([], status="silent_no_match", reason="no cue", duration=7.0),
++            load_manifest(),
++            6.0,
++        )
++
++
++def test_load_plan_accepts_a_valid_plan(tmp_path):
++    path = tmp_path / "plan.json"
++    path.write_text(json.dumps(plan([cue()])), encoding="utf-8")
++    assert load_plan(path) == plan([cue()])
++
++
++def test_load_plan_rejects_a_schema_violation(tmp_path):
++    invalid = plan([cue(volume=0.5)])
++    path = tmp_path / "plan.json"
++    path.write_text(json.dumps(invalid), encoding="utf-8")
++    with pytest.raises(SoundDesignError):
++        load_plan(path)
++
++
++def test_load_plan_rejects_a_missing_file(tmp_path):
++    with pytest.raises(SoundDesignError):
++        load_plan(tmp_path / "missing.json")
++
++
++def test_more_than_three_cues_are_rejected():
++    cues = [cue("click", 0.0), cue("click", 1.0), cue("click", 2.0), cue("click", 3.0)]
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan(cues), load_manifest(), 6.0)
++
++
++def test_negative_start_and_volume_are_rejected():
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue(start=-0.1)]), load_manifest(), 6.0)
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue(volume=-0.1)]), load_manifest(), 6.0)
++
++
++def test_manifest_entries_must_be_well_formed(tmp_path):
++    with pytest.raises(SoundDesignError):
++        resolve_cues(plan([cue("bad")]), {"bad": "not a dict"}, 6.0, sfx_dir=tmp_path)
++    with pytest.raises(SoundDesignError):
++        resolve_cues(
++            plan([cue("bad")]),
++            {"bad": {"file": "bad.mp3", "duration": 0.0, "description": "x"}},
++            6.0,
++            sfx_dir=tmp_path,
++        )
++
++
++def test_an_end_at_a_start_time_does_not_count_as_overlap():
++    resolved = resolve_cues(
++        plan([cue("pop", 0.0), cue("click", 0.72), cue("whoosh-short", 0.72)]),
++        load_manifest(),
++        6.0,
++    )
++    assert [c["catalog_key"] for c in resolved] == ["pop", "click", "whoosh-short"]
+diff --git a/tools/video/lemo/sound_design.py b/tools/video/lemo/sound_design.py
+new file mode 100644
+index 0000000..dbdaa7d
+--- /dev/null
++++ b/tools/video/lemo/sound_design.py
+@@ -0,0 +1,292 @@
++"""Cue planning and resolution for Lemo sound design.
++
++The plan is authored by an agent and resolved here against the fixed,
++bundled sound-effect library. This module is pure: it reads the library
++manifest and a plan file, validates them, and resolves cue paths. It does no
++rendering, audio processing, or network access.
++"""
++
++from __future__ import annotations
++
++import hashlib
++import json
++import math
++from pathlib import Path
++from typing import Any
++
++import jsonschema
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++
++SFX_MANIFEST_REL = ".agents/skills/hyperframes-media/assets/sfx/manifest.json"
++SFX_MANIFEST_PATH = REPO_ROOT / SFX_MANIFEST_REL
++SFX_DIR = SFX_MANIFEST_PATH.parent
++PLAN_SCHEMA_PATH = REPO_ROOT / "schemas" / "lemo" / "sound_design.schema.json"
++
++MAX_CUES = 3
++MAX_OVERLAP = 2
++VOLUME_CAPS = {"auto": 0.25, "quiet": 0.12, "off": 0.0}
++
++_DURATION_TOLERANCE_SECONDS = 0.001
++
++
++class SoundDesignError(ValueError):
++    """Raised when a sound-design plan or the sound library is invalid."""
++
++
++def _is_number(value: Any) -> bool:
++    return isinstance(value, (int, float)) and not isinstance(value, bool)
++
++
++def _is_finite_number(value: Any) -> bool:
++    return _is_number(value) and math.isfinite(value)
++
++
++def _is_flat_filename(value: Any) -> bool:
++    """True for a plain file name with no directory part or traversal."""
++    if not isinstance(value, str) or not value:
++        return False
++    if value in {".", ".."}:
++        return False
++    if "/" in value or "\\" in value or ".." in value:
++        return False
++    return not Path(value).is_absolute()
++
++
++def manifest_sha256() -> str:
++    """Return the SHA-256 of the canonical library manifest bytes."""
++    return hashlib.sha256(SFX_MANIFEST_PATH.read_bytes()).hexdigest()
++
++
++def load_manifest() -> dict[str, dict[str, Any]]:
++    """Load and validate the fixed sound-effect library manifest."""
++    try:
++        data = json.loads(SFX_MANIFEST_PATH.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        raise SoundDesignError(
++            f"cannot read the sound library manifest {SFX_MANIFEST_PATH}: {exc}"
++        ) from exc
++
++    if not isinstance(data, dict):
++        raise SoundDesignError(
++            f"sound library manifest {SFX_MANIFEST_PATH} must be a JSON object"
++        )
++
++    manifest: dict[str, dict[str, Any]] = {}
++    for key, entry in data.items():
++        if not isinstance(key, str) or not key:
++            raise SoundDesignError("sound library keys must be non-empty strings")
++        if not isinstance(entry, dict):
++            raise SoundDesignError(f"sound library entry {key!r} must be an object")
++        if not _is_flat_filename(entry.get("file")):
++            raise SoundDesignError(
++                f"sound library entry {key!r} must name a flat file, got {entry.get('file')!r}"
++            )
++        duration = entry.get("duration")
++        if not _is_finite_number(duration) or duration <= 0:
++            raise SoundDesignError(
++                f"sound library entry {key!r} must have a positive duration, got {duration!r}"
++            )
++        description = entry.get("description")
++        if not isinstance(description, str) or not description.strip():
++            raise SoundDesignError(
++                f"sound library entry {key!r} must have a non-empty description"
++            )
++        manifest[key] = entry
++    return manifest
++
++
++def load_plan(path: Path) -> dict[str, Any]:
++    """Load a plan file, validate it against the schema, and pin the library."""
++    plan_path = Path(path)
++    try:
++        plan = json.loads(plan_path.read_text(encoding="utf-8"))
++        schema = json.loads(PLAN_SCHEMA_PATH.read_text(encoding="utf-8"))
++        jsonschema.validate(plan, schema)
++    except (OSError, json.JSONDecodeError, jsonschema.ValidationError) as exc:
++        raise SoundDesignError(
++            f"invalid sound-design plan {plan_path}: {exc}"
++        ) from exc
++
++    library = plan["library"]
++    if library["manifest"] != SFX_MANIFEST_REL:
++        raise SoundDesignError(
++            f"plan library.manifest must be {SFX_MANIFEST_REL!r}, "
++            f"got {library['manifest']!r}"
++        )
++    try:
++        expected_sha256 = manifest_sha256()
++    except OSError as exc:
++        raise SoundDesignError(
++            f"cannot hash the sound library manifest {SFX_MANIFEST_PATH}: {exc}"
++        ) from exc
++    if library["sha256"] != expected_sha256:
++        raise SoundDesignError(
++            "plan library.sha256 does not match the bundled sound library manifest"
++        )
++    return plan
++
++
++def selection_status(plan: dict[str, Any], clip_duration: float) -> str:
++    """Validate the plan's mode/status/cue relationship and return the status."""
++    mode = plan.get("mode")
++    if mode not in VOLUME_CAPS:
++        raise SoundDesignError(f"unknown sound-design mode {mode!r}")
++
++    selection = plan.get("selection")
++    if not isinstance(selection, dict):
++        raise SoundDesignError("plan selection must be an object")
++    status = selection.get("status")
++    reason = selection.get("reason")
++    if not isinstance(reason, str) or not reason.strip():
++        raise SoundDesignError("plan selection.reason must be a non-empty string")
++
++    cues = plan.get("cues")
++    if not isinstance(cues, list):
++        raise SoundDesignError("plan cues must be a list")
++
++    duration = plan.get("duration_seconds")
++    if not _is_finite_number(duration) or not _is_finite_number(clip_duration):
++        raise SoundDesignError("plan and clip durations must be numbers")
++    if abs(duration - clip_duration) > _DURATION_TOLERANCE_SECONDS:
++        raise SoundDesignError(
++            f"plan duration {duration!r}s does not match the clip's {clip_duration!r}s"
++        )
++
++    if mode == "off":
++        if status != "disabled":
++            raise SoundDesignError(
++                f"mode 'off' requires selection.status 'disabled', got {status!r}"
++            )
++        if cues:
++            raise SoundDesignError("mode 'off' requires zero cues")
++        return "disabled"
++
++    if status == "selected":
++        if not cues:
++            raise SoundDesignError("selection.status 'selected' requires at least one cue")
++        return "selected"
++
++    if status == "silent_no_match":
++        if cues:
++            raise SoundDesignError("selection.status 'silent_no_match' requires zero cues")
++        return "silent_no_match"
++
++    if status == "disabled":
++        raise SoundDesignError("selection.status 'disabled' is only valid when mode is 'off'")
++    raise SoundDesignError(f"mode {mode!r} is incompatible with status {status!r}")
++
++
++def _check_overlap(cues: list[dict[str, Any]]) -> None:
++    """Reject any instant where more than MAX_OVERLAP cues are active."""
++    # Ends sort before starts at the same timestamp, so a cue that ends exactly
++    # where another begins does not count as an overlap.
++    events = []
++    for cue in cues:
++        events.append((cue["start_seconds"], 1, cue["catalog_key"]))
++        events.append((cue["end_seconds"], 0, cue["catalog_key"]))
++    events.sort(key=lambda event: (event[0], event[1]))
++
++    active: list[str] = []
++    for _, is_start, key in events:
++        if is_start:
++            active.append(key)
++            if len(active) > MAX_OVERLAP:
++                raise SoundDesignError(
++                    f"at most {MAX_OVERLAP} cues may overlap at once: {', '.join(active)}"
++                )
++        else:
++            active.remove(key)
++
++
++def resolve_cues(
++    plan: dict[str, Any],
++    manifest: dict[str, dict[str, Any]],
++    clip_duration: float,
++    *,
++    sfx_dir: Path = SFX_DIR,
++) -> list[dict[str, Any]]:
++    """Resolve a validated plan's cues to files under the sound library."""
++    if selection_status(plan, clip_duration) != "selected":
++        return []
++
++    cues = plan["cues"]
++    if len(cues) > MAX_CUES:
++        raise SoundDesignError(f"a plan may hold at most {MAX_CUES} cues")
++    if not isinstance(manifest, dict):
++        raise SoundDesignError("sound library manifest must be an object")
++
++    mode = plan["mode"]
++    volume_cap = VOLUME_CAPS[mode]
++    sfx_root = Path(sfx_dir).resolve()
++    resolved: list[dict[str, Any]] = []
++
++    for index, raw_cue in enumerate(cues):
++        if not isinstance(raw_cue, dict):
++            raise SoundDesignError(f"cue {index} must be an object")
++
++        key = raw_cue.get("catalog_key")
++        if not isinstance(key, str) or not key:
++            raise SoundDesignError(f"cue {index} must have a non-empty catalog_key")
++        entry = manifest.get(key)
++        if entry is None:
++            raise SoundDesignError(f"cue {index} uses unknown catalog key {key!r}")
++        if not isinstance(entry, dict):
++            raise SoundDesignError(f"sound library entry {key!r} must be an object")
++
++        file = entry.get("file")
++        if not _is_flat_filename(file):
++            raise SoundDesignError(
++                f"sound library entry {key!r} must name a flat file, got {file!r}"
++            )
++
++        source_duration = entry.get("duration")
++        if not _is_finite_number(source_duration) or source_duration <= 0:
++            raise SoundDesignError(
++                f"sound library entry {key!r} must have a positive duration"
++            )
++
++        path = (sfx_root / file).resolve()
++        if not path.is_file():
++            raise SoundDesignError(
++                f"cue {index} ({key!r}) does not resolve to a file under {sfx_root}"
++            )
++        if sfx_root not in path.parents:
++            raise SoundDesignError(
++                f"cue {index} ({key!r}) resolves outside the sound library {sfx_root}"
++            )
++
++        start = raw_cue.get("start_seconds")
++        if not _is_finite_number(start) or not 0 <= start < clip_duration:
++            raise SoundDesignError(
++                f"cue {index} ({key!r}) start_seconds must be within [0, {clip_duration})"
++            )
++
++        volume = raw_cue.get("volume")
++        if not _is_finite_number(volume) or not 0 <= volume <= volume_cap:
++            raise SoundDesignError(
++                f"cue {index} ({key!r}) volume must be within [0, {volume_cap}] "
++                f"for mode {mode!r}"
++            )
++
++        rationale = raw_cue.get("rationale")
++        if not isinstance(rationale, str) or not rationale.strip():
++            raise SoundDesignError(
++                f"cue {index} ({key!r}) must have a non-empty rationale"
++            )
++
++        resolved.append(
++            {
++                "catalog_key": key,
++                "path": path,
++                "start_seconds": start,
++                "volume": volume,
++                "source_duration_seconds": source_duration,
++                "end_seconds": min(start + source_duration, clip_duration),
++                "rationale": rationale,
++            }
++        )
++
++    resolved.sort(key=lambda cue: (cue["start_seconds"], cue["catalog_key"]))
++    _check_overlap(resolved)
++    return resolved

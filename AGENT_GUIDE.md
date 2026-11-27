@@ -4,6 +4,10 @@ Start here. This is the complete operating guide and agent contract for StudioKa
 
 For architecture, key files, and conventions see [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
 
+> **Active checkpoint (2026-11-27):** this checkout is paused mid-way through
+> the Lemo free sound-design feature. Read [`CHECKPOINT.md`](CHECKPOINT.md)
+> before any other work; it names the exact commit, task state, and next action.
+
 ## First Run — Environment Check
 
 Before any production work, confirm the project dependencies are installed. The
