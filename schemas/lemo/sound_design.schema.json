@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "studiokat/lemo/sound_design",
+  "title": "Lemo Sound Design Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version", "clip_id", "mode", "duration_seconds",
+    "master_path", "output_path", "library", "cues", "selection"
+  ],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "clip_id": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["auto", "quiet", "off"] },
+    "duration_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "master_path": { "type": "string", "minLength": 1 },
+    "output_path": { "type": "string", "minLength": 1 },
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "sha256"],
+      "properties": {
+        "manifest": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "cues": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["catalog_key", "start_seconds", "volume", "rationale"],
+        "properties": {
+          "catalog_key": { "type": "string", "minLength": 1 },
+          "start_seconds": { "type": "number", "minimum": 0 },
+          "volume": { "type": "number", "minimum": 0, "maximum": 0.25 },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["selected", "silent_no_match", "disabled"]
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
