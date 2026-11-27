@@ -1,0 +1,25 @@
+/home/superkat01/github/StudioKat/.venv/lib/python3.11/site-packages/pytest_asyncio/plugin.py:306: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session". Set it to "fixture-scope" to keep the current behavior.
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.2.0, pluggy-1.7.0 -- /home/superkat01/github/StudioKat/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/superkat01/github/StudioKat
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 11 items
+
+tests/tools/test_editor_render.py::test_editor_render_registered PASSED  [  9%]
+tests/tools/test_editor_render.py::test_editor_render_styles_op PASSED   [ 18%]
+tests/tools/test_editor_render.py::test_editor_render_rejects_unknown_operation PASSED [ 27%]
+tests/tools/test_editor_render.py::test_editor_render_requires_project_id PASSED [ 36%]
+tests/tools/test_editor_render.py::test_editor_render_workspace_is_under_project PASSED [ 45%]
+tests/tools/test_editor_render.py::test_chrome_prefers_env_binary PASSED [ 54%]
+tests/tools/test_editor_render.py::test_child_env_injects_discovered_chrome PASSED [ 63%]
+tests/tools/test_editor_render.py::test_child_env_omits_chrome_when_none_found PASSED [ 72%]
+tests/tools/test_editor_render.py::test_parse_json_tolerates_prefix_lines PASSED [ 81%]
+tests/tools/test_editor_render.py::test_preview_url_parsed_from_child_stdout PASSED [ 90%]
+tests/tools/test_editor_render.py::test_preview_url_times_out PASSED     [100%]
+
+============================== 11 passed in 2.33s ==============================

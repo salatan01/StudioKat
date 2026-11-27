@@ -1,0 +1,46 @@
+# Re-review package (path-scoped): ink-wash 7157b5e..cb44618
+## Commits
+cb44618 fix(lemo): size the ink-wash sheet to the live viewport so 9:16 is exercised
+4e9a347 feat(lemo): add the briefing-board sample clip
+67dbe64 feat(lemo): add the paper-popup sample clip
+95ce2b8 feat(lemo): add the paper-popup sample clip
+865e901 feat(lemo): add the briefing-board sample clip
+
+## Stat (ink-wash only)
+ .agents/skills/lemo/samples/clips/ink-wash/clip.js | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+## Diff (ink-wash only, -U10)
+diff --git a/.agents/skills/lemo/samples/clips/ink-wash/clip.js b/.agents/skills/lemo/samples/clips/ink-wash/clip.js
+index 31e1f24..a894613 100644
+--- a/.agents/skills/lemo/samples/clips/ink-wash/clip.js
++++ b/.agents/skills/lemo/samples/clips/ink-wash/clip.js
+@@ -15,24 +15,26 @@
+ // Deterministic: every value derives from `t` or a fixed seed — the geometry is
+ // built once from seeded RNGs, the frame redraws it at the current progress.
+ // No Math.random, no Date.now.
+ 
+ import { mulberry, clamp, lerp, seg, ss, eio, vnoise } from '/core/lib.js';
+ import { mk, draw as inkDraw, blot, TONE } from '/styles/ink-wash/demo/ink.js';
+ 
+ const canvas = document.getElementById('c');
+ const ctx = canvas.getContext('2d');
+ 
++// The render server sizes the viewport to --size, so window.innerWidth/Height is
++// the real frame; clip.json's width/height is only the native authoring fallback.
+ let META = {};
+ try { META = await (await fetch('clip.json')).json(); } catch {}
+-const W = (META.width | 0) || canvas.width;
+-const H = (META.height | 0) || canvas.height;
++const W = Math.round(window.innerWidth || (META.width | 0) || canvas.width);
++const H = Math.round(window.innerHeight || (META.height | 0) || canvas.height);
+ canvas.width = W;
+ canvas.height = H;
+ 
+ window.DUR = 6;
+ 
+ const portrait = H > W;
+ const MX = Math.min(W, H);              // the sheet's short side: scales brush widths
+ const fx = f => W * f, fy = f => H * f;
+ 
+ // ---- the clip's own words --------------------------------------------------

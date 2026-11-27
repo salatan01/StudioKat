@@ -1,0 +1,189 @@
+# Review package: dc13ba2..HEAD
+
+## Commits
+9de7ca3 fix(lemo): make font --check verify-only and harden download_fonts
+
+## Files changed
+ tests/contracts/test_lemo_fonts.py | 28 +++++++++++++++
+ tools/video/lemo/setup.py          | 72 ++++++++++++++++++--------------------
+ 2 files changed, 63 insertions(+), 37 deletions(-)
+
+## Diff
+diff --git a/tests/contracts/test_lemo_fonts.py b/tests/contracts/test_lemo_fonts.py
+index 98bf7ac..c26efe3 100644
+--- a/tests/contracts/test_lemo_fonts.py
++++ b/tests/contracts/test_lemo_fonts.py
+@@ -28,10 +28,38 @@ def test_font_binaries_are_gitignored():
+ 
+ def test_verify_fonts_reports_missing_and_bad_hashes(tmp_path):
+     from tools.video.lemo import setup as s
+     good = tmp_path/"a.ttf"; good.write_bytes(b"abc")
+     import hashlib
+     files = [{"path":"a.ttf","sha256":hashlib.sha256(b"abc").hexdigest()}]
+     assert s.verify_fonts(tmp_path, files) == []
+     bad = [{"path":"a.ttf","sha256":"0"*64}]
+     assert any(x.startswith("sha256:") for x in s.verify_fonts(tmp_path, bad))
+     assert any(x.startswith("missing:") for x in s.verify_fonts(tmp_path, [{"path":"nope.ttf","sha256":"0"*64}]))
++
++def _write_tmp_manifest(root, files):
++    root.mkdir(parents=True, exist_ok=True)
++    (root/"manifest.json").write_text(json.dumps(
++        {"version":1, "google_fonts_commit":"0"*40, "files":files}))
++
++def test_check_is_verify_only_and_never_downloads(monkeypatch, tmp_path, capsys):
++    from tools.video.lemo import setup as s
++    root = tmp_path/"fonts"
++    files = [{"path":"x/a.ttf","slug":"x","family":"X",
++              "url":"https://example.invalid/x/a.ttf","sha256":"0"*64,
++              "licence_path":"assets/fonts/licenses/x.txt"}]
++    _write_tmp_manifest(root, files)
++    monkeypatch.setattr(s, "DEFAULT_FONTS_ROOT", root)
++
++    def _boom(*a, **k):
++        raise AssertionError("network used by verify-only path")
++    monkeypatch.setattr(s.urllib.request, "urlopen", _boom)
++
++    before = sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
++    assert s.main(["--check"]) == 1
++    assert s.main(["--check", "--offline"]) == 1
++    assert s.main(["--fonts", "--offline"]) == 1
++    after = sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
++    assert before == after  # nothing downloaded, nothing written
++    out = capsys.readouterr().out
++    assert "missing: x/a.ttf" in out
++    assert "FONTS OK" not in out
+diff --git a/tools/video/lemo/setup.py b/tools/video/lemo/setup.py
+index 8d07225..02f87a0 100644
+--- a/tools/video/lemo/setup.py
++++ b/tools/video/lemo/setup.py
+@@ -1,23 +1,27 @@
+ """Fetch and verify the OFL fonts used by the Lemo style clips.
+ 
+ The font binaries are large third-party files (the two CJK faces dominate), so
+ they are downloaded on demand rather than committed. ``manifest.json`` pins every
+ file to a commit of ``google/fonts`` and records the SHA-256 of the exact bytes,
+ so a download can be verified byte-for-byte and will fail loudly if upstream
+ serves anything unexpected.
+ 
+ Usage (through the thin CLI shim at ``.agents/skills/lemo/scripts/setup.py``)::
+ 
+-    setup.py --fonts            # download every pinned face
+-    setup.py --check            # download anything missing, then verify
+-    setup.py --check --offline  # verify what is already on disk, no network
++    setup.py --fonts            # download missing/corrupt faces, then verify
++    setup.py --check            # verify only; never downloads, never uses the network
++    setup.py --fonts --offline  # forbid the network: verify and report, no download
++
++``--check`` never mutates the tree: on a fresh checkout it reports the missing
++files and exits 1. Only ``--fonts`` (or the no-flag default) downloads, and
++``--offline`` forbids that.
+ """
+ 
+ from __future__ import annotations
+ 
+ import argparse
+ import hashlib
+ import json
+ import urllib.request
+ from pathlib import Path
+ 
+@@ -88,71 +92,65 @@ def _download(url: str, dest: Path, sha256: str) -> None:
+         tmp.replace(dest)
+     finally:
+         if tmp.exists():
+             tmp.unlink()
+ 
+ 
+ def download_fonts(root: Path, files: list[dict]) -> None:
+     """Download any missing or corrupt font binaries named by ``files``.
+ 
+     Files that already match their recorded hash are left untouched, so the call
+-    is idempotent and cheap to re-run.
++    is idempotent and cheap to re-run. The decision is made per entry from the
++    entry's own fields — never by parsing the strings ``verify_fonts`` returns —
++    so paths containing spaces are handled correctly.
+     """
+     root = Path(root)
+-    problems = verify_fonts(root, files)
+-    if not problems:
+-        return
+-    bad = {line.split(": ", 1)[1].split(" ", 1)[0] for line in problems}
+     for entry in files:
+-        if entry["path"] not in bad:
+-            continue
+         dest = root / entry["path"]
++        if dest.is_file() and _sha256(dest) == entry["sha256"]:
++            continue
+         _download(entry["url"], dest, entry["sha256"])
+ 
+ 
++def _finish(root: Path, files: list[dict], label: str) -> int:
++    """Verify ``files`` and print a report; return the process exit code."""
++    problems = verify_fonts(root, files)
++    if problems:
++        print("FONT PROBLEMS:")
++        for problem in problems:
++            print(f"  {problem}")
++        return 1
++    print(label)
++    return 0
++
++
+ def main(argv: list[str] | None = None) -> int:
+     parser = argparse.ArgumentParser(description="Fetch and verify the Lemo OFL fonts.")
+     parser.add_argument(
+         "--check",
+         action="store_true",
+-        help="verify the fonts and exit non-zero on any problem",
++        help="verify the fonts and exit non-zero on any problem (never downloads)",
+     )
+     parser.add_argument(
+         "--fonts",
+         action="store_true",
+-        help="download every pinned font binary",
++        help="download missing or corrupt font binaries, then verify",
+     )
+     parser.add_argument(
+         "--offline",
+         action="store_true",
+-        help="never use the network (verification only)",
++        help="never use the network",
+     )
+     args = parser.parse_args(argv)
+ 
+     root = fonts_root()
+     files = load_manifest(root)["files"]
+ 
++    # A check is read-only: it must never download and never touch the network,
++    # so a fresh checkout reports `missing:` rather than silently fetching 63 MiB.
+     if args.check:
+-        if not args.offline:
+-            download_fonts(root, files)
+-        problems = verify_fonts(root, files)
+-        if problems:
+-            print("FONT PROBLEMS:")
+-            for problem in problems:
+-                print(f"  {problem}")
+-            return 1
+-        print("FONTS OK")
+-        return 0
+-
+-    # Default action, and the explicit --fonts flag, download what is missing.
+-    if args.offline:
+-        print("--offline set; nothing to download")
+-        return 0
+-    download_fonts(root, files)
+-    problems = verify_fonts(root, files)
+-    if problems:
+-        print("FONT PROBLEMS:")
+-        for problem in problems:
+-            print(f"  {problem}")
+-        return 1
+-    print(f"FONTS OK ({len(files)} files)")
+-    return 0
++        return _finish(root, files, label="FONTS OK")
++
++    # `--fonts` (or the no-flag default) downloads first, unless --offline forbids it.
++    if not args.offline:
++        download_fonts(root, files)
++    return _finish(root, files, label=f"FONTS OK ({len(files)} files)")

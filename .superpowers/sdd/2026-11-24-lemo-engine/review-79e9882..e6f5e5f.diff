@@ -1,0 +1,623 @@
+# Review package: 79e9882..e6f5e5f
+
+## Commits
+e6f5e5f feat(lemo): add the input schemas and curated samples
+
+## Files changed
+ .agents/skills/lemo/samples/briefing-board/CREDITS |  40 +++++++++
+ .../photos/skylab-cluster-black-sky.jpg            | Bin 0 -> 93885 bytes
+ .../photos/skylab-cluster-earth-orbit.jpg          | Bin 0 -> 68581 bytes
+ .../photos/skylab-rendezvous-flyaround.jpg         | Bin 0 -> 23779 bytes
+ .agents/skills/lemo/samples/dataviz/CREDITS        |  26 ++++++
+ .agents/skills/lemo/samples/dataviz/data.csv       |  31 +++++++
+ .../skills/lemo/samples/dataviz/data_manifest.json |  16 ++++
+ .../skills/lemo/samples/living-screencast/CREDITS  |  21 +++++
+ .../lemo/samples/living-screencast/ui_spec.json    |  52 +++++++++++
+ .agents/skills/lemo/samples/teardown/CREDITS       |  19 ++++
+ .../skills/lemo/samples/teardown/parts_spec.json   |  15 ++++
+ schemas/lemo/clip.schema.json                      |  97 +++++++++++++++++++++
+ schemas/lemo/parts_spec.schema.json                |  56 ++++++++++++
+ schemas/lemo/ui_spec.schema.json                   |  97 +++++++++++++++++++++
+ tests/contracts/test_lemo_inputs.py                |  45 ++++++++++
+ 15 files changed, 515 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/samples/briefing-board/CREDITS b/.agents/skills/lemo/samples/briefing-board/CREDITS
+new file mode 100644
+index 0000000..47e0655
+--- /dev/null
++++ b/.agents/skills/lemo/samples/briefing-board/CREDITS
+@@ -0,0 +1,40 @@
++# CREDITS — briefing-board sample (NASA Skylab photographs)
++
++Every photograph pinned on this board is real and sourced. Nothing here is generated.
++The three photos document Skylab, the United States' first space station (1973-1979).
++
++Themes: a station assembled in orbit, inspected by a visiting crew, and photographed
++against the Earth. The board treats the real photographs as the evidence.
++
++PHOTOGRAPHS (NASA; all public domain)
++
++1. photos/skylab-cluster-black-sky.jpg
++   Title: "View of the Skylab space station cluster photographed against black sky"
++   NASA image id: sl3-114-1682 (Skylab 3, 1973). Source: NASA.
++   Source page: https://images.nasa.gov/details/sl3-114-1682
++   Asset URL: https://images-assets.nasa.gov/image/sl3-114-1682/sl3-114-1682~medium.jpg
++   Retrieved: 2026-11-24 (HTTP 200).
++   Change: downscaled to 512 px on the long edge; otherwise unaltered.
++
++2. photos/skylab-cluster-earth-orbit.jpg
++   Title: "View of Skylab space station cluster in Earth orbit from CSM"
++   NASA image id: sl4-143-4707 (Skylab 4, 1974). Source: NASA.
++   Source page: https://images.nasa.gov/details/sl4-143-4707
++   Asset URL: https://images-assets.nasa.gov/image/sl4-143-4707/sl4-143-4707~medium.jpg
++   Retrieved: 2026-11-24 (HTTP 200).
++   Change: downscaled to 512 px on the long edge; otherwise unaltered.
++
++3. photos/skylab-rendezvous-flyaround.jpg
++   Title: "Rendezvous and Fly Around Inspection of Skylab I Orbital Space Station"
++   NASA image id: sl2-04-248 (Skylab 2, 1973). Source: NASA.
++   Source page: https://images.nasa.gov/details/sl2-04-248
++   Asset URL: https://images-assets.nasa.gov/image/sl2-04-248/sl2-04-248~medium.jpg
++   Retrieved: 2026-11-24 (HTTP 200).
++   Change: downscaled to 512 px on the long edge; otherwise unaltered.
++
++LICENCE
++- All three are works of NASA, a U.S. Government agency, and are in the public domain.
++  NASA images are generally not copyrighted; see https://www.nasa.gov/nasa-brand-center/images-and-media/
++- Credit line for the board: "Photographs: NASA (public domain)."
++
++The whiteboard, its marker annotations and the pinned card are drawn in code.
+diff --git a/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-black-sky.jpg b/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-black-sky.jpg
+new file mode 100644
+index 0000000..9530e38
+Binary files /dev/null and b/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-black-sky.jpg differ
+diff --git a/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-earth-orbit.jpg b/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-earth-orbit.jpg
+new file mode 100644
+index 0000000..a9c9737
+Binary files /dev/null and b/.agents/skills/lemo/samples/briefing-board/photos/skylab-cluster-earth-orbit.jpg differ
+diff --git a/.agents/skills/lemo/samples/briefing-board/photos/skylab-rendezvous-flyaround.jpg b/.agents/skills/lemo/samples/briefing-board/photos/skylab-rendezvous-flyaround.jpg
+new file mode 100644
+index 0000000..0289fa0
+Binary files /dev/null and b/.agents/skills/lemo/samples/briefing-board/photos/skylab-rendezvous-flyaround.jpg differ
+diff --git a/.agents/skills/lemo/samples/dataviz/CREDITS b/.agents/skills/lemo/samples/dataviz/CREDITS
+new file mode 100644
+index 0000000..bff1157
+--- /dev/null
++++ b/.agents/skills/lemo/samples/dataviz/CREDITS
+@@ -0,0 +1,26 @@
++# CREDITS — dataviz sample (NASA GISTEMP)
++
++This sample is a real, sourced dataset for a `dataviz` clip. Nothing here is invented.
++
++SOURCE
++- NASA Goddard Institute for Space Studies (GISS), GISTEMP v4 — Global Land-Ocean
++  Temperature Index (GLB.Ts+dSST).
++  Exact URL: https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv
++- Retrieved: 2026-11-24 (HTTP 200).
++- Licence: Public domain. GISTEMP is a work of the U.S. Government (NASA), and U.S.
++  Government works are not subject to copyright in the United States.
++
++WHAT WAS TAKEN
++- `data.csv` is a 30-row slice of the source file: calendar years 1996-2025 (the most
++  recent complete years), with four columns chosen by header name — Year, J-D (annual
++  mean), JJA (June-July-August), DJF (December-January-February).
++- Every value is copied unchanged from the source. Columns are named in
++  `data_manifest.json` by their source headers, not by index.
++- The incomplete 2026 row was excluded. The source is reissued as more stations report,
++  so the values are current as of the retrieval date above.
++
++UNITS
++- Temperature anomalies in degrees Celsius, relative to the 1951-1980 mean.
++
++CREDITS LINE FOR THE END CARD
++- Data: NASA GISS Surface Temperature Analysis (GISTEMP v4), public domain.
+diff --git a/.agents/skills/lemo/samples/dataviz/data.csv b/.agents/skills/lemo/samples/dataviz/data.csv
+new file mode 100644
+index 0000000..0156ff9
+--- /dev/null
++++ b/.agents/skills/lemo/samples/dataviz/data.csv
+@@ -0,0 +1,31 @@
++Year,J-D,JJA,DJF
++1996,.33,.37,.32
++1997,.46,.43,.37
++1998,.61,.69,.68
++1999,.38,.35,.56
++2000,.39,.40,.40
++2001,.53,.53,.39
++2002,.63,.56,.70
++2003,.61,.56,.59
++2004,.53,.38,.68
++2005,.68,.62,.62
++2006,.64,.64,.66
++2007,.66,.60,.84
++2008,.54,.51,.39
++2009,.66,.68,.57
++2010,.72,.66,.75
++2011,.61,.69,.49
++2012,.64,.63,.52
++2013,.67,.67,.61
++2014,.75,.69,.67
++2015,.90,.78,.85
++2016,1.01,.89,1.23
++2017,.91,.80,1.00
++2018,.85,.79,.86
++2019,.98,.93,.93
++2020,1.01,.89,1.17
++2021,.85,.86,.75
++2022,.89,.94,.89
++2023,1.17,1.16,.88
++2024,1.28,1.25,1.35
++2025,1.19,1.08,1.30
+diff --git a/.agents/skills/lemo/samples/dataviz/data_manifest.json b/.agents/skills/lemo/samples/dataviz/data_manifest.json
+new file mode 100644
+index 0000000..836c78b
+--- /dev/null
++++ b/.agents/skills/lemo/samples/dataviz/data_manifest.json
+@@ -0,0 +1,16 @@
++{
++  "dataset": "NASA GISS Surface Temperature Analysis (GISTEMP v4) — Global Land-Ocean Temperature Index",
++  "source_url": "https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv",
++  "retrieved_at": "2026-11-24",
++  "columns": ["Year", "J-D", "JJA", "DJF"],
++  "units": {
++    "Year": "calendar year (CE)",
++    "J-D": "annual mean surface-temperature anomaly, degrees Celsius, relative to the 1951-1980 mean",
++    "JJA": "June-July-August mean anomaly, degrees Celsius, relative to the 1951-1980 mean",
++    "DJF": "December-January-February mean anomaly, degrees Celsius, relative to the 1951-1980 mean"
++  },
++  "licence": "Public domain (a work of the U.S. Government, NASA Goddard Institute for Space Studies).",
++  "rows": 30,
++  "row_range": "1996-2025",
++  "note": "data.csv is a 30-row slice of the source file (years 1996-2025, the most recent complete calendar years). Columns are selected by header name and kept in the source's own order. The 2026 row was excluded because the year is incomplete. Values are copied unchanged; a leading '.' means zero-point, as in the source."
++}
+diff --git a/.agents/skills/lemo/samples/living-screencast/CREDITS b/.agents/skills/lemo/samples/living-screencast/CREDITS
+new file mode 100644
+index 0000000..eb15f07
+--- /dev/null
++++ b/.agents/skills/lemo/samples/living-screencast/CREDITS
+@@ -0,0 +1,21 @@
++# CREDITS — living-screencast sample (original app)
++
++Original work authored for this sample. Nothing here copies a real product or character.
++
++APP
++- "Cascade", a fictional board-and-tasks app. Invented for this sample. It is not a real
++  product; no real logo, trade dress or shipping interface was referenced, traced or copied.
++- The window, its panes and the list and form rows are described by `ui_spec.json` and
++  drawn flat in the clip.
++
++MASCOT
++- "Pebble", an original geometric mascot: a rounded triangle body on two stub legs, two
++  dot eyes, a curved mouth, stick arms and a scarf. Drawn for this sample.
++- No real mascot, brand character or anthropomorphic logo was used. The clip draws no
++  third party's character; Pebble is the only performer.
++
++LICENCE
++- Licence: original work, dedicated to the public domain under CC0 1.0
++  (https://creativecommons.org/publicdomain/zero/1.0/). Author: StudioKat, 2026.
++- No third-party assets are included. The UI is drawn in code; there is no screenshot and
++  no photograph.
+diff --git a/.agents/skills/lemo/samples/living-screencast/ui_spec.json b/.agents/skills/lemo/samples/living-screencast/ui_spec.json
+new file mode 100644
+index 0000000..7326ea9
+--- /dev/null
++++ b/.agents/skills/lemo/samples/living-screencast/ui_spec.json
+@@ -0,0 +1,52 @@
++{
++  "version": "1.0",
++  "app": "Cascade",
++  "window": {
++    "title": "Cascade — Launch Board",
++    "width": 1280,
++    "height": 800
++  },
++  "mascot": {
++    "name": "Pebble",
++    "shape": "An original flat geometric mascot: a rounded triangle body on two stubby legs, with two dot eyes, a small curved mouth, two thin stick arms and a short scarf.",
++    "accent": "The scarf carries the single accent colour; the body stays neutral ink on the ground.",
++    "traits": [
++      "points at a control before pressing it",
++      "presses with anticipation, a fast action and a settle",
++      "reads a list row by row",
++      "reacts with a small hop when a state changes"
++    ]
++  },
++  "panes": [
++    {
++      "id": "sidebar",
++      "title": "Boards",
++      "kind": "list",
++      "items": [
++        { "id": "inbox", "label": "Inbox" },
++        { "id": "launch", "label": "Launch Board", "state": "selected" },
++        { "id": "archive", "label": "Archive" }
++      ]
++    },
++    {
++      "id": "board",
++      "title": "Launch Board",
++      "kind": "table",
++      "items": [
++        { "id": "brief", "label": "Write the brief", "state": "done" },
++        { "id": "assets", "label": "Collect the assets", "state": "todo" },
++        { "id": "review", "label": "Review the cut", "state": "todo" }
++      ]
++    },
++    {
++      "id": "composer",
++      "title": "New task",
++      "kind": "form",
++      "items": [
++        { "id": "title", "label": "Task title", "value": "Pin the source cards" },
++        { "id": "owner", "label": "Owner", "value": "Rill" },
++        { "id": "add", "label": "Add to board", "state": "idle" }
++      ]
++    }
++  ]
++}
+diff --git a/.agents/skills/lemo/samples/teardown/CREDITS b/.agents/skills/lemo/samples/teardown/CREDITS
+new file mode 100644
+index 0000000..d9107ff
+--- /dev/null
++++ b/.agents/skills/lemo/samples/teardown/CREDITS
+@@ -0,0 +1,19 @@
++# CREDITS — teardown sample (original product)
++
++Original work authored for this sample.
++
++PRODUCT
++- "Field Lamp FL-1", a fictional hand lamp. Invented for this sample. It is not a real
++  product and was not copied from any vendor's parts diagram, teardown or spec sheet.
++- `parts_spec.json` lists six parts along one vertical axis: shell, diffuser, driver
++  board, cell x2, bracket x2, M3 bolt x4.
++
++ILLUSTRATIVE ONLY
++- The spec is a diagram, not a measured model. Every part, layer and count is a drawing
++  decision. No dimension, mass, tolerance or fastener torque is supplied or implied, and
++  none may be stated on screen.
++
++LICENCE
++- Licence: original work, dedicated to the public domain under CC0 1.0
++  (https://creativecommons.org/publicdomain/zero/1.0/). Author: StudioKat, 2026.
++- No third-party CAD file, model or photograph is included. The parts are drawn in code.
+diff --git a/.agents/skills/lemo/samples/teardown/parts_spec.json b/.agents/skills/lemo/samples/teardown/parts_spec.json
+new file mode 100644
+index 0000000..f78662f
+--- /dev/null
++++ b/.agents/skills/lemo/samples/teardown/parts_spec.json
+@@ -0,0 +1,15 @@
++{
++  "version": "1.0",
++  "product": "Field Lamp FL-1",
++  "illustrative": true,
++  "axis": "vertical",
++  "notes": "An invented product. Every part and count is a drawing decision, not a measurement; no dimension, mass, tolerance or torque is stated or implied.",
++  "parts": [
++    { "id": "shell", "name": "shell", "layer": 0, "count": 1 },
++    { "id": "diffuser", "name": "diffuser", "layer": 1, "count": 1 },
++    { "id": "board", "name": "driver board", "layer": 2, "count": 1 },
++    { "id": "cell", "name": "cell", "layer": 3, "count": 2 },
++    { "id": "bracket", "name": "bracket", "layer": 4, "count": 2 },
++    { "id": "bolt", "name": "M3 bolt", "layer": 5, "count": 4 }
++  ]
++}
+diff --git a/schemas/lemo/clip.schema.json b/schemas/lemo/clip.schema.json
+new file mode 100644
+index 0000000..6da8f49
+--- /dev/null
++++ b/schemas/lemo/clip.schema.json
+@@ -0,0 +1,97 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "studiokat/lemo/clip",
++  "title": "Lemo Clip Input",
++  "description": "The input clip.json written by `lemo_render new` and authored per clip. It is the source of truth `lemo_render validate` reads: the style, the format, the named inputs and the facts. It is distinct from the pipeline artifact schemas/artifacts/lemo_clip.schema.json, which records the built clip workspace.",
++  "type": "object",
++  "required": [
++    "clip_id",
++    "style_id",
++    "subject",
++    "one_idea",
++    "aspect",
++    "width",
++    "height",
++    "fps",
++    "duration_seconds",
++    "sound",
++    "text_mode",
++    "inputs",
++    "facts"
++  ],
++  "additionalProperties": false,
++  "properties": {
++    "clip_id": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Folder name of the clip, unique within the run."
++    },
++    "style_id": {
++      "type": "string",
++      "minLength": 1,
++      "description": "One of the fifteen lemo style ids."
++    },
++    "subject": {
++      "type": "string",
++      "minLength": 1,
++      "description": "What the clip is about, in a phrase."
++    },
++    "one_idea": {
++      "type": "string",
++      "minLength": 1,
++      "description": "The single idea the clip must land."
++    },
++    "aspect": {
++      "type": "string",
++      "enum": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++      "description": "Frame aspect, restricted to the style's supported set."
++    },
++    "width": {
++      "type": "integer",
++      "minimum": 1,
++      "description": "Frame width in pixels."
++    },
++    "height": {
++      "type": "integer",
++      "minimum": 1,
++      "description": "Frame height in pixels."
++    },
++    "fps": {
++      "type": "integer",
++      "minimum": 1,
++      "description": "Frames per second."
++    },
++    "duration_seconds": {
++      "type": "number",
++      "exclusiveMinimum": 0,
++      "description": "Clip length in seconds, inside the style's native window."
++    },
++    "sound": {
++      "type": "string",
++      "enum": ["none", "foley"],
++      "description": "Audio intent. v1 is silent, so this is normally \"none\"."
++    },
++    "text_mode": {
++      "type": "string",
++      "minLength": 1,
++      "description": "How on-screen text is handled for this clip (for example title-only or burned-in subtitles)."
++    },
++    "inputs": {
++      "type": "object",
++      "description": "Maps each required input name from the style manifest (data, cutouts, ui_spec, parts_spec) to a path relative to the clip folder.",
++      "additionalProperties": {
++        "type": "string",
++        "minLength": 1,
++        "description": "Path relative to the clip directory; must stay inside it."
++      }
++    },
++    "facts": {
++      "type": "array",
++      "description": "The real, checkable claims shown in the clip. Empty when the style needs none.",
++      "items": {
++        "type": "string",
++        "minLength": 1
++      }
++    }
++  }
++}
+diff --git a/schemas/lemo/parts_spec.schema.json b/schemas/lemo/parts_spec.schema.json
+new file mode 100644
+index 0000000..94dde1f
+--- /dev/null
++++ b/schemas/lemo/parts_spec.schema.json
+@@ -0,0 +1,56 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "studiokat/lemo/parts_spec",
++  "title": "Lemo Parts Spec",
++  "description": "The illustrative parts list a teardown clip is built from. It names the product and its parts and the order they separate along one axis. It is a diagram specification, never a measured engineering drawing.",
++  "type": "object",
++  "required": ["version", "product", "illustrative", "parts"],
++  "properties": {
++    "version": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Spec format version."
++    },
++    "product": {
++      "type": "string",
++      "minLength": 1,
++      "description": "The product the parts belong to."
++    },
++    "illustrative": {
++      "const": true,
++      "description": "Always true: the parts are a diagram, not a measured model. No dimension, tolerance or torque may be inferred from it."
++    },
++    "parts": {
++      "type": "array",
++      "minItems": 1,
++      "description": "The parts, in separation order along the axis.",
++      "items": {
++        "type": "object",
++        "required": ["id", "name", "layer", "count"],
++        "properties": {
++          "id": {
++            "type": "string",
++            "minLength": 1,
++            "description": "Stable identifier used by the clip."
++          },
++          "name": {
++            "type": "string",
++            "minLength": 1,
++            "description": "Short noun label shown beside the part."
++          },
++          "layer": {
++            "type": "integer",
++            "minimum": 0,
++            "description": "Position of the part along the explode axis; parts sharing a layer move together."
++          },
++          "count": {
++            "type": "integer",
++            "minimum": 1,
++            "description": "How many of this part: one for a plate, many for fasteners."
++          }
++        },
++        "additionalProperties": false
++      }
++    }
++  }
++}
+diff --git a/schemas/lemo/ui_spec.schema.json b/schemas/lemo/ui_spec.schema.json
+new file mode 100644
+index 0000000..9ce5a36
+--- /dev/null
++++ b/schemas/lemo/ui_spec.schema.json
+@@ -0,0 +1,97 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "studiokat/lemo/ui_spec",
++  "title": "Lemo UI Spec",
++  "description": "The flat, drawn interface a living-screencast clip is built from. It names an original app, its window and its panes; the mascot is drawn by the clip, never from a real product.",
++  "type": "object",
++  "required": ["version", "app", "window", "panes"],
++  "properties": {
++    "version": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Spec format version."
++    },
++    "app": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Name of the invented app shown in the window."
++    },
++    "window": {
++      "type": "object",
++      "description": "The drawn application window.",
++      "properties": {
++        "title": {
++          "type": "string",
++          "minLength": 1
++        },
++        "width": {
++          "type": "integer",
++          "minimum": 1
++        },
++        "height": {
++          "type": "integer",
++          "minimum": 1
++        }
++      },
++      "additionalProperties": false
++    },
++    "mascot": {
++      "type": "object",
++      "description": "An original geometric mascot. Never a real product logo or a third party's character.",
++      "properties": {
++        "name": { "type": "string", "minLength": 1 },
++        "shape": { "type": "string", "minLength": 1 },
++        "accent": { "type": "string", "minLength": 1 },
++        "traits": {
++          "type": "array",
++          "items": { "type": "string", "minLength": 1 }
++        }
++      },
++      "additionalProperties": false
++    },
++    "panes": {
++      "type": "array",
++      "minItems": 1,
++      "description": "The interface panes the mascot moves between.",
++      "items": {
++        "type": "object",
++        "required": ["id", "title", "kind", "items"],
++        "properties": {
++          "id": {
++            "type": "string",
++            "minLength": 1
++          },
++          "title": {
++            "type": "string",
++            "minLength": 1
++          },
++          "kind": {
++            "type": "string",
++            "enum": ["list", "table", "detail", "form", "settings", "dialog", "canvas", "inspector", "toolbar"]
++          },
++          "items": {
++            "type": "array",
++            "description": "Rows or controls of the pane, in display order.",
++            "items": {
++              "oneOf": [
++                { "type": "string", "minLength": 1 },
++                {
++                  "type": "object",
++                  "required": ["id", "label"],
++                  "properties": {
++                    "id": { "type": "string", "minLength": 1 },
++                    "label": { "type": "string", "minLength": 1 },
++                    "value": { "type": ["string", "number", "boolean"] },
++                    "state": { "type": "string" }
++                  },
++                  "additionalProperties": false
++                }
++              ]
++            }
++          }
++        },
++        "additionalProperties": false
++      }
++    }
++  }
++}
+diff --git a/tests/contracts/test_lemo_inputs.py b/tests/contracts/test_lemo_inputs.py
+new file mode 100644
+index 0000000..79fb323
+--- /dev/null
++++ b/tests/contracts/test_lemo_inputs.py
+@@ -0,0 +1,45 @@
++import json
++from pathlib import Path
++import jsonschema
++import pytest
++REPO_ROOT = Path(__file__).resolve().parents[2]
++SAMPLES = REPO_ROOT / ".agents/skills/lemo/samples"
++SCHEMAS = REPO_ROOT / "schemas/lemo"
++
++def _validate(name, doc):
++    jsonschema.validate(doc, json.loads((SCHEMAS/f"{name}.schema.json").read_text()))
++
++def test_teardown_sample_is_illustrative():
++    doc = json.loads((SAMPLES/"teardown/parts_spec.json").read_text())
++    _validate("parts_spec", doc)
++    assert doc["illustrative"] is True
++    doc["illustrative"] = False
++    with pytest.raises(jsonschema.ValidationError): _validate("parts_spec", doc)
++
++def test_living_screencast_sample_validates():
++    _validate("ui_spec", json.loads((SAMPLES/"living-screencast/ui_spec.json").read_text()))
++
++def test_dataviz_manifest_has_provenance():
++    doc = json.loads((SAMPLES/"dataviz/data_manifest.json").read_text())
++    for key in ["source_url","retrieved_at","columns","units","licence"]:
++        assert doc[key], key
++
++def test_dataviz_csv_matches_the_manifest():
++    import csv
++    doc = json.loads((SAMPLES/"dataviz/data_manifest.json").read_text())
++    with (SAMPLES/"dataviz/data.csv").open(newline="", encoding="utf-8") as fh:
++        rows = list(csv.DictReader(fh))
++    assert 1 <= len(rows) <= 30
++    assert list(rows[0]) == doc["columns"]
++
++def test_briefing_board_sample_has_real_photos():
++    from PIL import Image
++    photos = sorted((SAMPLES/"briefing-board/photos").glob("*.jpg"))
++    assert 2 <= len(photos) <= 4, photos
++    for path in photos:
++        with Image.open(path) as im:
++            assert im.format == "JPEG" and im.width >= 100 and im.height >= 100, path
++
++def test_every_sample_has_credits():
++    for name in ["dataviz","briefing-board","living-screencast","teardown"]:
++        assert (SAMPLES/name/"CREDITS").is_file(), name

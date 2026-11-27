@@ -1,0 +1,40 @@
+# Review package: 9616e77..e51b8b6
+
+## Commits
+e51b8b6 fix(lemo): save/restore marquee letter transforms in art-deco
+
+## Files changed
+ .agents/skills/lemo/samples/clips/art-deco/clip.js | 2 ++
+ 1 file changed, 2 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/samples/clips/art-deco/clip.js b/.agents/skills/lemo/samples/clips/art-deco/clip.js
+index bf344be..ae6be66 100644
+--- a/.agents/skills/lemo/samples/clips/art-deco/clip.js
++++ b/.agents/skills/lemo/samples/clips/art-deco/clip.js
+@@ -54,23 +54,25 @@ const TITLE_CY = portrait ? 890 : 900;
+ 
+ const marqueeRig = () => ({
+   rig: signRig({ height: portrait ? 1.0 : 1.5, theta: 0.62, near: [4.6, 2.2, 6.6] }),
+   cam: makeCam({ x: 0, y: 0, z: 0, f: portrait ? 700 : 1100, oy: portrait ? 1100 : 800, W, H }),
+ });
+ 
+ function drawMarquee(lit) {
+   const { rig, cam } = marqueeRig();
+   const { S, k, Hb } = rig;
+   S.letters.forEach((le, li) => {
++    g.save();
+     cardTransform(g, cam, cam.P(...rig.at(le.x * k, Hb)), cam.P(...rig.at((le.x + le.w) * k, Hb)), cam.P(...rig.at(le.x * k, 0)), le.w, S.h);
+     g.translate(-le.x, 0);
+     B.drawSign(g, S, 0, 0, 1, { lit, only: li, haloK: 1.1 });
++    g.restore();
+   });
+ }
+ 
+ function marqueeBox() {
+   const { rig, cam } = marqueeRig();
+   const { S, k, Hb } = rig;
+   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+   const touch = p => {
+     x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
+     y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);

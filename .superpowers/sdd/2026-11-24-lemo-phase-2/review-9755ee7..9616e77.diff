@@ -1,0 +1,230 @@
+# Review package: 9755ee7..9616e77
+
+## Commits
+9616e77 feat(lemo): add the art-deco sample clip
+
+## Files changed
+ .agents/skills/lemo/samples/clips/art-deco/clip.js | 131 +++++++++++++++++++++
+ .../skills/lemo/samples/clips/art-deco/clip.json   |  21 ++++
+ .../skills/lemo/samples/clips/art-deco/index.html  |  48 ++++++++
+ 3 files changed, 200 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/samples/clips/art-deco/clip.js b/.agents/skills/lemo/samples/clips/art-deco/clip.js
+new file mode 100644
+index 0000000..bf344be
+--- /dev/null
++++ b/.agents/skills/lemo/samples/clips/art-deco/clip.js
+@@ -0,0 +1,131 @@
++// Art Deco · "A launch invitation"
++//
++// An original six-second launch invitation for a fictional grand theatre
++// ("THE AURELIA"). The world is drawn in the Art Deco engine's gold and lacquer:
++// a symmetric sunburst opens about the centre axis, the bulb marquee of the
++// launch sign is projected in true perspective and counts on — letters switch
++// on one by one with a flash and a settle, then chase — while the title bar
++// unfolds symmetrically from the centre point.
++//
++// The vendored demo (styles/art-deco/demo) is the technique reference only; its
++// own story, hotel and sign copy are not used here. Deterministic: every value
++// derives from `t`.
++
++import { clamp, seg } from '/core/lib.js';
++import * as D from '/styles/art-deco/demo/engine/deco.js';
++import * as T from '/styles/art-deco/demo/engine/type.js';
++import * as B from '/styles/art-deco/demo/engine/bulbs.js';
++import { makeCam, cardTransform } from '/styles/art-deco/demo/engine/cam.js';
++import { signRig } from '/styles/art-deco/demo/scenes/roof.js';
++
++const canvas = document.getElementById('c');
++const g = canvas.getContext('2d');
++const W = Math.max(2, Math.round(window.innerWidth) & ~1);
++const H = Math.max(2, Math.round(window.innerHeight) & ~1);
++const portrait = H > W;
++canvas.width = W;
++canvas.height = H;
++window.DUR = 6;
++
++const TITLE = 'THE AURELIA';
++const SUB = 'Opening Night';
++const SIGN_TEXT = 'THE AURELIA';
++
++const TITLE_OPEN = 0.30;   // title bar unfolds from the centre axis: 0.30 -> 0.80
++const SIGN_T0 = 1.10;       // first bulb ignition of the marquee count-on
++const BULB_STAGGER = 0.30;  // per-letter ignition
++
++const sign = B.buildSign(SIGN_TEXT, { font: 'Poiret', size: portrait ? 110 : 140, spacing: 17, track: 0.16 });
++const LETTER_T = Array.from({ length: sign.letters.length }, (_, i) => SIGN_T0 + i * BULB_STAGGER);
++const CHASE_FROM = LETTER_T[sign.letters.length - 1] + 0.9;
++
++await Promise.all([
++  document.fonts.load('80px Limelight', TITLE),
++  document.fonts.load('80px Poiret', SIGN_TEXT),
++  document.fonts.load('600 40px Josefin', SUB),
++  document.fonts.load('400 40px Josefin', SUB),
++  document.fonts.load('80px Italiana', SIGN_TEXT),
++]);
++await document.fonts.ready;
++
++const CX = W / 2;
++const TITLE_SIZE = portrait ? 110 : 96;
++const TITLE_CY = portrait ? 890 : 900;
++
++const marqueeRig = () => ({
++  rig: signRig({ height: portrait ? 1.0 : 1.5, theta: 0.62, near: [4.6, 2.2, 6.6] }),
++  cam: makeCam({ x: 0, y: 0, z: 0, f: portrait ? 700 : 1100, oy: portrait ? 1100 : 800, W, H }),
++});
++
++function drawMarquee(lit) {
++  const { rig, cam } = marqueeRig();
++  const { S, k, Hb } = rig;
++  S.letters.forEach((le, li) => {
++    cardTransform(g, cam, cam.P(...rig.at(le.x * k, Hb)), cam.P(...rig.at((le.x + le.w) * k, Hb)), cam.P(...rig.at(le.x * k, 0)), le.w, S.h);
++    g.translate(-le.x, 0);
++    B.drawSign(g, S, 0, 0, 1, { lit, only: li, haloK: 1.1 });
++  });
++}
++
++function marqueeBox() {
++  const { rig, cam } = marqueeRig();
++  const { S, k, Hb } = rig;
++  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
++  const touch = p => {
++    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
++    y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
++  };
++  for (const le of rig.S.letters) {
++    touch(cam.P(...rig.at(le.x * k, Hb)));
++    touch(cam.P(...rig.at((le.x + le.w) * k, Hb)));
++    touch(cam.P(...rig.at(le.x * k, 0)));
++  }
++  return { x0, y0, x1, y1 };
++}
++
++let BOX = null;
++function boxes() {
++  if (BOX) return BOX;
++  const padX = TITLE_SIZE * 0.9;
++  const w = Math.max(T.measure(g, TITLE, TITLE_SIZE, T.FONTS.title, 8, ''), T.measure(g, SUB, TITLE_SIZE * 0.34, T.FONTS.sans, (TITLE_SIZE * 0.34) * 0.45, 600)) + padX * 2;
++  const h = TITLE_SIZE * 2.05;
++  const title = { x0: CX - w / 2, y0: TITLE_CY - h / 2, x1: CX + w / 2, y1: TITLE_CY + h / 2 };
++  const subSize = TITLE_SIZE * 0.34;
++  const subW = T.measure(g, SUB, subSize, T.FONTS.sans, subSize * 0.45, 600);
++  const sub = { x0: CX - subW / 2, y0: TITLE_CY + TITLE_SIZE * 0.66 - subSize * 0.85, x1: CX + subW / 2, y1: TITLE_CY + TITLE_SIZE * 0.66 + subSize * 0.3 };
++  BOX = {
++    title: { id: 'title', text: TITLE, x0: title.x0, y0: title.y0, x1: title.x1, y1: title.y1 },
++    sub: { id: 'sub', text: SUB, x0: sub.x0, y0: sub.y0, x1: sub.x1, y1: sub.y1 },
++    sign: { id: 'sign', text: SIGN_TEXT, ...marqueeBox() },
++  };
++  return BOX;
++}
++
++function draw(t) {
++  g.setTransform(1, 0, 0, 1, 0, 0);
++  g.globalAlpha = 1;
++  g.globalCompositeOperation = 'source-over';
++  D.ground(g, W, H);
++  const p = seg(t, TITLE_OPEN, TITLE_OPEN + 0.50);
++  D.sunburst(g, CX, TITLE_CY, { rays: 72, r0: 30, r1: 1500, mode: 'lines', w: 1.8, part: seg(t, 0.05, 0.35), alpha: 0.8, sheen: 0.3 });
++  D.glow(g, CX, TITLE_CY, 520, '#c9a24b', 0.2);
++  const lit = B.litSequence(t, LETTER_T, { flash: 0.18, chaseFrom: CHASE_FROM, chaseSpeed: 12, chaseLen: 5, chaseDim: 0.35 });
++  drawMarquee(lit);
++  T.titleBar(g, TITLE, CX, TITLE_CY, { p, out: 0, size: TITLE_SIZE, font: T.FONTS.title, track: 8, sub: SUB, subSize: TITLE_SIZE * 0.34, wings: true });
++}
++
++window.render = t => draw(clamp(t, 0, window.DUR));
++
++window.TEXTS = t => {
++  const out = [];
++  if (t >= 0.55) {
++    const bx = boxes();
++    out.push({ id: 'title', text: TITLE, x0: bx.title.x0, y0: bx.title.y0, x1: bx.title.x1, y1: bx.title.y1 });
++    out.push({ id: 'sub', text: SUB, x0: bx.sub.x0, y0: bx.sub.y0, x1: bx.sub.x1, y1: bx.sub.y1 });
++  }
++  if (t >= SIGN_T0) out.push({ id: 'sign', text: SIGN_TEXT, x0: boxes().sign.x0, y0: boxes().sign.y0, x1: boxes().sign.x1, y1: boxes().sign.y1 });
++  return out;
++};
++
++draw(0);
++window.READY = true;
+diff --git a/.agents/skills/lemo/samples/clips/art-deco/clip.json b/.agents/skills/lemo/samples/clips/art-deco/clip.json
+new file mode 100644
+index 0000000..eb4e61e
+--- /dev/null
++++ b/.agents/skills/lemo/samples/clips/art-deco/clip.json
+@@ -0,0 +1,21 @@
++{
++  "clip_id": "art-deco-001",
++  "style_id": "art-deco",
++  "subject": "A launch invitation",
++  "one_idea": "A grand theatre's launch invitation: the title bar unfolds symmetrically from the centre axis while the bulb marquee counts on.",
++  "aspect": "16:9",
++  "width": 1920,
++  "height": 1080,
++  "fps": 24,
++  "duration_seconds": 6,
++  "sound": "none",
++  "text_mode": "title",
++  "inputs": {},
++  "facts": [
++    "Title bar unfolds symmetrically from the centre axis while the bulb marquee counts on",
++    "Minimum readcheck threshold: 1.5 seconds per on-screen text block",
++    "Deterministic launch sequence: no Math.random or Date.now used",
++    "Banded gold gradient with sliding sheen and engraved shadow on gold type",
++    "Bulb marquee counts letters on with a flash and settle, then chases"
++  ]
++}
+diff --git a/.agents/skills/lemo/samples/clips/art-deco/index.html b/.agents/skills/lemo/samples/clips/art-deco/index.html
+new file mode 100644
+index 0000000..036fb47
+--- /dev/null
++++ b/.agents/skills/lemo/samples/clips/art-deco/index.html
+@@ -0,0 +1,48 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>A launch invitation</title>
++<style>
++  html, body { margin: 0; background: #060504; overflow: hidden; }
++  canvas#c { display: block; }
++
++  /* Faces come from the pinned OFL manifest
++     (.agents/skills/lemo/library/assets/fonts/manifest.json); the render
++     server root is library/, so the URL is absolute from there. */
++  @font-face {
++    font-family: 'Limelight';
++    src: url('/assets/fonts/limelight/Limelight-Regular.ttf') format('truetype');
++    font-style: normal;
++    font-weight: 400;
++    font-display: block;
++  }
++  @font-face {
++    font-family: 'Poiret';
++    src: url('/assets/fonts/poiretone/PoiretOne-Regular.ttf') format('truetype');
++    font-style: normal;
++    font-weight: 400;
++    font-display: block;
++  }
++  @font-face {
++    font-family: 'Josefin';
++    src: url('/assets/fonts/josefinsans/JosefinSans[wght].ttf') format('truetype');
++    font-style: normal;
++    font-weight: 100 700;
++    font-display: block;
++  }
++  @font-face {
++    font-family: 'Italiana';
++    src: url('/assets/fonts/italiana/Italiana-Regular.ttf') format('truetype');
++    font-style: normal;
++    font-weight: 400;
++    font-display: block;
++  }
++</style>
++</head>
++<body>
++  <canvas id="c" width="1920" height="1080"></canvas>
++  <script type="module" src="clip.js"></script>
++</body>
++</html>

@@ -1,0 +1,1205 @@
+# Review package: de2443e..f73ba17
+
+## Commits
+f73ba17 docs(lemo): complete the fifteen style briefs
+
+## Files changed
+ .agents/skills/lemo/briefs/art-deco.md       | 186 +++++++++++++++++++++++++
+ .agents/skills/lemo/briefs/ascii-crt.md      | 177 ++++++++++++++++++++++++
+ .agents/skills/lemo/briefs/briefing-board.md | 196 +++++++++++++++++++++++++++
+ .agents/skills/lemo/briefs/ink-wash.md       | 185 +++++++++++++++++++++++++
+ .agents/skills/lemo/briefs/paper-popup.md    | 184 +++++++++++++++++++++++++
+ .agents/skills/lemo/briefs/teardown.md       | 192 ++++++++++++++++++++++++++
+ tests/contracts/test_lemo_briefs.py          |   9 +-
+ 7 files changed, 1128 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/.agents/skills/lemo/briefs/art-deco.md b/.agents/skills/lemo/briefs/art-deco.md
+new file mode 100644
+index 0000000..d484641
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/art-deco.md
+@@ -0,0 +1,186 @@
++# Art Deco — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo is a 1930s hotel film with its own cast and plot; its characters, its
++building and its lines are the demo's own. Design a new one.
++
++## Promise
++
++The world is drawn in true perspective in gold and lacquer, and it is symmetrical. A grand
++hall recedes to a single vanishing point, a tower rises in three-point perspective, and a
++marquee of light bulbs spells the title letter by letter. Figures are elongated and
++streamlined — tall, small-headed, faceted volumes with a hard terminator between a lit
++plane and a shadow plane and a thin gold rim — and the type is geometric and engraved. The
++viewer should feel a 1930s poster become a moving picture.
++
++## When to use
++
++- A glamorous, retro, celebratory or theatrical subject.
++- A title, launch or event card that wants symmetry and shine.
++- A subject that becomes architecture — a hotel, a tower, a stage, a show.
++- A beat where a lit sign can name the thing.
++
++## When not to use
++
++- Minimal grids or flat, quiet data design.
++- Photoreal footage or realistic materials; this is decorative geometry.
++- Dense technical diagrams with many labels.
++- Anything that wants to look contemporary or neutral.
++
++## Materials & rendering
++
++- Everything is drawn on a Canvas 2D at 1920×1080, in true projected perspective.
++  `demo/engine/deco.js` is the core: the palette `C`, `rgba`, `mix`, metallic gold
++  (`goldGrad`, `goldFlat`), the gold line (`gline`), glow, ornaments (`sunburst`, `fan`,
++  `sparkle`), and `toPath`/`arcPts`.
++- `demo/engine/cam.js` is a tiny pinhole camera for 2D sets drawn in one, two or three-point
++  perspective (`makeCam`, `cardTransform`), with yaw, pitch and roll and a focal length —
++  this is how Cassandre's steep angles are built.
++- `demo/engine/type.js` is the typography and graphic kit: `goldText` (gold fill, engraved
++  shadow, moving sheen), `titleBar` (a bar that unfolds symmetrically from a point as its
++  letters rise), `decoDigits`, `yearBadge`, `floorMedallion`, `dial` (the elevator floor
++  indicator), `clockFace` and `subtitleCard`. The four faces are `FONTS` — Limelight
++  (title), Poiret (deco), Josefin (sans) and Italiana (serif).
++- `demo/engine/bulbs.js` makes the marquee: `buildSign` thins the glyphs to a one-pixel
++  skeleton, traces stroke chains and lays bulbs along them; `drawSign` draws them;
++  `litSequence` switches letters on one by one with a flash and settle, then a chase.
++- Gold is never flat: it is a banded gradient along an axis with a sheen that can slide, so
++  the metal glints. Determinism: seeded `mulberry` / `hash` from `demo/engine/deco.js`; no
++  `Math.random()`.
++
++## Colour logic
++
++- A deep lacquer ground — warm black, night-blue — cut by gold. `C` in
++  `demo/engine/deco.js` fixes the range: `gold0`/`gold1`/`gold2`/`goldHi` for the metal,
++  `ink`/`black`/`night` for the ground, ivory for light, with emerald, burgundy and plum as
++  the jewel accents, and `bulb`/`bulbGlow` for the sign.
++- Gold is the light and the line: it rims the figures, draws the architecture and fills the
++  type. Use it as a material, with a gradient, not a flat yellow.
++- Colour is sparing and saturated: one jewel tone for the thing the beat is about, the rest
++  in gold and black.
++- Bulbs are warm white by default; a coloured bulb is a deliberate choice for one word.
++
++## Type & text
++
++- Four faces, listed in the style registry and named in `demo/engine/type.js` as `FONTS`:
++  Limelight (title), Poiret (deco), Josefin (sans) and Italiana (serif). Await every face
++  before the first frame.
++- The title is a graphic event, not a caption: `titleBar` opens from a point, unfolds its
++  bar symmetrically, raises its letters and adds wings and a glint.
++- Numerals and labels belong to the machine: `decoDigits`, `yearBadge`, `floorMedallion`,
++  the `dial` and the `clockFace` all set numbers in the deco manner.
++- Keywords can be spelled in light bulbs; the sign is the loudest type in the frame.
++- Expose `window.TEXTS(t)` for any readable string, with the full text and a screen box.
++
++## Motion quality
++
++- Symmetry is the beat: a composition opens outward from a centre line, or closes to it.
++  The title bar unfolds from a point; elevator doors part from the seam.
++- Light arrives before form: a sign counts on bulb by bulb with a flash, then settles into a
++  chase. Light is the animation.
++- Figures move with elegance — long lines, a lean, a held pose — never a cartoon bounce.
++- Transitions are in-media: door splits that swing from the centre seam, a revolving-door
++  wipe, match cuts. Never a dissolve.
++
++## Camera grammar
++
++- A pinhole camera in real perspective: push down a one-point hall, crane up a two-point
++  tower, tilt from a dark sign to the street in three-point.
++- A vertical crane up a stair core that can pull out to the whole section and push back in.
++- A pull-back that flies out from the sign to reveal the whole building.
++- A held wide of the symmetrical set for the curtain.
++- Transitions are the doors and the revolve — no fades.
++
++## Native moves
++
++**Cutaway (4–6 s).** The manifest window is 4–15 s, so the cutaway is `max(3, 4) .. 6 s` —
++i.e. 4 s to 6 s, default 6. One image: a composition opens from its centre axis; a sign or a
++badge lights; hold. One icon, nothing explained.
++
++**Micro-explanation (8–15 s).** The window is 4–15 s, so the micro-explanation is
++`8 .. 15 s`. Establish the building; the title bar unfolds; a sign counts on; a figure
++crosses the set; a door part or the camera cranes to a second view; hold on the symmetry.
++One place, one mood, one curtain.
++
++## Module map
++
++- `demo/film.js` — the film assembly: `SHOTS` (the shot list with titles), `shotAt`, the
++  in-media transitions (`splitOpen`, `revolve`), `renderFilm`, `init`, `subs`, `events`.
++- `demo/main.js` — the page contract: loads the four faces, imports `film.js`, exposes
++  `window.render`, `window.DUR` and `window.EV`, and renders a named gate still via
++  `?scene=file.fn`.
++- `demo/chars.js` — the figure language: `drawFigure`, `drawPip`, `FACES`, `POSE`, `mixPose`
++  and the faceted-lacquer construction. The demo's cast is the demo's; invent your own.
++- `demo/frames.js` — the gate stills and the component kit (`kit`, `modelSheet`, `charTest`,
++  `frameLobby`, `frameRoof`, `signTest`); read it to see the pieces assembled.
++- `demo/engine/deco.js` — palette and primitives (`C`, `goldGrad`, `goldFlat`, `gline`,
++  `glow`, `sunburst`, `fan`, `sparkle`, `polyPart`, `toPath`, `arcPts`, the easings and
++  seeded random).
++- `demo/engine/cam.js` — `makeCam` and `cardTransform`: one, two and three-point perspective.
++- `demo/engine/type.js` — `FONTS`, `goldText`, `titleBar`, `decoDigits`, `yearBadge`,
++  `floorMedallion`, `dial`, `clockFace`, `subtitleCard`, `measure`.
++- `demo/engine/bulbs.js` — `buildSign`, `drawSign`, `litAll`, `litSequence`: the bulb
++  marquee.
++- `demo/scenes/lobby.js`, `demo/scenes/roof.js`, `demo/scenes/stairs.js` and
++  `demo/scenes/tower.js` — the four sets: a one-point hall (with `doors`, `plaque`,
++  `guest`), a two-point rooftop with the sign, a stair-core section, and a three-point
++  tower exterior.
++- `demo/shots_*.js` — the individual shots (`titleShot`, `streetShot`, `lobbyWide`,
++  `roofRun`, `lastLetter` and the rest), assembled by `demo/film.js`.
++
++The demo's plot, building and dialogue are the demo's; the modules above are technique
++references only.
++
++## Aspect adaptation
++
++- **16:9** is native: the full symmetrical set, the sign across the top.
++- **9:16** becomes a tall poster: the composition stacks vertically along the centre axis,
++  the sign or title at the head, a figure at the foot, the camera craning the column.
++- **1:1** squares the set around its vanishing point; hold one symmetrical motif.
++- **4:5** is a gentle portrait with a little more headroom than 1:1.
++- **3:4** is the tallest portrait: the axis runs full height and the type stacks in short
++  lines.
++
++Every layout keeps the symmetry about the centre axis; build the set for the aspect rather
++than cropping, and keep `window.TEXTS(t)` boxes fully inside the frame.
++
++## Inputs & proof
++
++- No required inputs; the style takes no external data file.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and nothing says
++  "as the narration says".
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the manifest window 4–15 s and default to 6 s. The style
++  runs at 24 fps.
++
++## Pitfalls
++
++- Gold painted as a flat fill looks like mustard — use the banded gradient and the sheen.
++- A set built in flat 2D reads as a diagram; project it through the pinhole camera in real
++  perspective.
++- Reusing the demo's hotel, sign text, cast or plot is a copy, not a homage — design your
++  own.
++- A bulb sign that lights all at once loses the count-on; sequence it.
++- Colour everywhere drowns the gold; keep to gold, black and one jewel tone.
++- A voice-over or an on-screen "say this" cue is wrong for this style (v1 is silent).
++
++## Originality checklist
++
++- [ ] The building, cast and copy are the user's, not the demo's hotel or sign.
++- [ ] Geometry is projected in true perspective, not faked flat.
++- [ ] Gold is a gradient with a sheen, not a flat yellow.
++- [ ] The composition opens or closes about a centre axis.
++- [ ] The bulb sign counts on with a flash and a chase.
++- [ ] Nothing is quoted from the demo's plot, characters or lines.
++
++## QA checklist
++
++- [ ] `duration_seconds` inside 4–15 s (default 6) at 24 fps.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] All four faces defined and loaded before `window.READY = true`.
++- [ ] The set is symmetrical about its axis and built for the chosen aspect.
++- [ ] Transitions are door splits, the revolve, or a cut; no dissolves.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/.agents/skills/lemo/briefs/ascii-crt.md b/.agents/skills/lemo/briefs/ascii-crt.md
+new file mode 100644
+index 0000000..d45fe40
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/ascii-crt.md
+@@ -0,0 +1,177 @@
++# ASCII CRT — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo is a science-fiction terminal log with its own story; its lines, its
++images and its end card are the demo's own. Write a new entry.
++
++## Promise
++
++Everything is made of characters on a monochrome screen. Pictures are photos broken down
++into a grid of letters and symbols by ink coverage; a full-screen terminal holds a
++conversation one character at a time; and the camera can push so far into the grid that a
++single glyph becomes the whole frame. The screen itself is a physical object — amber
++phosphor, scanlines, curved glass and a warm bezel — that switches on, glows, and can switch
++off to a bright dot. The viewer should feel an old machine thinking, not a video of text.
++
++## When to use
++
++- A text-mode, terminal or retro-computer subject.
++- A story told by what a machine writes, receives or logs.
++- A transformation where prose becomes image (letters falling into a picture, or the
++  reverse).
++- A title card or a beat where one screen carries the whole idea.
++
++## When not to use
++
++- Modern, glossy UI or polished product visuals.
++- Photographic or photoreal imagery as an end in itself; images are characters here.
++- Anything that needs the full Unicode range or a non-monospaced face.
++- Bright, saturated colour work — this is a phosphor palette.
++
++## Materials & rendering
++
++- Draw the picture into a scene canvas at 1920×1080, then run it through the CRT pass.
++  `demo/main.js` holds the timeline and the grid; `demo/term.js` is the character-grid
++  engine; `demo/crt.js` is the screen.
++- `demo/term.js` builds a VT323 glyph atlas (`initTerm`), stamps one glyph per cell
++  (`glyph`, `text`, `inverse`, `cursor`), and turns brightness into characters. `makeRamp`
++  sorts a character set by measured ink coverage into brightness levels; `pick` chooses a
++  level with 4×4 ordered dithering; `cellsFromImage` averages an image into per-cell
++  brightness. A cell is twice as tall as it is wide, as a character is.
++- `demo/art.js` supplies the raster source: the `Art` class draws into a small grid
++  canvas, and `paintEarthrise`, `makeCraters`, `horizonY` and `earthShade` make the demo's
++  own picture. Bring your own image; the technique is the averaging.
++- `demo/crt.js` is the screen, in WebGL2: barrel distortion, rounded screen corners, glass
++  reflection, scanlines that narrow where bright, signal noise, high-voltage flicker, and a
++  power-on that grows from a bright dot to a horizontal line to the full screen (reversed
++  for power-off). It maps intensity to a P3-amber phosphor with a second, blue channel for
++  the demo's Earth.
++- Determinism: everything is a function of `t` and a seeded `hash`; `crt.render` takes an
++  integer frame, and there is no `Math.random()` or `Date.now()`.
++
++## Colour logic
++
++- One phosphor, mostly. The screen is amber: an orange low end and a near-white high end
++  (`phos` in `demo/crt.js`). The glass is never pure black, so an unlit screen still reads
++  as glass.
++- A second channel exists — the demo paints Earth in a cool blue (`phosE`) — so one thing
++  in the film can hold a different colour. Spend that channel on one thing only.
++- Brightness is the character: on the grid, tone is literally which glyph is stamped, so a
++  ramp of symbols replaces a ramp of grey.
++- Inverse video (a solid block with the glyph knocked out) is the highlight; it is the
++  terminal's idea of emphasis, not a colour.
++
++## Type & text
++
++- One face, and it is **monospace**: the style registry lists VT323, the fixed-width
++  terminal face the demo's atlas is built from. There is no proportional type here.
++- Type is the medium, not a caption: text is stamped cell by cell and can be typed out over
++  time in the bottom log strip (`strip` in `demo/main.js`), one character at a time.
++- Inverse blocks, blinking block cursors and a ruled separator are the vocabulary of
++  emphasis; keep to them.
++- Expose `window.TEXTS(t)` for any readable string, with the full text and a screen box.
++
++## Motion quality
++
++- The grid is the beat. A message is typed one character at a time, following the timing of
++  what is being said; a reply arrives in bursts, as if a person were typing at the far end.
++- A transformation is the payoff: characters leave a sentence, fly, and land as the cells
++  of a picture, each cell's letter chosen by tone; or the camera pushes until a glyph
++  becomes fields of log text. Every landing is one bright flash.
++- The screen has electronics: a power-on raster, phosphor afterglow that decays after a
++  switch, a cursor that blinks and lingers.
++- Nothing eases softly — a terminal snaps. Cuts, hard scrolls and line-on movements suit it.
++
++## Camera grammar
++
++- The camera is the reader's eye at a monitor: hold on the text, scroll the log, push into a
++  detail, pull out of the screen to reveal the room and the machine.
++- A character-grid zoom: scale the cell width until glyphs fill the frame.
++- A pull-back that shows the screen filling the frame, then the desk and the machine around
++  it.
++- A power-off to a bright centre line and a dot.
++- Transitions are cuts, scrolls and the grid transformation — never a dissolve.
++
++## Native moves
++
++**Cutaway (3–6 s).** The manifest window is 3–15 s, so the cutaway is `max(3, 3) .. 6 s` —
++i.e. 3 s to 6 s, default 6. One screen: a line types out; the cursor blinks; hold. One
++message, nothing explained.
++
++**Micro-explanation (8–15 s).** The window is 3–15 s, so the micro-explanation is
++`8 .. 15 s`. A full-screen exchange: a boot or a title; a message arrives and is answered; a
++tag or a picture is revealed; push the grid and land the transformation; hold. One machine,
++one conversation, one reveal.
++
++## Module map
++
++- `demo/main.js` — the timeline and the film: `window.render(t)`, `window.DUR`, the
++  character grid layout (`V80`, `STRIP`), the boot, the carrier, the message, the reply, the
++  fall, the picture, the fractal zoom, the pull-out and the end card.
++- `demo/term.js` — the character-grid engine: `initTerm`, `glyph`, `text`, `inverse`,
++  `cursor`, `makeRamp`, `pick`, `cellsFromImage`, `ATLAS`.
++- `demo/crt.js` — the CRT post-process: `makeCRT` and its shaders (pre-filter, downsample,
++  blur, composite) for barrel distortion, scanlines, phosphor, glow, noise, flicker and
++  power on/off.
++- `demo/art.js` — the raster source: the `Art` class, `paintEarthrise`, `makeCraters`,
++  `horizonY`, `earthShade`. The demo's picture is the demo's; the averaging is the
++  technique.
++- `demo/lines.json` — the demo's spoken lines. Its words are the demo's; do not reuse them,
++  and v1 carries no audio at all.
++
++The demo's voice, music and subtitle tooling are not vendored with these modules; a new
++clip is authored from the modules above and nothing under `demo/` is copied.
++
++## Aspect adaptation
++
++- **16:9** is native: an 80-column terminal with a wide bottom log strip; before any
++  pull-out, the screen fills the frame exactly.
++- **9:16** becomes a tall terminal: a narrower column (about 40 characters), the log strip
++  at the foot, the picture re-gridded taller.
++- **1:1** squares the screen: centre the picture, crop the log to a few rows.
++- **4:5** is a gentle portrait, a little more headroom than 1:1.
++- **3:4** is the tallest portrait: the column runs full height and the log sits at the base.
++
++Every layout re-grids the cells to the frame; the glyph cell stays two units tall to one
++wide, and `window.TEXTS(t)` boxes must stay fully inside the frame.
++
++## Inputs & proof
++
++- No required inputs; the style takes no external data file.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and nothing says
++  "as the narration says".
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the manifest window 3–15 s and default to 6 s. The style
++  runs at 24 fps.
++
++## Pitfalls
++
++- Mixing in proportional type breaks the grid — everything is monospace VT323.
++- A photo pasted as a flat image is not the style; average it into the character ramp.
++- Without scanlines, curvature and phosphor glow the frame looks like plain text, not a
++  screen — keep the CRT pass.
++- Overusing the second colour channel stops it meaning anything — save it for one thing.
++- A voice-over or an on-screen "say this" cue is wrong for this style (v1 is silent).
++- Forgetting to await `initTerm()` leaves an empty glyph atlas — every character vanishes.
++
++## Originality checklist
++
++- [ ] The screen's words and images are the user's, not the demo's log or story.
++- [ ] Everything is monospaced VT323 on the character grid.
++- [ ] Images are character-averaged, never pasted photographs.
++- [ ] The phosphor, scanlines and curvature carry the CRT look.
++- [ ] The second colour channel marks exactly one thing.
++- [ ] Nothing is quoted from the demo's lines or its end card.
++
++## QA checklist
++
++- [ ] `duration_seconds` inside 3–15 s (default 6) at 24 fps.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] The VT323 atlas is built before the first frame; all faces load before
++      `window.READY = true`.
++- [ ] Every glyph lands on the grid; nothing is off-cell.
++- [ ] Scanlines, curvature and glow are present; the screen reads as glass.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/.agents/skills/lemo/briefs/briefing-board.md b/.agents/skills/lemo/briefs/briefing-board.md
+new file mode 100644
+index 0000000..a3dcedd
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/briefing-board.md
+@@ -0,0 +1,196 @@
++# Briefing Board — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the modules you draw with, and the two clip lengths.
++The demo is a filmed whiteboard wall about bridges and ships; its subject, its city and
++its copy are the demo's own. Build an original board — with real cut-outs and real
++credits, never invented evidence.
++
++## Promise
++
++A case being worked out on a wall, filmed like a piece of physical filmmaking. Photographs
++are cut out and pinned a few millimetres off an enamel whiteboard, so they carry their own
++shadows, parallax and weight; marker lines, dimension arrows, hatching and handwritten
++labels are drawn on the board beneath and across them. The camera tracks along the wall,
++never showing it whole before the reveal, and lands on a verdict the evidence supports.
++The viewer should feel a room being reasoned in, not a slide being played.
++
++## When to use
++
++- A subject that is genuinely assembled from real photographs — a bridge, a ship, a
++  machine, a site, a specimen — where the photos are the evidence.
++- A comparison of real things against one another, marshalled on a wall.
++- A claim that is built by pinning cuts together and annotating them.
++- A "here is what we know, here is the conclusion" beat inside a longer explainer.
++
++## When not to use
++
++- Invented evidence: a photograph the user cannot source is not pinned.
++- Photographic product renders passed off as real documentary photographs.
++- Pure typography or an abstract idea with no photographs to pin.
++- A subject where no credit line is possible — licensed or public-domain sources only.
++
++## Materials & rendering
++
++- One continuous board, shot inside the wall. `demo/kit/board.js` sets the frame at
++  `W = 1920`, `H = 1080` and builds the board itself: a seeded, procedural enamel surface
++  with tonal drift, ghosts of earlier marker work, eraser haze and fine speckle
++  (`buildBoard`). The board is `6400×3600` board pixels by default, so the camera can
++  travel and still keep art full-frame.
++- Elements live on the board as data. A `print` is a cut-out photograph, mounted off the
++  board with a pre-blurred silhouette shadow (`drawPrint`, `drawPrintShadow`); a `tag`,
++  `magnet`, `ruler` and `card` are physical things pinned on (`drawTag`, `drawMagnet`,
++  `drawRuler`, `drawCard`); ink is marker work drawn straight onto the board
++  (`drawInk` — lines, dimension lines, hatching and marker lettering); a `stamp` is a
++  rubber impression (`drawStamp`).
++- A photo cut-out is prepared outside the clip, not faked inside it. Each `print` names a
++  real object under `demo/kit/objects/*.json`, which records the source photograph and how
++  it was cut (trim, crop, polygon, keep-largest, desaturate) — read one before you add one.
++- Determinism: every texture, ghost and jitter comes from seeded `mulberry` / `hash` /
++  `vnoise` in the kit, never `Math.random`.
++- Motion blur is part of the look: `renderScene` accumulates shutter samples in proportion
++  to `screenSpeed(t)` at a 180° shutter (`SHUTTER = 1/48`), so a fast track smears the way
++  film does.
++
++## Colour logic
++
++- A warm off-white board on a grey wall, with a bounded marker set: graphite, blue and
++  red, plus a water blue for anything that runs (`THEME`). Magnets come in red, graphite,
++  blue and white.
++- The board is the ground and stays neutral; the photographs keep their own graded colour,
++  which is what makes them read as evidence rather than stickers.
++- Ink carries the argument: a red dimension line or a strike-through is a decision, not
++  decoration. Use red sparingly, for the thing the shot is about.
++- Shadows are warm and dark, always offset from the window light at the upper left
++  (`LIGHT = [.45, .8]`); a cut-out without that shadow loses its weight.
++
++## Type & text
++
++- Four faces, listed in the style registry and named in `demo/kit/board.js` as `FONT`
++  (`marker` = LXGW Marker Gothic, `sc` = Noto Sans SC, `sans` = Archivo, `mono` =
++  Plex Mono). Await `loadFonts()` before the first frame.
++- Lettering on the board is written glyph by glyph along the stroke (`drawWrite`), with a
++  per-glyph tilt and baseline wobble seeded from the text, so it reads as a hand.
++- Physical labels — a tag on a magnet, a printed card — use the interface faces; the
++  marker is for the drawn annotations.
++- Expose `window.TEXTS(t)` for every label a viewer must read (`sceneTexts`), with the
++  full string and a screen-space box; fine-print credits can pass at `pass: true`.
++
++## Motion quality
++
++- Entrances are physical: prints are lowered onto the board (`arrive.kind: 'drop'`), tags
++  snap and swing about their pin (`'swing'`), magnets click in (`'snap'`), things slide in
++  (`'slide'`). Nothing fades in from nowhere.
++- The camera is built from overlapping eased moves (`camAt`, `bease`), so position,
++  velocity and acceleration are continuous and no move visibly starts. Impact shakes
++  (`C.shakes`) are short and declared, used where a magnet lands hard.
++- There is a hand-held breath — a sum of slow sines (`scene.hand`) — so the wall is never
++  perfectly still.
++- A marker line draws itself in its writing direction with a tip; erasing sweeps a band
++  across and leaves a ghost (`drawInk` → `e.erase`).
++
++## Camera grammar
++
++- The camera lives inside the wall. `camAt(t)` keys a centre, a log-zoom, and a roll, and
++  `toScreen` / `toWorld` project board space. `screenSpeed(t)` reports how fast the frame
++  is moving for the shutter.
++- Track laterally along the line of pinned prints and annotate as you go.
++- Push in on one print, then hold while a tag or a dimension is drawn.
++- A slow pull-back reveals the whole wall only at the end — never before.
++- Hold still over a verdict card; the shot earns the pause.
++- Transitions are tracks and hard cuts on a beat — no dissolves.
++
++## Native moves
++
++**Cutaway (6 s).** The manifest window is 6–20 s, so the cutaway is `max(3, 6) .. 6 s` —
++the window wins and the shortest clip is 6 s, default 6. One beat: track onto one cut-out,
++pin it, draw one dimension and one label, hold. A single fact, nothing explained.
++
++**Micro-explanation (8–20 s).** The window is 6–20 s, so this runs `8 .. 20 s`. Establish
++the wall off-centre; track across two or three pinned prints; draw the annotation that
++links them; stamp or strike the option that loses; pull back to the whole wall for the
++verdict card; hold long enough to read. One argument, pinned from real photos.
++
++## Module map
++
++- `demo/index.html` — the responsive canvas page; calls `setScene`, exposes `window.DUR`,
++  `window.render`, `window.TEXTS`, `window.CAM`, `window.RESCHECK`, `window.SUBCHECK` and
++  `window.READY`, and loads `scenes/film.json` by default.
++- `demo/kit/board.js` — the whiteboard kit: `setScene`, `renderScene`, `camAt`,
++  `toWorld`, `screenSpeed`, `loadFonts`, `sceneTexts`, `sceneEvents`, `resCheck`,
++  `subCheck`, plus the board, print, tag, magnet, ruler, card, stamp and ink drawing.
++- `demo/kit/batch.mjs` — the batch renderer: each scene JSON becomes a PNG at its own
++  `size`, using the shared `openDemo` page. Read it to see how a still is captured.
++- `demo/kit/objects/*.json` — one record per cut-out: the source photograph, its anchors
++  and the cut (`prep`: rotate, crop, polygon, keep-largest, grade). These are the real
++  cut-outs; a `print_*` record is the same photo uncut on a white border.
++- `demo/tools/camcheck.mjs` — samples the camera at 4× frame rate and fails if the wall is
++  shown too whole before the reveal, if a judgement frame is cut, or if the frame-content
++  speed jumps; writes `out/camcheck.csv`.
++- `demo/tools/rescheck.mjs` — every frame: every photo in frame keeps at least one real
++  photo pixel per screen pixel (`window.RESCHECK`), so a cut never upscales; writes
++  `out/rescheck.csv`.
++- `demo/tools/subcheck.mjs` — the demo's subtitle check (one line per language, measured
++  in the real fonts, plus timing). v1 is silent, so subtitles are not exported; read it
++  only for the shape.
++- `demo/audio/` — the demo's narration, music and mix script. The demo's text and score
++  are its own; v1 carries no audio at all, so nothing here is imported.
++
++## Aspect adaptation
++
++- **16:9** is native: a wide wall, a lateral track along the pinned line.
++- **9:16** becomes a tall column: stack the prints vertically, pull the camera into a
++  vertical track, and keep the verdict at the foot of the frame.
++- **3:4** is a taller portrait: give the subject print the upper two-thirds and the
++  annotation and card the lower third.
++
++The manifest lists only these three aspects. Do not add another layout without first
++extending the manifest's `aspects` list; in every aspect `window.TEXTS(t)` boxes must stay
++fully inside the frame.
++
++## Inputs & proof
++
++- Required inputs: `cutouts` and `facts`. Each cut-out must be a real, sourced photograph
++  with an entry under `demo/kit/objects/` or the clip's own object folder; each number on
++  screen must be sourced in `facts`. Never invent evidence or a credit.
++- **Real cut-outs and credits only.** Every photograph in the clip is credited, and CC BY
++  material is named on screen for at least 2.5 s (see the demo's `demo/CREDITS` for the
++  shape of a proper credit trail). No real product, company or place is named or readable
++  unless the user supplies it.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and nothing
++  says "as the narration says".
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 6–20 s window and default to 6 s. The style runs at
++  24 fps.
++
++## Pitfalls
++
++- Inventing a photograph or a number is the cardinal sin — pin only what `cutouts` and
++  `facts` supply, and credit every source.
++- Showing the whole wall before the reveal kills the camera's discipline; let
++  `demo/tools/camcheck.mjs` fail and fix the move.
++- Upscaling a cut-out past one photo pixel per screen pixel is visible; keep
++  `demo/tools/rescheck.mjs` at ≥ 1.
++- A cut-out without its offset shadow looks pasted on, not pinned.
++- Too many magnets, tags and notes turn evidence into clutter — let the photos speak.
++- A voice-over or an on-screen "say this" cue is wrong for this style (v1 is silent).
++
++## Originality checklist
++
++- [ ] Every photograph is the user's, sourced and credited; nothing is invented.
++- [ ] No demo bridge, ship, place, number or line is reused.
++- [ ] Cut-outs carry real offset shadows and the board's own texture.
++- [ ] The camera never shows the whole wall before the reveal.
++- [ ] Ink annotates the argument; red marks the decision, not everything.
++- [ ] Nothing is imported from the demo's audio.
++
++## QA checklist
++
++- [ ] `cutouts` and `facts` present; every photo credited and every number sourced.
++- [ ] `duration_seconds` inside 6–20 s (default 6) at 24 fps.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] All four faces defined and loaded before `window.READY = true`.
++- [ ] `demo/tools/camcheck.mjs` and `demo/tools/rescheck.mjs` report OK.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/.agents/skills/lemo/briefs/ink-wash.md b/.agents/skills/lemo/briefs/ink-wash.md
+new file mode 100644
+index 0000000..dcf2bd2
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/ink-wash.md
+@@ -0,0 +1,185 @@
++# Ink Wash — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo is a Chinese ink-wash film with its own swordsman, river and poem; its
++figures, its story and its words are the demo's own. Paint an original picture.
++
++## Promise
++
++Pictures that are brushed, not placed. A wet brush lays ink onto a sheet of xuan paper; the
++ink bleeds, pools at the stroke's edge and dries into feibai dry-brush streaks, while the
++paper's fibres and grain stay visible underneath. A new picture arrives out of a spreading
++blot of ink rather than a cut, and the empty paper — the liubai — is part of the
++composition. The viewer should feel a picture being written with a brush, one stroke at a
++time, not a vector fading up.
++
++## When to use
++
++- A landscape, a figure, an animal, a flower or a mood that reads in silhouette and tone.
++- A traditional subject wanting weight, silence and negative space rather than detail.
++- A title or section card where one brushed image carries the feeling.
++- A sequence where a picture is built stroke by stroke as the argument, and ends on empty
++  paper.
++
++## When not to use
++
++- Hard-edged UI, crisp charts or dense diagrams, where legibility needs clean type.
++- Photoreal 3D, sharp geometry or anything that wants uniform, flat colour.
++- A subject with many parts that must all be named — the style wants a few decisive
++  strokes, not an inventory.
++- Fast, busy kinetic typography; this style breathes slowly.
++
++## Materials & rendering
++
++- Draw each picture into three Canvas 2D layers and composite them on the GPU. `demo/comp.js`
++  defines the xuan-paper compositor: a `wet` canvas (bleed, pooling, grain), a `dry` canvas
++  (ink bitten by the paper's tooth) and a `col` canvas (cinnabar seals, mounting silk), fed
++  through a WebGL2 fragment shader that mixes paper, ink density and colour and paints the
++  paper texture itself. `layerSet(W, H)` gives one picture's three canvases.
++- The brush engine is `demo/ink.js`. `mk(points, options)` builds one stroke from a
++  centreline, a pressure profile and a set of bristles; `draw(layers, stroke, p, alpha)`
++  paints it up to progress `p`. The five ink tones are `TONE` — jiao, nong, zhong, dan,
++  qing (scorched, dark, heavy, pale, clear); pick the tone, not an opacity.
++- `drawSeq` writes a group of strokes in order, allocating time by stroke length, so a
++  character or a figure appears in its true writing order. `blot` is a moss/ink dot; `mass`
++  is a polygon of wet ink (a bamboo hat, distant mountains); `qpts` builds quadratic
++  Beziers.
++- The transition between two pictures is the ink bloom in `demo/comp.js`: the new picture
++  grows out of a spreading blot, with a dark water-line at its front, rather than a
++  cross-fade.
++- Determinism: every bristle, break and jitter comes from seeded `mulberry` / `hash` /
++  `vnoise` in `library/core/lib.js`, never `Math.random`.
++
++## Colour logic
++
++- Almost monochrome: the five ink tones against warm paper. That restraint is the style.
++- One colour, at most, breaks it — the cinnabar of a seal or a small accent
++  (`VERM = [176, 46, 34]` in `demo/hero.js`). The seal is the one saturated mark.
++- Value does the work: a light tone for mist and distance, a heavy tone for the near
++  subject. Keep five tones, not fifty.
++- The paper colour is a choice, not white; `demo/comp.js` shades it with cloud mottling,
++  long fibres and grain, and can warm it toward old paper (`paperCol`, `warm`).
++
++## Type & text
++
++- Four faces, listed in the style registry: CormorantGaramond (the `Cormorant` and
++  `CormorantSC` families), plus MaShanZheng and ZhiMangXing for Han calligraphy. Await
++  every `document.fonts.load` before `window.READY = true`.
++- Letters are inscriptions (tiba) placed in the picture's liubai, in a vertical or
++  classical register, not a modern caption bar.
++- A seal (`demo/seal.js` draws the demo's vermilion stamp, carved in baiwen) is the
++  smallest piece of type and often the only colour on the sheet.
++- Expose `window.TEXTS(t)` for any line a viewer must read, with the full string and a
++  screen-space box.
++
++## Motion quality
++
++- The stroke is the beat. A line appears along its length in writing order; a wet stroke
++  darkens where the ink pools; a dry stroke breaks into feibai as it runs.
++- A picture is written, never faded: it arrives stroke by stroke, or out of an ink bloom,
++  and a finished picture holds while the next is prepared.
++- Motion is deliberate and calm — a brush has weight; it does not spring or bounce.
++- Dry-brush and wet-brush are two textures, not two opacities; choose the one the stroke
++  needs.
++
++## Camera grammar
++
++- The camera is a quiet reader of the sheet: a slow drift across the paper, a gentle push
++  into a detail (a face, a wave head), a pull back to reveal the empty paper.
++- A pan along the horizon as a new picture is written.
++- A hold on the finished sheet, letting the liubai do its work.
++- A breath of paper shake (a few pixels) when a wave breaks or a blade falls.
++- Transitions are ink blooms and hard cuts — never a dissolve.
++
++## Native moves
++
++**Cutaway (4–6 s).** The manifest window is 4–15 s, so the cutaway is `max(3, 4) .. 6 s` —
++i.e. 4 s to 6 s, default 6. One picture: open on paper; a first stroke lays the ground; a
++second carries the subject; hold. Two or three decisive strokes, nothing explained.
++
++**Micro-explanation (8–15 s).** The window is 4–15 s, so the micro-explanation is
++`8 .. 15 s`. Brush a whole picture: a pale wash for distance; a heavy stroke for the near
++subject; a texture stroke (cun) or a moss dot; an inscription in the blank; then hold the
++finished sheet, or bloom into the next. One place, one mood, one breath.
++
++## Module map
++
++- `demo/main.js` — the page contract: builds the compositor and two layer sets, loads the
++  faces, picks the shot module, exposes `window.DUR`, `window.EV`, `window.render`,
++  `window.READY`.
++- `demo/ink.js` — the brush engine: `TONE`, `reseed`, `mk`, `draw`, `drawSeq`, `blot`,
++  `mass`, `qpts`, the pressure profiles (`brush`, `tip`, `lens`, `nail`, `na`, `press`,
++  `fan`, `robe`, `rise`, `cone`, `dot`).
++- `demo/comp.js` — the xuan-paper WebGL2 compositor (`makeComp`, `layerSet`): paper
++  texture, wet bleed, pooling, dry ink, the three-colour layer stack and the ink-bloom
++  transition.
++- `demo/wave.js` — `waveShape` and `wave`: a splashed-ink wave with water lines and
++  dry-brush spray.
++- `demo/glyph.js` — the demo's character 水 (water): `SHUI`, `glyphMask`, `shuiStrokes`,
++  `cutStroke`, `writeShui`, `tipAt`. Read it for how a real glyph supplies the skeleton
++  and the brush supplies the strokes; write your own character or shape.
++- `demo/frames.js` — style frames (`wide`, `cross`, `cut`); read it for how a picture is
++  assembled from the pieces below.
++- `demo/hero.js` — the demo's figure language: `POSE`, `mixPose`, `hero`, `VERM`. Study the
++  freehand (xieyi) construction; invent your own figure, never the demo's swordsman.
++- `demo/comp.js` and `demo/ink.js` are the engine; `demo/face.js` (a face close-up),
++  `demo/land.js` (shanshui mountains, cun texture, cliff, pine, reed, ripple),
++  `demo/climax.js` and `demo/cross.js` (the demo's shots) show how they combine.
++- `demo/lines.json` — the demo's spoken lines, with voice and speed. Its words are the
++  demo's; do not reuse them, and v1 carries no audio at all.
++
++## Aspect adaptation
++
++- **16:9** is native: a broad landscape, a horizon running edge to edge, the inscription
++  in a corner of sky.
++- **9:16** becomes a hanging scroll: a tall composition, subject low, mist above, the
++  inscription reading down one side.
++- **1:1** centres the subject and caps the sky; keep the seal inside the square.
++- **4:5** is a gentle portrait, a little more headroom than 1:1, the inscription low.
++- **3:4** is the tallest portrait: give the subject the full column and set the inscription
++  in a short vertical line.
++
++Every non-16:9 layout is the same sheet at a different proportion; the paper and bleed
++always run to the edges, and `window.TEXTS(t)` boxes must stay fully inside the frame.
++
++## Inputs & proof
++
++- No required inputs; the style takes no external data file.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and there is no
++  "as the narration says" anywhere.
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the manifest window 4–15 s and default to 6 s. The style
++  runs at 24 fps.
++
++## Pitfalls
++
++- A gradient used as a wash and a real wet stroke are not the same thing; let the brush
++  make the tone.
++- Too many tones turn the sheet muddy — five ink tones is the discipline.
++- Hours of dense strokes kill the liubai; the empty paper is part of the picture.
++- Reusing the demo's swordsman, river or poem is a copy, not an homage — invent the
++  subject.
++- A voice-over or an on-screen "say this" cue is wrong for this style (v1 is silent).
++- Forgetting to load a calligraphic face renders fallback glyphs — await every load before
++  `window.READY = true`.
++
++## Originality checklist
++
++- [ ] The picture is the user's subject, not the demo's river, swordsman or story.
++- [ ] Strokes are built with the brush engine, not drawn as flat shapes.
++- [ ] Tones stay within the five-tone set; the seal is the only saturated colour.
++- [ ] Liubai (empty paper) is composed, not left over.
++- [ ] The inscription is the clip's own text.
++- [ ] Nothing is quoted from the demo's lines, figures or shot list.
++
++## QA checklist
++
++- [ ] `duration_seconds` inside 4–15 s (default 6) at 24 fps.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] All faces defined and loaded before `window.READY = true`.
++- [ ] Wet and dry ink are both used where the picture needs them; no stray gradients.
++- [ ] Transitions are ink blooms or cuts; paper reaches every edge.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/.agents/skills/lemo/briefs/paper-popup.md b/.agents/skills/lemo/briefs/paper-popup.md
+new file mode 100644
+index 0000000..78ba669
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/paper-popup.md
+@@ -0,0 +1,184 @@
++# Paper Pop-up — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo is a paper-book adventure with its own hero and story; its characters,
++its world and its copy are the demo's own. Cut a new one.
++
++## Promise
++
++A miniature world that opens out of a book. The cover lifts, the page stands up as a
++backdrop, and flat paper pieces rise off the spread into a shallow three-dimensional scene,
++each cut-out carrying a crisp white border, a grey cardboard edge and a real cast shadow.
++Folded mechanisms pop and settle; the camera is a macro lens that can be deep or shallow,
++and it moves as if it were inside the book looking across the page. The viewer should feel
++a made object being opened, not a 3D render being played.
++
++## When to use
++
++- A gentle story, fable or journey that suits a storybook miniature.
++- A mechanism or a "how it unfolds" idea that a pop-up can act out.
++- A whimsical product or brand world where paper is the material.
++- A chapter card or a beat where a page turn is the transition.
++
++## When not to use
++
++- Flat motion graphics, crisp charts or a data-led story — paper wants depth and mood.
++- Photoreal surfaces anything like real-world materials; this is cut paper and cardboard.
++- A dense diagram with many labelled parts; the pop-up carries one idea.
++- Fast, hard-edged kinetic typography; the style wants a hand and a hush.
++
++## Materials & rendering
++
++- A Three.js scene with a paper look. `demo/main.js` sets up the renderer, camera and the
++  timeline; `demo/book.js` builds the book itself — a spine at the far end, a cover that
++  flips back to stand as the backdrop, and the page block whose surface height is `PG`.
++- Paper is drawn on canvases first, then mounted as cut meshes. `demo/paper.js` turns a
++  drawing into a cut-out: `finishCut` adds the expanded white border, the grey cardboard
++  edge and the paper fibre texture (`GRAIN`, `paperFill`); `cv`, `sh`, `blob`,
++  `smoothClosed`, `crescent` and `rr` are the drawing helpers. `demo/cutmesh.js` turns a
++  cut-out canvas into a front-and-back mesh (`cutMesh`) with a back colour and a soft blob
++  shadow (`blobShadow`).
++- The book's moving pieces are `demo/sets.js`: `pages` draws the page art, `buildSets`
++  builds the pop-up mechanisms that rise and fold on their own timing (`RISE`, `FOLD`),
++  and `updatePops` drives them each frame. A piece has a fold direction — backward to lie
++  face-up when flat, forward to lie face-down.
++- The camera has real optics: `demo/post.js` adds physical depth of field (circle of
++  confusion against a focus distance) and bloom, then tone-maps. A shallow focus is the
++  style's signature; a macro push can throw the background pages soft.
++- Determinism: seeded `mulberry` / `hash` / `vnoise` from `library/core/lib.js`; no
++  `Math.random()`, no `Date.now()`.
++
++## Colour logic
++
++- Warm paper as the ground: cream, kraft and a few muted inks. `demo/paper.js` sets the
++  cut line as a dark warm brown (`INK = '#3a2a24'`) and shades each piece with one lit and
++  one shadow plane rather than a gradient.
++- A small, storybook palette of flat colours, one per world or character; the paper border
++  is always white so every piece reads as cut.
++- A single accent for the thing the beat is about — a coat, a lamp, a boat. Everything
++  else stays in the paper range.
++- The desk light is the mood: `demo/main.js` lights the scene with a warm lamp, a soft sun
++  and a hemisphere fill, so the pages fall off into shadow at the edges of the spread.
++
++## Type & text
++
++- Four faces, listed in the style registry and named for the demo: ZCOOL KuaiLe (Han),
++  Fredoka (the UI hand), Lilita One (display) and IM Fell English (storybook serif). Await
++  every `document.fonts.load` before the first frame.
++- Text lives in the world or on an overlay: chapter banners, speech bubbles that type
++  themselves on (`demo/hud.js`, `drawBubbles`, `CPS`), action words, and a storybook
++  serif for titles.
++- A bubble belongs to the paper — keep the border and the shadow consistent with the
++  cut-outs so it reads as part of the book, not a modern lower-third.
++- Expose `window.TEXTS(t)` for any readable line, with the full string and a screen box.
++
++## Motion quality
++
++- Everything has paper weight. Pieces rise with a spring and settle (`spring` in
++  `demo/lib.js`); a fold has anticipation, a fast travel and a soft stop.
++- Page turns are the section transitions: the spread folds away, the next rises, on a
++  beat. Never a dissolve.
++- Characters act out the beat: a pose redrawn each frame (`demo/art.js` draws Pip with
++  changing eyes, mouth and arms; `demo/actors.js` rigs the cast). One clear action, then a
++  hold.
++- Particles sell the material — dust in the lamp, sparkles on a reveal, fireflies — but
++  they never replace the mechanism. The piece moves; the dust only agrees.
++
++## Camera grammar
++
++- A macro camera with a shallow depth of field: focus on the piece that matters and let
++  the rest go soft.
++- Push in across the page to one pop-up; hold while it settles.
++- Crane up as the spread rises, so the pieces open toward the lens.
++- A slow orbit around the book for the wide, the desk and lamp at the edge of frame.
++- Transitions are page turns and folds — no fades between worlds.
++
++## Native moves
++
++**Cutaway (5–6 s).** The manifest window is 5–20 s, so the cutaway is `max(3, 5) .. 6 s` —
++i.e. 5 s to 6 s, default 6. One action: the cover opens a little, one piece springs up and
++settles, hold. One world, nothing explained.
++
++**Micro-explanation (8–20 s).** The window is 5–20 s, so this runs `8 .. 20 s`. Open the
++cover; raise the first spread; a character enters and acts; the page turns; the next spread
++rises; hold on the finished scene. One small journey in three or four pop-ups, told by the
++mechanism, not by a caption.
++
++## Module map
++
++- `demo/main.js` — the program: renderer, camera, lights, the desk and the cast, the
++  timeline and `render(t)`; awaits the faces and reads the demo's own timing JSON.
++- `demo/book.js` — `makeBook`, `coverCanvases`, `texOf`, and the book's dimensions
++  (`BW`, `BD`, `BT`, `HB`, `PG`).
++- `demo/paper.js` — paper drawing: `cv`, `paperFill`, `finishCut`, `sh`, `blob`,
++  `smoothClosed`, `smoothOpen`, `crescent`, `rr`, `INK`, `GRAIN`.
++- `demo/cutmesh.js` — `cutMesh`, `mats`, `blobShadow`, `thread`, `particles`: cut-out
++  meshes, shadow decals and instanced particles.
++- `demo/art.js` — all the drawn art: `drawPip`, `drawCrumple`, `drawWhale` and the static
++  props (`hill`, `lolliTree`, `pine`, `bush`, `flower`, `mushHouse`). These are the demo's
++  characters; invent your own.
++- `demo/actors.js` — `makePip`, `makeCrumple`, `makeFold`, `makeWhale`, `makeBoat`: the
++  rigged cast and props.
++- `demo/sets.js` — `pages`, `buildSets`, `buildSlats`, `updatePops`, `RISE`, `FOLD`: the
++  four spreads and their pop-up mechanisms.
++- `demo/hud.js` — the overlay: subtitles, speech bubbles, chapter banners, action words and
++  the end card (`drawSubs`, `drawBubbles`, `drawChapter`, `drawEnd`).
++- `demo/post.js` — `makePost`: MSAA, physical depth of field, bloom and tone mapping.
++- `demo/lib.js` — `clamp`, `lerp`, `seg`, `ss`, `eio`, `eo`, `ei`, `back`, `spring`,
++  `mulberry`, `hash`, `vnoise`, `TAU`, `monotone`, `track`, `env`.
++
++The demo's room props, its HDR environment and its Three.js build live in folders the
++library does not vendor; a new clip brings its own or works entirely in flat paper. Nothing
++under `demo/` should be copied; the modules above are technique references only.
++
++## Aspect adaptation
++
++- **16:9** is native: the open book fills the width, the spread running across the frame.
++- **9:16** becomes a tall page: the book stands, the spreads stack vertically, and the
++  camera cranes up the column.
++- **1:1** centres one spread and crops to the active piece, the book edge at the frame.
++
++The manifest lists only these three aspects. Do not add another layout without first
++extending the manifest's `aspects` list. In every aspect `window.TEXTS(t)` boxes must stay
++fully inside the frame.
++
++## Inputs & proof
++
++- No required inputs; the style takes no external data file.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and nothing says
++  "as the narration says".
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 5–20 s window and default to 6 s. The style runs at
++  24 fps.
++
++## Pitfalls
++
++- A pop-up that is just a flat sprite shows no fold, no cast shadow and no depth — build
++  the piece to rise and to cast.
++- A cut-out without the white border and cardboard edge reads as a sticker, not paper.
++- A deep focus everywhere loses the macro feel; keep the depth of field shallow and move
++  the focus with the beat.
++- Reusing the demo's hero, its world or its lines is a copy — invent the story.
++- Too many pieces on one spread turn it into confetti; the pop-up carries one idea.
++- A voice-over or an on-screen "say this" cue is wrong for this style (v1 is silent).
++
++## Originality checklist
++
++- [ ] The story and characters are the user's, not the demo's cast or world.
++- [ ] Cut-outs carry the white border, the cardboard edge and a real shadow.
++- [ ] Pieces rise and fold on their own mechanism; nothing is a flat sprite.
++- [ ] The camera keeps a shallow, moving focus.
++- [ ] The palette stays in the paper range, with one accent.
++- [ ] Nothing is imported from the demo's art, story or audio.
++
++## QA checklist
++
++- [ ] `duration_seconds` inside 5–20 s (default 6) at 24 fps.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] All faces defined and loaded before `window.READY = true`.
++- [ ] Pop-ups rise and settle with paper weight; page turns are the transitions.
++- [ ] Depth of field is real and follows the subject.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/.agents/skills/lemo/briefs/teardown.md b/.agents/skills/lemo/briefs/teardown.md
+new file mode 100644
+index 0000000..45bb3d9
+--- /dev/null
++++ b/.agents/skills/lemo/briefs/teardown.md
+@@ -0,0 +1,192 @@
++# Teardown — style brief
++
++A working brief for an authoring agent. Read it before you write a `clip.js` in this
++style. It fixes the look contract, the v1 realisation rules, and the two clip lengths.
++**The vendored demo folder is empty in v1.** The CAD sample was stripped when the engine
++was vendored, so `demo/` holds only `.gitkeep`: there is no demo page, no demo scene and
++no demo module to copy. Build this style from the shared library helpers and the rules on
++this page, and never import a module that does not exist.
++
++## Promise
++
++A product opened up like a museum specimen. The object hangs in a clean void and its
++parts separate along one honest axis, so a viewer sees what is inside and how the pieces
++stack. Each layer is a flat, legible plate — shell, board, bracket, fastener, component —
++drawn as a cut-away rather than photographed, and labelled in plain engineering lettering.
++The camera circles the assembled form, then rides the gap between two layers.
++
++## When to use
++
++- A physical object whose parts separate along a single axis — a torch, a speaker, a
++  camera, a motor, a hinge, a tool.
++- A "what's inside" or "how it fits together" beat inside a larger explainer.
++- An assembly order where the sequence of layers is the whole message.
++- A spec sheet rendered as motion: mass, size and count read off the plates.
++
++## When not to use
++
++- A subject with no real parts list — a service, a habit, an abstract idea. Use a diagram
++  style instead.
++- Photographs or photoreal renders standing in for a measured engineering drawing.
++- A story, a character piece or anything with a cast; this style has no actors.
++- Invented internals: if the parts are not known, they are not drawn.
++
++## Materials & rendering
++
++- Draw at 1920×1080. A 2D canvas is enough for a schematic explode; a Three.js scene is
++  available for a true 3D one, with `library/core/three/post.js` providing the
++  depth-of-field and bloom pass. Whatever you choose, the model is built here, in this
++  clip — nothing is loaded from a CAD format.
++- A part is a silhouette plus a hairline outline plus flat fills: one lit face, one
++  shadow face, one rim. No texture maps, no photographic materials.
++- Layers sit on a shared axis with even gaps; the exploded view is a stack of plates, not
++  a scattered pile. Counter-bores, fasteners and connectors are small drawn glyphs.
++- **Illustrative only in v1.** The drawing is a diagram, not a measured model: every
++  dimension on screen is a drawing decision, not a specification. Never state a number the
++  `parts_spec` did not supply, and never imply a tolerance, a fastener torque or a real
++  engineering unit.
++- Determinism: seed any jitter from `mulberry` / `hash` / `vnoise` in
++  `library/core/lib.js`; no `Math.random()`, no `Date.now()`.
++
++## Colour logic
++
++- One graphite line colour, one light metal, one shadow metal and exactly one accent for
++  the part under discussion. That is the whole palette.
++- The accent marks the active layer and nothing else: the layer the narration or the
++  caption currently names takes the accent, every other layer stays neutral. It never
++  decorates.
++- Depth comes from the value of the fill, not a gradient: the lit face is one flat tone,
++  the shadow face a darker flat tone, the cut edge between them a third. Keep it to three.
++- Contrast between a label and the plate under it must be real; pick the ink against the
++  fill rather than guessing.
++
++## Type & text
++
++- No style font is shipped — the manifest's `fonts` list is empty — so set labels in a
++  system sans or a technical monospace and keep them small and factual.
++- A part label is a short noun and, when the `parts_spec` gives one, a count: `M3 bolt ×4`,
++  `cell ×6`. It is never a marketing line and never a made-up specification.
++- Labels sit on a leader line to their part, in the plate's own plane, so they travel
++  with the explode instead of floating on the glass.
++- Expose `window.TEXTS(t)` for every label a viewer must read, with the full string and a
++  screen-space box.
++
++## Motion quality
++
++- The explode is the beat. Layers travel along the one axis, each on its own short eased
++  move, and settle; the stack is never left half-open across a cut.
++- Gaps open a little after the previous layer lands, so the eye follows the order rather
++  than watching everything move at once.
++- A part that enters does one thing: it slides in, seats, and stops. No idle float, no
++  spinning once seated.
++- Ease with the shared helpers (`eio`, `eo`, `spring`) so the settle has weight; a bolt
++  that overshoots a hair and locks reads as mechanical, a bolt that bounces reads as
++  broken.
++
++## Camera grammar
++
++- A slow orbit around the assembled object, then a push along the axis as the layers
++  open: the move shows the depth the explode creates.
++- A lateral track past the stack: the parts read as a row.
++- A macro push into one gap to show a single connector, then a pull back to the whole.
++- A held wide of the finished, exploded specimen for the last beat.
++- Transitions are cuts and axis moves — never a dissolve.
++
++## Native moves
++
++**Cutaway (6 s).** The manifest window is 6–20 s, so the cutaway is `max(3, 6) .. 6 s` —
++the window wins and the shortest clip is 6 s, default 6. One object: open on the assembled
++form orbiting; the parts separate along the axis in order; one label lands on the key
++layer; hold the open specimen for a beat. Nothing explained.
++
++**Micro-explanation (8–20 s).** The window is 6–20 s, so this runs `8 .. 20 s`. Start
++assembled and orbiting; lift the shell; reveal the board; seat the fasteners one by one;
++label the two parts that matter; push in on one connector; pull back to the full exploded
++stack and hold. One product, one axis, one order.
++
++## Module map
++
++- **There is no demo module.** `teardown/demo/` contains only `.gitkeep`; the CAD sample
++  was removed in Task 1 and has not been replaced. Do **not** import a demo page, a demo
++  scene or any module under `demo/` — the folder is empty. Author the clip from scratch.
++- `library/core/lib.js` — the shared helpers, imported as `/core/lib.js`: `clamp`, `lerp`,
++  `seg`, `ss`, `eio`, `eo`, `ei`, `back`, `spring`, `mulberry`, `hash`, `vnoise`, `TAU`,
++  `monotone`, `track`, `env`. Use them for easing and seeded jitter so every frame agrees.
++- `library/core/three/post.js` — the vendored post-processing helper if you build the
++  explode as a real 3D scene; use it for depth of field and bloom, not for a new look.
++- `library/core/render/` — the shared render and QA tooling (a headless page, still and
++  video capture, read-check helpers). Read it to see how another style is captured; do not
++  invent your own pipeline.
++
++### `parts_spec` (required input, Task 9 shape)
++
++The clip requires a `parts_spec` file, referenced by the `inputs.parts_spec` path in
++`clip.json`. Never invent a part list: if there is no real specification, ask once — do
++not fabricate one. The spec is a JSON object:
++
++- `version` — the spec format version.
++- `product` — what the object is; a generic or fictional name, never a real brand.
++- `illustrative` — always `true` in v1. It records that the drawing is a diagram, not a
++  measured model, and it is what lets the style show an exploded view at all.
++- `parts` — an ordered list of the layers, top or outermost first; each part has:
++  - `id` — a stable identifier the timeline targets.
++  - `name` — the short label drawn on the leader line.
++  - `layer` — the stacking position along the explode axis.
++  - `count` — how many of this part the object holds.
++
++Draw only the parts the spec lists. Do not add a component the spec is silent about, and
++do not attach a dimension, tolerance or unit to any of them.
++
++## Aspect adaptation
++
++- **16:9** is native: the object on its side, the explode running left to right, labels
++  above and below the stack.
++- **9:16** turns the axis vertical: the object stands, the layers stack top to bottom,
++  the camera travels up the column and the labels sit to one side.
++
++The manifest lists only these two aspects. Do not add another layout without first
++extending the manifest's `aspects` list.
++
++## Inputs & proof
++
++- Required inputs: `parts_spec` plus `facts`. Never invent a part or a claim; ask or stop.
++- First release is **silent**. The clip carries `sound: "none"` — no narration, voice,
++  score, foley, subtitles or audio stream. Recipes and QA are visual-only, and nothing
++  says "as the narration says".
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 6–20 s window and default to 6 s. The style runs at 24
++  or 30 fps.
++
++## Pitfalls
++
++- A measured-looking dimension or unit is a lie in v1 — the spec is `illustrative: true`,
++  so never print one that `parts_spec` did not supply.
++- Importing a `demo/` module is impossible here — the folder is empty. Do not reference a
++  file that does not exist to pad the module map.
++- A third-party CAD import (`occt-import-js`, STEP, KiCad or similar) is out of scope and
++  forbidden — the model is drawn in this clip.
++- Scattering the parts off the axis makes a pile, not a teardown; keep every layer on one
++  line.
++- An accent used on every plate stops meaning "this one matters" — reserve it.
++- A frame that shows an assembled object with no explode has not made the style's claim.
++
++## Originality checklist
++
++- [ ] The product is the user's, not the demo's, and no demo file is imported (none
++      exists).
++- [ ] Every part drawn comes from `parts_spec`; nothing is guessed.
++- [ ] The spec declares `illustrative: true`, and no real dimension or unit appears.
++- [ ] `parts_spec` uses only the documented fields.
++- [ ] The explode runs on one axis and the accent marks the active layer only.
++- [ ] No third-party CAD loader, no brand name, no photoreal material.
++
++## QA checklist
++
++- [ ] `parts_spec` present at the `inputs.parts_spec` path; every drawn part is listed in
++      it and every listed part's `id`, `name`, `layer` and `count` are honoured.
++- [ ] `duration_seconds` inside 6–20 s (default 6); fps 24 or 30.
++- [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
++- [ ] All fonts defined and loaded before `window.READY = true`.
++- [ ] Layers stay on one axis; the accent is used once.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean and has no audio track.
+diff --git a/tests/contracts/test_lemo_briefs.py b/tests/contracts/test_lemo_briefs.py
+index b0dbfd8..2f4a8c9 100644
+--- a/tests/contracts/test_lemo_briefs.py
++++ b/tests/contracts/test_lemo_briefs.py
+@@ -2,20 +2,27 @@
+ from pathlib import Path
+ import pytest
+ REPO_ROOT = Path(__file__).resolve().parents[2]
+ BRIEFS = REPO_ROOT / ".agents/skills/lemo/briefs"
+ SECTIONS = ["Promise","When to use","When not to use","Materials & rendering","Colour logic",
+             "Type & text","Motion quality","Camera grammar","Native moves","Module map",
+             "Aspect adaptation","Inputs & proof","Pitfalls","Originality checklist","QA checklist"]
+ 
+ @pytest.mark.parametrize("style", ["swiss-motion","midcentury-toon","dataviz","silkscreen-poster",
+                                     "bauhaus-shapes","flat-space-explainer","assembly-line-diagram",
+-                                    "living-screencast","isometric-picture-book"])
++                                    "living-screencast","isometric-picture-book","briefing-board",
++                                    "ink-wash","paper-popup","teardown","ascii-crt","art-deco"])
+ def test_pilot_brief_has_the_contract(style):
+     text = (BRIEFS/f"{style}.md").read_text(encoding="utf-8")
+     assert len(text) >= 1500, style
+     import re
+     assert re.findall(r"^## (.+)$", text, re.M) == SECTIONS, style
+     assert "demo/" in text  # module map names real files
+     assert "16:9" in text and "9:16" in text
+     assert "silent" in text.lower(), style  # v1 clips have no audio at all
+     assert "sound" in text.lower(), style
++
++
++def test_every_manifest_brief_exists():
++    from styles.lemo.loader import list_styles
++    for style in list_styles():
++        assert (REPO_ROOT / style["brief_md"]).is_file(), style["id"]

@@ -53,9 +53,11 @@ spec.
   or transfer the repo. Pushing was not done by the agent.
 - Commit style: `git -c commit.gpgsign=false commit`.
 - `docs/superpowers/` and `.superpowers/` are still listed in `.gitignore`.
-  The process files for this feature were **force-added** (`git add -f`) so they
-  travel with the repository. Future edits to already-tracked files are normal;
-  new files in those directories still need `git add -f`.
+  The process files for this feature, every historical `docs/superpowers/`
+  plan/spec, **and every `.superpowers/sdd/` workspace** were **force-added**
+  (`git add -f`) so they travel with the repository. Only `__pycache__/` and
+  `*.pyc` were excluded. Future edits to already-tracked files are normal; new
+  files in those directories still need `git add -f`.
 
 ---
 
@@ -284,8 +286,9 @@ Process (now force-tracked):
 - `docs/superpowers/specs/2026-11-26-lemo-free-sound-design.md`
 - `docs/superpowers/plans/2026-11-27-lemo-free-sound-design.md`
 - `docs/superpowers/` other plans/specs (historical context)
-- `.superpowers/sdd/2026-11-27-lemo-free-sound-design/` — ledger, task briefs,
-  reports, review verdicts, and diff packages
+- `.superpowers/sdd/` — all historical workspaces (briefs, reports, review
+  diffs, prior checkpoints/trackers), including this feature's ledger and
+  `2026-11-27-lemo-free-sound-design/`; `__pycache__/` and `*.pyc` excluded.
 
 Not yet touched (Task 4): Lemo skills, `pipeline_defs/lemo.yaml`,
 `AGENT_GUIDE.md`, HyperFrames SFX docs.

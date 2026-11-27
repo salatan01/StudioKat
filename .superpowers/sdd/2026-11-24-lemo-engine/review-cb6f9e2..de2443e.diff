@@ -1,0 +1,1065 @@
+# Review package: cb6f9e2..de2443e
+
+## Commits
+de2443e docs(lemo): rewrite the pilot briefs in original prose
+
+## Files changed
+ .agents/skills/lemo/briefs/dataviz.md         | 283 +++++++++++++-------------
+ .agents/skills/lemo/briefs/midcentury-toon.md | 276 +++++++++++++------------
+ .agents/skills/lemo/briefs/swiss-motion.md    | 249 +++++++++++-----------
+ tests/contracts/test_lemo_briefs.py           |   7 +-
+ 4 files changed, 430 insertions(+), 385 deletions(-)
+
+## Diff
+diff --git a/.agents/skills/lemo/briefs/dataviz.md b/.agents/skills/lemo/briefs/dataviz.md
+index 7924094..52e0300 100644
+--- a/.agents/skills/lemo/briefs/dataviz.md
++++ b/.agents/skills/lemo/briefs/dataviz.md
+@@ -1,211 +1,222 @@
+-# Data Visualization — pilot brief
++# Data Visualization — style brief
+ 
+ A working brief for an authoring agent. Read it before you write a `clip.js` in this
+-style. It states the look contract, the modules you draw with, and the two clip lengths.
+-The demo modules are a technique reference only — its dataset, its story and its captions
+-are the demo's own. Replace both the data and the captions.
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo modules are technique references only — its dataset, its story and its
++copy are the demo's own. Replace both the data and the writing.
+ 
+ ## Promise
+ 
+-A chart that tells a story: real numbers drawn mark by mark on cream paper by a red–blue
+-pencil, with handwritten notes pinned to the values. The chart itself is the camera, the
+-rhythm and the plot — every movement is a meaningful chart operation (a mark lands, an
+-axis grows, the scale changes, a series morphs). The viewer should read one idea at a
+-time and trust every number on screen.
++A story drawn out of real numbers on cream paper by a two-colour pencil. Marks drop in, an
++axis extends, the scale shifts, a series transforms — every movement is a genuine chart
++operation, never a decoration. Handwritten notes are pinned to the values they explain.
++The camera is the chart: it dives to a single mark and pulls back to the whole. The viewer
++should read one thing at a time and trust every number on screen.
+ 
+ ## When to use
+ 
+-- A trend, ranking, relationship, distribution or before→after worth one clear idea.
+-- A human-scale story hung on real data (a single case inside a larger pattern).
+-- A procedure or comparison that becomes clearer charted than narrated.
+-- Subjects with openly licensed, traceable data you can cite on an end card.
++- A trend, ranking, relationship, distribution or before-to-after that reduces to one clear
++  idea.
++- A human-scale story hung on real data — one case inside a larger pattern.
++- A procedure or comparison that becomes clearer charted than told.
++- A subject with openly licensed, traceable data you can cite on an end card.
+ 
+ ## When not to use
+ 
+-- Decorative-only motion or a chart used as wallpaper.
+-- Fictional or estimated numbers presented as fact.
+-- Character-led cartoons or photoreal scenes; the pencil is the only performer here.
++- Decorative-only motion, or a chart used as wallpaper.
++- Invented or estimated numbers presented as fact.
++- Character-led cartoons or photoreal scenes; here the pencil is the only performer.
+ - A dashboard or a deck of charts — this style shows one idea at a time.
+ 
+ ## Materials & rendering
+ 
+-- Draw with `demo/engine.js` on a Canvas 2D at 1920×1080. World units equal chart pixels
+-  at zoom 1; a 2D camera `{x, y, zoom, roll, sx, sy}` looks at one sheet of paper.
+-- Paper is warm cream with fixed-seed fibre noise and a faint dot grid in world space
+-  (`drawPaper`). Ink is a dark warm ink for axes and series, a pale warm grey for grid and
+-  the zero line. Ticks and printed labels use a mono face.
+-- Marks are data dots with a thin ink ring so pale values stay visible on cream. A mark
+-  lands with a short pop and a thin ripple; suppress ripples when marks arrive closer
+-  than about 0.1 s.
+-- Handwriting in a pencil face carries per-glyph jitter and graphite grain and is written
+-  on as the tip dances over the x-height (`handText`). Leaders are wobbly curves ending in
+-  an **un-closed** ring around the mark.
+-- The red–blue pencil (`drawPencil`) is the only performer: a hex body with two colours and
+-  a sharpened wood cone. Only the tip end shows, from the lower right; its shadow drifts
+-  farther and softer with lift; the tip is sharp, the body soft.
+-- Layout: a plot box fixed in world space, a memory zone for early notes, every note pinned
+-  in data space (value plus pixel offset) so rescales keep the layout, and a bottom band
+-  for the caption.
++- Draw with `demo/engine.js` on a Canvas 2D at 1920×1080. World units equal chart pixels at
++  zoom 1, and a 2D camera `{x, y, zoom, roll, sx, sy}` looks at a single sheet of paper.
++- The paper is warm cream carrying deterministic fibre speckle and a soft dot grid ruled in
++  world space (`drawPaper`). Ink is a dark warm ink for axes and series and a pale warm grey
++  for the grid and the zero line. Ticks and printed labels use the mono face.
++- A mark is a data dot with a thin ink ring so pale values survive on cream. It arrives
++  with a small pop and one thin ripple; skip the ripple whenever two marks fall within
++  roughly a tenth of a second.
++- Handwriting in the pencil face carries per-glyph jitter and graphite grain and is written
++  on as the tip dances across the x-height (`handText`). A leader is a wobbly curve that
++  finishes in a ring which never quite closes around the mark.
++- The two-colour pencil (`drawPencil`) is the sole performer: a hexagonal body with two
++  leads and a sharpened wood cone. Only its tip end is seen, arriving from the lower right,
++  its shadow stretching further out and softening as it rises. The tip is sharp, the body
++  soft.
++- Set up a plot frame anchored in world space, a zone that holds the earliest notes, each
++  pinned in data space (a value plus a pixel offset) so rescales keep the layout, and a
++  bottom band for the caption.
+ 
+ ## Colour logic
+ 
+-- Colour encodes **one thing: the value.** Diverging data uses a ramp centred on the mean
+-  of a meaningful reference period, with a symmetric span (`RAMP`, `valueColor`). Data with
+-  no natural centre uses a single sequential ramp. Everything else is ink on cream.
+-- Honesty beats drama: pale values stay pale; never stretch a ramp to make a change look
+-  bigger.
+-- The two pencil leads carry meaning: **blue for memories and human notes, red for records
+-  and warnings.** A change of lead marks a turn in the story.
+-- One `accent` colour may bypass the ramp for a mark that is not data (a highlight, a lone
+-  annotation).
++- Colour carries a single meaning: the value. Where the data diverges, a ramp pivots on the
++  average of a reference period you can justify, and spreads evenly to either side (`RAMP`,
++  `valueColor`). Data with no natural centre takes a single ordered ramp; the rest of the
++  picture is simply ink on cream.
++- Truth outranks drama: a pale value stays pale, and you never widen a ramp to make a
++  change look larger.
++- The two leads carry meaning: **blue for memory and the human aside, red for the record
++  and the warning.** Changing lead marks a turn in the story.
++- A single `accent` can step outside the ramp for a mark that carries no data (a highlight,
++  a lone annotation).
+ 
+ ## Type & text
+ 
+-- The subtitle is the figure caption: a text serif in ink, left-aligned with the chart,
+-  ≤ 2 lines, with a hairline rule above it and a small mono kicker for the range drawn so
+-  far (`caption`). Words appear on their whisper timestamps over a paper-colour band; hold
+-  at least max(1.8 s, speech + 0.6 s).
+-- The title is the chart's own headline in a text serif, set in world space above the plot;
+-  it fades when the camera is close and returns with the full view.
+-- Do not caption over a signature chart operation or a silence.
+-- Expose `window.TEXTS(t)` for any text a viewer must read, with full strings and
+-  screen-space boxes.
++- The figure caption is a text serif in ink, left-aligned with the chart, at most two
++  lines, capped by a hairline rule and a small mono kicker that names the range covered so
++  far (`caption`). Words appear on their timestamps over a paper-coloured band.
++- The title is the chart's headline, set in the same serif and placed in world space over
++  the plot; it dims when the camera moves close and returns with the full view.
++- Never set a caption over a signature chart operation.
++- Expose `window.TEXTS(t)` for any text a viewer must read, with the full string and its
++  screen-space box.
+ 
+ ## Motion quality
+ 
+-- The rhythm of the data is the rhythm of the film. Map the marks to a musical grid; to
+-  accelerate, divide the beat instead of changing tempo. Pick a tempo whose finest
+-  subdivision lands on whole frames, so picture and sound never drift.
+-- Pencil acting: lift before each tap, land with the shadow meeting the tip, a tiny
+-  rebound; hurry as data densifies, tremble like a needle at a peak. It can flinch
+-  (recoil and freeze), hesitate (hover before a mark) and exit (hand the story to the
+-  viewer).
+-- A rescale reads as ratchet clicks (stepped, each step eased); a calm rescale is smooth.
+-- A morph is a staggered sweep, each mark easing into its new form; notes fade as it
+-  passes and return as tiny marks.
+-- Never fade to blank and never dissolve. Transitions are chart operations: axis growth,
+-  pull-backs, rescales, morphs, a cell widening into the next frame.
++- The data's own cadence sets the cut's cadence. Attach each mark to a beat of the grid; to
++  speed up, subdivide the beat instead of raising the tempo. Choose a tempo at which the
++  smallest subdivision falls on whole frames, so the image cannot drift.
++- The pencil's performance: rise before every tap, set down so the shadow touches the tip,
++  add a slight rebound; hurry as the data densifies; shiver like a needle at the top of a
++  spike. It can also flinch — snapping back and freezing — stall by hovering above a mark,
++  or leave, handing the tale back to the audience.
++- A rescale can ratchet, clicking through eased increments, or it can glide when the mood
++  is calm.
++- A morph is a sweep that visits the marks in turn: each eases into its new shape while the
++  notes fade as the sweep reaches them and then come back as small marks.
++- Never fade to blank and never dissolve. Transitions are chart operations: an axis
++  extends, a pull-back, a rescale, a morph, a cell widening into the next frame.
+ 
+ ## Camera grammar
+ 
+-A 2D camera over one sheet of paper. A film is one take; a hard cut is rare and
+-meaningful. The moves are a vocabulary, not a route.
+-
+-- Extreme close-up on one mark, following its leader: one fact, one life.
+-- Full view first, then dive to one mark: the pattern before the case.
+-- Pull back as axes grow out of the marks: the frame arrives with the unit.
+-- Track the pencil, newest mark at about 60 % of the width: progress, past behind and
+-  future ahead.
+-- Pedestal with rising data and a creeping Dutch angle: escalation.
+-- Punch-in over two frames with decaying shake: surprise, a broken frame.
++- A flat camera gliding across a single page. The piece plays as one continuous take; when
++  a hard cut comes it means something. The moves below are words in a language, not a fixed
++  path.
++- Tighten all the way onto a single mark and trace its leader: a lone fact, a lone life.
++- Begin wide, then fall in on a single mark: the general shape before the particular case.
++- Draw back while the axes extend from the marks: the frame widens to admit the unit.
++- Track the pencil, the newest mark about 60 % across the width: progress, the past behind
++  and the future ahead.
++- Pedestal as the data rises, with a creeping Dutch angle: escalation.
++- Punch in over two frames with a decaying shake: surprise, a broken frame.
+ - Fast pull-out with roll and a small tremor: a rush.
+-- Locked-off: the transformation is the movement.
+-- Hold on one mark, then pull back: the part inside the whole.
+-- Lateral pan across notes in the memory zone: recollection.
++- Locked off: the transformation is the movement.
++- Rest on a single mark and then draw back: the fragment within the whole.
++- Pan laterally across the notes in the memory zone: recollection.
+ 
+-Keep key subjects at least a third of frame height. When the real axis scrolls off-screen,
+-pin its tick labels to a paper strip at the frame edge (frozen pane, `stickyLabels`).
++Keep key subjects at least a third of frame height. Once the true axis leaves the view,
++carry its numbers on a slim paper tab fixed to the edge of the frame (the frozen pane,
++`stickyLabels`).
+ 
+ ## Native moves
+ 
+-**Cutaway (3–6 s, default 6).** One mark, one fact. Open close on a single dot; the ring
+-writes on, the leader writes on, the handwritten note writes on; hold. No axes needed if
+-the note names the value; land the dot on a beat and leave the number legible in the first
+-and last frame.
++**Cutaway (6 s, default 6).** The manifest window opens at 6 s, so the cutaway is
++`max(3, 6) .. 6 s` — the window wins and the shortest clip is 6 s, default 6; this style
++never produces a 3–5 s clip. One mark, one fact: open close on a single dot; the ring
++writes on, the leader writes on, the handwritten note writes on; hold. No axes are needed
++if the note names the value; land the dot on a beat and leave the number legible in the
++first and the last frame.
+ 
+-**Micro-explanation (8–20 s).** A small series with a turn. Open on the full view, then
+-dive to the first mark; grow the axis as the narration names the unit; track the pencil so
+-the newest mark sits ahead of centre; pin one or two annotations; then either a rescale
+-(ratchet clicks) or a morph (dots into stripes) to reveal the whole; end on one mark close,
+-or on the headline revised. Never extrapolate beyond the real record; state the rise in the
+-data, not the design.
++**Micro-explanation (8–20 s).** The window closes at 20 s, so this runs `8 .. 20 s`. A
++small series with a turn: open on the full view, then dive to the first mark; grow the axis
++as the unit is named; track the pencil so the newest mark sits ahead of centre; pin one or
++two annotations; then either a rescale (ratchet clicks) or a morph (dots into stripes) to
++show the whole; close on one mark, or on the headline revised. Never extrapolate past the
++real record — state the rise in the data, not in the design.
+ 
+ ## Module map
+ 
+-- `demo/engine.js` — the style core: palette `P`, the value ramp `RAMP`/`rampRGB` and
+-  `valueColor`, the camera (`applyCam`, `w2s`, `s2w`, `viewRect`), `drawPaper`,
+-  `resample` and `pencilStroke` (any polyline in pencil), path helpers (`leader`,
+-  `ringPath`, `wavePath`, `heartPath`, `bracketPath`), handwriting (`handText`,
+-  `measureHand`) and printed type (`setType`), the data marks (`dataDot`, `inkLine`,
+-  `morphMark`, `stripe`, `dashedCell`), the pencil `drawPencil`, the figure `caption`, and
+-  the generic chart primitives `plotShape`, `stripesFill`, `inkShape`, `sparklePath`,
+-  `dotTrail`.
++- `demo/engine.js` — the style core: the palette `P`; the value ramp `RAMP`/`rampRGB`/
++  `valueColor`; the camera (`applyCam`, `w2s`, `s2w`, `viewRect`); `drawPaper`; `resample`
++  and `pencilStroke` (any polyline, in pencil); the path helpers (`quadPath`, `leader`,
++  `ringPath`, `wavePath`, `heartPath`, `bracketPath`); handwriting (`handText`,
++  `measureHand`) and printed type (`setType`); the data marks (`dataDot`, `inkLine`,
++  `morphMark`, `stripe`, `dashedCell`); the pencil `drawPencil`; the figure `caption`; and
++  the chart primitives `plotShape`, `stripesFill`, `inkShape`, `sparklePath`, `dotTrail`.
+ - `demo/film.js` — the story, camera and timing: `setData(d)`, `setCaptions(lines, dur,
+-  words)`, `subs`, the timeline-driven `renderFilm(g, t, opt)`, `DUR` and `buildEvents`.
+-- `demo/timeline.js` — tempo and geometry: `BPM`/`B`, `T`, `LIFE0`/`LIFE1`, `yearK`,
+-  `lifeYears`, the key-beat table `K`, `DUR`, and the chart scales `U`, `X`, `BOX`, `BAND`.
+-- `demo/data/` — the demo's own dataset (a temperature CSV and a JSON series). Read it to
+-  learn the shape of a prepared series, then replace it entirely; never ship the demo's
+-  numbers or its subject.
+-
+-**Real-data rule.** Every number on screen must be real and traceable. Never invent,
+-round up, or extrapolate a value. When the real record ends, say so — the empty next cell
++  words)`, the timeline-driven `renderFilm(g, t, opt)`, `DUR`, and the internal camera and
++  axis helpers `camAt`, `trackPose`, `stickyLabels`, `drawAxes` and `endCard`.
++- `demo/timeline.js` — tempo and geometry: `BPM`/`B`/`BAR`, `T(k)`, `LIFE0`/`LIFE1`,
++  `yearK`, `lifeYears`, the key-beat table `K`, `DUR`, and the chart scales `U`, `X`, `BOX`
++  and `BAND`.
++- `demo/data/` — the demo's own dataset (`GLB.Ts+dSST.csv`, `jja.json`). Read it to learn
++  the shape of a prepared series, then replace it entirely; never ship the demo's numbers
++  or its subject.
++
++**Real-data rule.** Every number on screen must be real and traceable. Never invent, round
++up or extrapolate a value. When the real record ends, say so — the empty next cell
+ (`dashedCell`) is the honest way to show a value nobody knows yet.
+ 
+ For every clip that uses data, write a `data_manifest.json` beside the clip and record:
+ 
+ - `source_url` — the exact URL of the dataset.
+-- `retrieved_at` — the retrieval date, ISO format.
++- `retrieved_at` — the retrieval date, in ISO format.
+ - `columns` — the columns used, **by header name**, never by index.
+-- `units` — the unit and reference for each column (for example °C anomaly versus a stated
+-  baseline).
++- `units` — the unit and reference for each column (for example a °C anomaly against a
++  stated baseline).
+ - `licence` — the dataset's licence or public-domain status, named explicitly.
+ 
+-Select columns by header name only. Print every fact the narration claims as a `facts`
+-entry in `clip.json`.
++Always choose columns by their header name, not their position. Print every fact the clip
++asserts as a `facts` entry in `clip.json`.
+ 
+ ## Aspect adaptation
+ 
+ - **16:9** is native: a wide plot box, the caption band along the bottom, leaders reaching
+   to either side.
+-- **9:16** stacks: narrow the plot box, put the title at the top, the caption under the
+-  chart, and prefer vertical rescales and short leaders. The frozen-pane labels pin to the
++- **9:16** stacks: narrow the plot box, put the title at the top and the caption under the
++  chart, and prefer vertical rescales and short leaders; the frozen-pane labels pin to the
+   top or bottom edge instead of the side.
+-- **1:1** and **4:5** sit between: a squarer plot box, notes above and below the series.
++- **1:1** squares the plot box, with notes above and below the series.
++- **4:5** is a gentle portrait: a squarer box than 16:9, notes stacked, the caption low.
++- **3:4** is the tallest portrait: a narrow box, one series at a time, vertical rescales
++  only.
+ 
+-Keep every text box fully inside the frame in every aspect; the pencil must not hide fresh
+-marks — steepen its angle in dense passages.
++Keep every text box fully inside the frame in every aspect, and never let the pencil hide a
++fresh mark — tilt it more steeply through crowded passages.
+ 
+ ## Inputs & proof
+ 
+ - Required inputs: `data` and `facts`. `data` is a file path in `clip.json`'s `inputs`
+   (inside the clip folder); `facts` is a list of real, checkable claim strings.
+ - Write `data_manifest.json` with `source_url`, `retrieved_at`, `columns`, `units` and
+   `licence`.
+-- Record in `clip.json` the subject, the one idea, the aspect, size, fps and duration.
+-- Keep the duration inside the style's window (6–20 s) and default to 6 s. Pick 24 or
+-  30 fps.
++- First release is **silent**. The clip declares `sound: "none"` — no narration, no voice,
++  no score, no foley, no subtitles and no audio stream. Every recipe and every QA check
++  here is visual only.
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 6–20 s window and default to 6 s. Pick 24 or 30 fps.
+ 
+ ## Pitfalls
+ 
+-- Select data columns by header name, never by index; print every fact the narration
+-  claims.
+-- Notes collide with later data — pin them in data space and use a memory zone.
+-- A frame break rescaled too fast is invisible — hold the pierced state at least half a
+-  beat.
+-- Right-aligned notes are still written left to right — the pencil hops to the first
+-  letter.
+-- Helpers that set `globalAlpha` must multiply the incoming alpha, or fades skip them.
+-- Tails leak across a hard silence — render the before and after in separate buffers and
+-  verify on decoded samples.
+-- In dense passages the pencil body lies across fresh marks — steepen its angle.
+-- Synthesized human sounds (a laugh) are uncanny — use a soft non-human sound.
++- Always choose data columns by their header name, not their position.
++- Notes collide with later data — pin them in data space and reserve a memory zone.
++- A frame break that rescales too quickly cannot be seen — keep the pierced state for half
++  a beat or more.
++- Even a right-aligned note is inked from left to right, so the pencil must jump to the
++  first glyph.
++- A helper that sets `globalAlpha` must multiply the incoming alpha, or the fade skips it.
++- Through a crowded stretch the pencil's body covers the newest marks, so tilt it more
++  steeply.
+ 
+ ## Originality checklist
+ 
+ - [ ] The dataset, its source and its licence are real and cited.
+ - [ ] The chart type is the one the data asks for, not the demo's.
+ - [ ] The notes, title and captions are written for this topic.
+-- [ ] The pencil lead colour changes only with a turn in the story.
++- [ ] The pencil lead changes colour only with a turn in the story.
+ - [ ] No number, axis or span is invented or stretched.
+-- [ ] Nothing is quoted from the demo's data, story or captions.
++- [ ] Nothing is quoted from the demo's data, story or writing.
+ 
+ ## QA checklist
+ 
+-- [ ] `data_manifest.json` present with `source_url`, `retrieved_at`, `columns`, `units`
+-      and `licence`; columns selected by header name.
++- [ ] `data_manifest.json` present with `source_url`, `retrieved_at`, `columns`, `units` and
++      `licence`; columns chosen by header name.
+ - [ ] Every number on screen appears in `facts` and traces to the data.
+-- [ ] Duration inside 6–20 s (default 6) and fps in 24/30.
++- [ ] `duration_seconds` inside 6–20 s (default 6); fps 24 or 30.
+ - [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
+ - [ ] All faces defined and loaded before `window.READY = true`.
+-- [ ] `window.DUR` matches `clip.json`; MP4 probes clean at the requested size/fps.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean at the requested size and fps
++      and carries no audio track.
+diff --git a/.agents/skills/lemo/briefs/midcentury-toon.md b/.agents/skills/lemo/briefs/midcentury-toon.md
+index c855c41..dd5e136 100644
+--- a/.agents/skills/lemo/briefs/midcentury-toon.md
++++ b/.agents/skills/lemo/briefs/midcentury-toon.md
+@@ -1,192 +1,214 @@
+-# Mid-century Toon — pilot brief
++# Mid-century Toon — style brief
+ 
+ A working brief for an authoring agent. Read it before you write a `clip.js` in this
+-style. It states the look contract, the modules you draw with, and the two clip
+-lengths. The demo modules are a technique reference only — the presenter, the product,
+-the steps and the voice in the demo are the demo's own. Author an original presenter,
+-an original prop and your own content.
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo modules are technique references only — the presenter, the product and
++the steps in the demo are the demo's own. Author an original presenter, an original prop
++and your own content.
+ 
+ ## Promise
+ 
+-A short "follow along" clip in warm, printed colour: flat shapes whose colour is printed
+-a few pixels off a thin, breathing ink line, so the picture shimmers like hand-registered
+-paint while the camera glides. A calm voice says one clause per picture. The viewer
+-should come away able to do the thing, not just having watched a story.
++A warm, printed how-to card that moves. Flat colour plates sit a few pixels off a thin,
++never-quite-closed ink line, so the image shimmers the way hand-registered paint does on
++cheap paper, and the camera glides on a tripod rather than a shoulder. A figure holds still
++while the hands act; one clear gesture per beat teaches one step. The viewer should finish
++able to perform the procedure, not merely remember a scene.
+ 
+ ## When to use
+ 
+-- A set-up guide, a how-to, a recipe card, a rules card or a safety card.
+-- Any small, countable procedure with 2–5 steps the viewer performs in order.
+-- Product onboarding where one hand action per step is the whole idea.
+-- Subjects that read best as abstract colour planes and a few props, not real rooms.
++- One of the everyday instruction cards: assembly steps, a recipe, a safety notice, a set
++  of rules.
++- Any short, countable procedure of two to five ordered steps.
++- Product onboarding where a single hand action per step is the whole idea.
++- Subjects that read as abstract colour planes and a prop or two, not a real room.
+ 
+ ## When not to use
+ 
+ - Photoreal 3D or a realistic environment.
+-- Data charts or dense technical diagrams (colour planes cannot carry them).
+-- A narrative film with a plot, dialogue and scene changes; this is a *scene* style.
+-- Anything needing a fully animated walking body — bodies hold, only hands act.
++- Charts and dense technical diagrams — flat colour planes cannot carry them.
++- A plotted narrative with dialogue and scene changes; this is a *scene* style.
++- Anything needing a fully animated walking body; in this style the body holds and only
++  the hands move.
+ 
+ ## Materials & rendering
+ 
+-- Draw with `demo/engine/toon.js` on a Canvas 2D at 1920×1080. The palette `PAL` is a
+-  warm paper ground, a warm near-black ink, and soft atomic-age complements.
+-- Colour and line are two separate "cels": every fill is drawn offset a few pixels from
+-  its ink line, and the offset re-rolls on twos via the global `REG` register, so the
+-  picture breathes. Use `shape(ctx, pts, opts)` for any shape in the style and `ink` for
+-  a pressure ribbon with deliberate breaks.
+-- Line is 3–5 px, with width breathing and small gaps; it never fully closes.
+-- Backgrounds are abstract: a colour plane, a floor band, a broken horizon and one or two
+-  props — never a full room. Finish with the light paper tooth and warm vignette
+-  (`paperFinish`).
+-- Shading is one flat darker plane clipped inside a shape, and drop shadows are a copy of
+-  the shape offset down-right in a paper shade. No gradients.
++- Draw with `demo/engine/toon.js` on a Canvas 2D at 1920×1080. The palette `PAL` is a warm
++  paper ground, a deep brown-black ink and soft atomic-age complements.
++- Colour and line are separate layers — two cels. Every fill is placed a few pixels away
++  from its ink outline, and that offset is re-rolled on twos through the `REG` register, so
++  the picture breathes. Build any shape with `shape(ctx, pts, opts)`; lay flat colour with
++  `plane`; draw the outline with `ink`, a pressure ribbon that opens small gaps on purpose.
++- The line runs about 3–5 px, its width breathing a little, and never closes completely.
++- Keep backgrounds abstract: a colour plane, a floor band, a broken horizon and one or two
++  props. Never build a room. Close with `paperFinish`, the light paper tooth and the warm
++  vignette.
++- Shade with a single darker flat plane clipped inside a shape. A drop shadow is a copy of
++  the shape pushed down-right in a paper tone. No gradients anywhere.
+ 
+ ## Colour logic
+ 
+-- A warm paper ground, a warm near-black ink, soft complements. Nothing pure or neon.
+-- One ground colour per scene: a lighter tint for walls, a darker shade for floors.
+-- The product keeps **one** colour through the whole clip; the accent (a garment, stars,
+-  bullets) is a different hue. Rotate the remaining step grounds across the scenes.
+-- Never place the product on its own colour, and never the presenter on their own accent.
++- A creamy stock, a deep brown-black ink, and soft mid-century complements. Nothing pure or
++  neon.
++- Each scene gets a single ground colour: a lighter tint for the wall, a darker shade for
++  the floor.
++- The product keeps one colour for the whole clip; the accent (a garment, a star, a
++  bullet) is a different hue. Rotate the remaining scene grounds step by step.
++- Never set the product on its own colour, and never set the presenter on the accent.
+ 
+ ## Type & text
+ 
+-- Three roles, three faces (the style registry lists them): a 1950s script for a kicker;
+-  a slab serif for titles, numerals and step headers, in ink over an offset colour plate;
+-  a geometric sans for body, details, labels and captions.
+-- The caption card is a paper-coloured rounded slab with a thin ink border (its colour cel
+-  offset too), small turning stars at the ends, bottom-centre. Hold at least
+-  max(1.8 s, speech + 0.6 s, chars/12 + 1 s).
+-- The step header is an ink disc with a paper numeral, a small letter-spaced "STEP n OF N",
+-  and the step title on a cream plate; it slides in on twos.
+-- Detail tags are paper cards with a star bullet, popping on the action beat beside the
+-  call-out. Data lands on the picture, never as a slide.
++- Three roles, three faces (the manifest lists oleoscript, alfaslabone and jost): a
++  mid-century script for a kicker; a slab serif for titles, numerals and step headers,
++  inked on a colour plate that sits off-register; a geometric sans for body copy, details,
++  labels and captions.
++- The caption sits in a rounded slab the colour of the paper, edged with a hairline ink
++  border (its colour cel offset too) and small stars turning at each end, bottom-centre.
++  Hold it long enough to be read.
++- A step header is a dark disc carrying a paper-coloured numeral, a short letterspaced
++  "STEP n OF N", with the step title on a cream plate; the whole header slides in on twos.
++- Detail tags are paper cards with a star bullet, popping beside the call-out on the action
++  beat. A value lands on the picture, never as a separate slide.
+ 
+ ## Motion quality
+ 
+-- On twos: poses, hand shapes and the cel jitter change at 12 fps (use `twos`). The
+-  camera, irises, arrows, plan routes and rays move at 24 fps.
+-- Held body, moving hands. A hand action has anticipation (pull back or lift), a fast
+-  action (0.15–0.25 s, eased out), a follow-through (recoil, settle, lift away), and
+-  lands exactly on a beat.
+-- Pop-ins (medallions, tags, labels, titles) scale in with a back-ease of about 0.25 s and
+-  a strong overshoot (`back`, `pop`).
+-- To reach the floor, use a kneel pose with two-bone IK (`armJoints`) so the hands stay on
+-  the object as it moves; never stretch standing arms.
+-- Lettering in the script face writes on left→right with a clip; headers slide in on twos.
++- Hold the animation on twos: poses, hand shapes and the paper jitter all step at 12 fps
++  (`twos`). The camera, irises, arrows, route drawing and rays run at 24 fps.
++- Hold the body, animate the hands. A hand action has anticipation (a pull back or a
++  lift), a quick stroke (roughly a sixth to a quarter of a second, easing out), a
++  follow-through in which the hand rebounds, settles and draws away, then a landing
++  squarely on the beat.
++- Pop-ins — medallions, tags, labels, titles — scale in with a back-ease of roughly 0.25 s
++  and a strong overshoot (`back`, `pop`).
++- To reach the floor, use a kneel pose with two-bone IK (`armJoints`) so the hands stay
++  locked to the object as it moves; never stretch a standing arm to reach.
++- Script lettering writes on left to right behind a clip; headers slide in on twos.
+ 
+ ## Camera grammar
+ 
+-The camera is "the stand" — never handheld. A vocabulary, not a route.
+-
+-- Slow push of a few percent: collecting the eye onto a stage.
+-- Iris through a medallion: the number *is* the door to the next step.
+-- Round call-out with a leader line: context and detail at once.
+-- Tilt with a pointing finger: the finger leads the frame.
+-- Push into a device, pan along signal rings: person → interface → device.
+-- Iris from a round object into a top view: function to plan.
+-- Pull-back with counter-rotation from a detail to a plan: one lane becomes a pattern.
+-- Colour-block wipe (side or bottom-up): turning the manual's page.
+-- Split frame in two colour blocks: right vs wrong, before vs after.
+-- Dead still for ≥ 3 s: "this is the frame to screenshot".
+-- Iris-out onto one object: a closing on the product or the result.
+-
+-Key subjects fill at least a third of frame height and stay clear of the caption band.
+-Transitions are circles, colour-block wipes and cuts on a beat — never dissolves.
++- The camera is a tripod — "the stand" — never handheld. The moves are a vocabulary, not a
++  route.
++- A slow push of a few percent: settle the eye on a stage.
++- An iris through a medallion: the number itself is the door to the next step.
++- A circular call-out joined by a leader line: showing place and close-up at once.
++- A tilt led by a pointing finger: the finger carries the frame.
++- A push into a device, panning along signal rings: person, then interface, then device.
++- An iris opening out of a round object toward a plan view: function becomes plan.
++- Pulling back while the frame counter-rotates, taking a close detail out to the plan: one
++  lane becomes a pattern.
++- A colour-block wipe (from the side or bottom-up): turning the page of the manual.
++- A split frame in two colour blocks: right versus wrong, before versus after.
++- Dead still for three seconds or more: "screenshot this frame".
++- An iris-out onto one object: closing on the product or the result.
++
++Let key subjects reach at least one third of the frame height and stay out of the caption
++band. Move between shots with an iris, a colour-block wipe or a cut on the beat; never
++dissolve.
+ 
+ ## Native moves
+ 
+-**Cutaway (3–6 s, default 6).** One gesture. Open on a single colour plane with the
+-presenter held; a call-out circle opens with a leader line onto their hand; the hand does
+-one action on a beat (anticipation, fast action, follow-through); a detail tag pops beside
+-the call-out; the camera holds. One step, no summary, the gesture legible in the first and
+-last frame.
++**Cutaway (4–6 s, default 6).** The manifest window opens at 4 s, so the cutaway is
++`max(3, 4) .. 6 s` — 4 s to 6 s, default 6. One gesture: open on a single colour plane with
++the presenter held; a call-out circle opens with a leader line onto the hand; the hand
++performs one action on a beat (anticipation, the quick stroke, the follow-through); a
++detail tag pops beside the call-out; the camera holds. One step, no summary, and the
++gesture is legible in the first and the last frame.
+ 
+-**Micro-explanation (8–20 s).** One rule actually taught. A step header slides in; a wide
+-shot shows the held presenter; the round call-out carries the close-up where the hands
+-perform the action on the beat; the detail tag lands with the value. Then a colour-block
+-wipe opens a small payoff — a real route or pattern that draws itself region by region and,
+-seen whole, reads as ornament. End on the held figure at rest beside the finished thing.
+-Keep one hand action per beat and assert the caption holds.
++**Micro-explanation (8–20 s).** The window closes at 15 s, so this runs `8 .. 15 s`. One
++rule actually taught: a step header slides in; a wide shot holds the presenter; the round
++call-out carries the close view where the hands perform on the beat; the detail tag lands
++with the value. Then a colour-block wipe opens a small payoff — a real route or pattern
++that inks itself one region after another and, taken whole, becomes pure ornament. End on
++the held figure at rest beside the finished thing. One hand action per beat.
+ 
+ ## Module map
+ 
+-- `demo/engine/toon.js` — the style core: palette `PAL`, easing (`ss`, `eo`, `eio`,
+-  `back`), `twos` for limited animation, the register (`REG`, `setClock`, `reg`), geometry
+-  (`spline`, `ellipse`, `rect`, `rrect`, `xform`), the ink ribbon `ink`, the core
+-  `shape`/`plane`, ornaments (`star`, `sparkle`, `rays`, `atom`, `boomerang`, `kidney`),
+-  the manual `arrow`, two-plate `text`/`fit`, and `paperFinish`.
+-- `demo/engine/chars.js` — the cast drawn with the engine: `armJoints` (two-bone arm
+-  solving), `toScreen`, `drawHand` (a four-finger glove with open/flat/point/grip), and
+-  `drawOwner`, `drawDock`, `drawPip` for a presenter, a base and a prop. Author your own
+-  presenter and prop; keep the rig, not the demo's characters.
+-- `demo/engine/icons.js` — an icon library: the `ICONS` map and `icon(ctx, name, cx, cy,
+-  size, opts)`, with names including dock, phone, start, cable, wifi, plug, water, beans,
+-  cup, filter, box, clock, check, leaf, key, bulb, spark and gear, all drawn flat and
+-  off-register.
+-- `demo/film.js` — the timeline and liftable scene helpers: tempo constants,
+-  `setup(content, durs)`, `DUR`, `section`, `srtCues`, `events`, and the reusable
+-  `subtitle`, `stepHeader`, `tag`, `callout`, `medallionAt`, the flow-route generator
+-  `laneY` + `buildPath`, `planProgress`, `drawPlan`, and the transition block.
++- `demo/engine/toon.js` — the style core: the palette `PAL`; the easing set (`ss`, `eo`,
++  `eio`, `back`); `twos` for limited animation; the register (`REG`, `setClock`, `reg`);
++  the geometry (`spline`, `ellipse`, `rect`, `rrect`, `move`, `xform`, `path`, `bbox`,
++  `plen`, `subpath`, `pointAt`); the texture and grain helpers (`textures`, `pat`,
++  `grainIn`); the ink ribbon `ink`; the core `shape` and `plane`; the ornaments (`star`,
++  `sparkle`, `rays`, `atom`, `boomerang`, `kidney`); the manual `arrow`; two-plate
++  `text`/`measure`/`fit`; and `paperFinish`.
++- `demo/engine/chars.js` — the cast, drawn with the engine: `armJoints` (two-bone arm
++  solving), `toScreen`, `drawHand` (a four-finger glove with open/flat/point/grip modes),
++  plus `drawOwner`, `drawDock` and `drawPip` for a presenter, a base and a prop. Author
++  your own presenter and prop; keep the rig, not the demo's characters.
++- `demo/engine/icons.js` — an icon library: the `ICONS` map and
++  `icon(ctx, name, cx, cy, size, opts)`, with names such as dock, phone, start, cable,
++  wifi, plug, water, beans, cup, filter, box, clock, check, leaf, key, bulb, spark and
++  gear, all drawn flat and off-register.
++- `demo/film.js` — the timeline and the reusable scene helpers: tempo constants
++  (`BPM`/`BEAT`/`BAR`), `setup(content, durs)`, `DUR()`, `section(t)`, `events()` and
++  `renderFilm(ctx, t, Q)`, with the liftable helpers `stepHeader`, `tag`, `callout`,
++  `medallionAt`, the flow-route generator `laneY` + `buildPath`, `planProgress` and
++  `drawPlan`.
+ - `demo/sheet.js` — `drawSheet(ctx, t, C)`, the model sheet: turnarounds, expressions, key
+   poses, hands, the prop and the palette in one frame. Use it to check your own drawing
+   before you build a clip.
+ 
+ Read these for technique; write your own content, presenter and timeline.
+ 
+ ## Aspect adaptation
+ 
+ - **16:9** is native: wide shots, side-by-side call-outs, a bottom-centre caption card.
+-- **9:16** stacks: keep the presenter centre, put the step header at the top, the call-out
+-  and detail tag in the lower half, and the caption card just above the safe area. Route
+-  plans rotate to run vertically.
+-- **1:1** and **4:5** sit between: single subject centred, call-out to one side, caption at
++- **9:16** stacks: keep the presenter centre, put the step header at the top and the
++  call-out with its detail tag in the lower half, and sit the caption card just above the
++  safe area. Route plans rotate to run vertically.
++- **1:1** squares the stage: one subject centred, the call-out to one side, the caption at
+   the bottom.
++- **4:5** is a gentle portrait: like 1:1 with more headroom, the call-out low and the
++  caption in the lower fifth.
++- **3:4** is the tallest portrait: give the presenter the full height, the call-out above
++  the caption and the route running down the column.
+ 
+-Keep text fully inside the frame in every aspect, and remember a zoom into the world
++Keep text fully inside the frame in every aspect, and remember that a zoom into the world
+ multiplies the ink weight — draw close-ups inside the call-out at native scale.
+ 
+ ## Inputs & proof
+ 
+-- No required inputs. The style takes no external file; the content is authored inline.
+-- Record in `clip.json` the subject, the one idea, the aspect, size, fps, duration and
+-  `facts` (real, checkable claims only).
+-- Keep the duration inside the style's window (4–15 s) and default to 6 s. The style runs
+-  at 24 fps.
+-- Expose `window.TEXTS(t)` for any text a viewer must read, with full strings and
+-  screen-space boxes.
++- No required inputs; the style takes no external file. The content is authored inline.
++- First release is **silent**. The clip declares `sound: "none"` — no narration, no voice,
++  no score, no foley, no subtitles and no audio stream. Every recipe and every QA check
++  here is visual only.
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 4–15 s window and default to 6 s. The style runs at
++  24 fps.
++- Expose `window.TEXTS(t)` for any text a viewer must read, with the full string and its
++  screen-space box.
+ 
+ ## Pitfalls
+ 
+-- A route that ignores obstacles looks fake — follow the product's real rules; flow
+-  streamlines bend around obstacles and never cross. Lay it one region per beat.
+-- A separate nose wedge looks glued on — one open spline from the bridge round the skull,
+-  closed at the nose tip.
+-- Thin arms read as sticks — shoulders at the torso corners, sleeves as a thick ink ribbon
+-  with a colour ribbon on top.
+-- Fat-blob fingers turn the hand into a cloud — stroke every part first, fill second (one
+-  union outline), slender fingers with separation lines.
+-- Zooming the world triples the ink — draw close-ups in the call-out at native scale.
+-- Detail text without reading time — move values into the detail, context into the title
+-  and voice; chars/12 + 1 s.
+-- A transition that draws the next scene before its start — clamp local time to just past
+-  the section start.
++- A route that ignores obstacles looks fake — respect the product's actual rules: the
++  flowing lines curve around obstacles and never intersect. Build the route one region at
++  a time, each on its own beat.
++- A separate nose wedge reads as glued on: run a single open curve from the bridge around
++  the skull and shut it at the tip of the nose.
++- Arms drawn thin look like sticks: anchor the shoulders at the torso corners, then lay a
++  broad ink band and a narrower colour band over it.
++- Blobby fingers make the hand read as a cloud: outline each part before filling it in a
++  single merged silhouette, keep the fingers slim and add separations.
++- Magnifying the world also magnifies the ink, so draw close-ups in the call-out at native
++  scale.
++- A detail with no reading time — move values into the detail and context into the title.
++- A transition that starts drawing the incoming scene too early: hold the local time to a
++  hair after the section begins.
+ 
+ ## Originality checklist
+ 
+ - [ ] The presenter and the prop are your own designs, not the demo's.
+ - [ ] The steps are the user's real procedure, in the right order.
+ - [ ] The product keeps one colour; the accent is a different hue.
+ - [ ] Rooms are abstract planes, not drawn environments.
+ - [ ] One hand action per beat, on the beat.
+-- [ ] Nothing is quoted from the demo's content, shots or voice.
++- [ ] Nothing is quoted from the demo's content, shots or characters.
+ 
+ ## QA checklist
+ 
+-- [ ] Duration inside 4–15 s (default 6) at 24 fps.
++- [ ] `duration_seconds` inside 4–15 s (default 6) at 24 fps.
+ - [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
+ - [ ] All faces defined and loaded before `window.READY = true`.
+-- [ ] Cel register on twos; camera and wipes at 24 fps.
+-- [ ] Hand actions land on beats; caption holds asserted in code.
+-- [ ] `window.DUR` matches `clip.json`; MP4 probes clean at the requested size/fps.
++- [ ] Cel register on twos; the camera and wipes at 24 fps.
++- [ ] Hand actions land on beats.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean at the requested size and fps
++      and carries no audio track.
+diff --git a/.agents/skills/lemo/briefs/swiss-motion.md b/.agents/skills/lemo/briefs/swiss-motion.md
+index 81f63f3..72014fe 100644
+--- a/.agents/skills/lemo/briefs/swiss-motion.md
++++ b/.agents/skills/lemo/briefs/swiss-motion.md
+@@ -1,177 +1,190 @@
+-# Swiss Motion — pilot brief
++# Swiss Motion — style brief
+ 
+ A working brief for an authoring agent. Read it before you write a `clip.js` in this
+-style. It states the look contract, the modules you draw with, and the two clip
+-lengths. The demo modules are a technique reference only — never re-shoot the demo's
+-story, text or artifact.
++style. It fixes the look contract, the demo modules you draw with, and the two clip
++lengths. The demo modules are technique references only — its subject, its printed
++programme and its copy belong to the demo. Build an original layout.
+ 
+ ## Promise
+ 
+-A short clip that reads like a printed programme brought to life: one paper ground, an
+-ink-and-grey grid, one signal colour, and motion as exact as a printing press. Every
+-element arrives on a beat; nothing bounces, glows or dissolves. The viewer should feel a
+-system being applied in front of them — a rule, a layout or a sequence resolving with
+-mechanical calm.
++Order made visible. A layout assembles itself in front of the viewer: a page ground, a
++measured grid, a single signal colour, and a rhythm as exact as a guillotine. Elements
++enter by wiping and clipping, never by fading; they land on beats and hold. The camera
++treats the frame as a spread it can slide across, so the piece reads as a system being
++applied rather than a story being told. By the end the arrangement should feel inevitable.
+ 
+ ## When to use
+ 
+-- A rule, method or set of steps that deserves to be *designed* rather than narrated.
+-- A title or transition cutaway: one strong layout, one message, a few seconds.
+-- A system explained by making it — a grid, a timetable, a spec, a comparison.
+-- Subjects with a countable structure: columns and rows can *mean* something (hours,
+-  floors, notes, years).
++- A rule, method or ordered procedure that is clearer shown than said.
++- A short title or transition beat: one strong layout, one message, a few seconds.
++- A system taught by building it — a grid, a schedule, a spec, a side-by-side.
++- A subject with countable structure, so columns and rows carry meaning (hours, floors,
++  years, pitches).
+ 
+ ## When not to use
+ 
+-- Narrated kinetic typography where words fly, spin or bounce.
+-- Anything needing gradients, glow, shadows, particles or device mock-ups.
+-- Photographic or photoreal content; this style is flat paper and flat ink.
+-- Dense data charts where values, not graphic mass, carry the meaning.
++- Kinetic typography where words fly, spin, bounce or tumble.
++- Anything that wants gradients, glow, shadow, particles or a device mock-up.
++- Photographic or continuous-tone imagery; this style is flat paper and flat ink.
++- Dense charts where the numbers, not the graphic mass, are the whole point — route those
++  to `dataviz`.
+ 
+ ## Materials & rendering
+ 
+-- Draw on a Canvas 2D at 1920×1080. Surfaces are flat: page `#EAE9E5`, paper `#FFFFFF`,
+-  ink `#111111`, one signal colour (a red like `#E30613`), and two or three light greys
+-  for the grid. The demo's palette is the `C` object in `demo/film.js`.
+-- The frame can behave as a spread: a left page (giant numeral, rule text, technical
+-  notes) and a right page (the artifact). Column coordinates come from `fx(i)` — 12
+-  columns, 96 px margin, 24 px gutter.
+-- Bars and blocks are flat rectangles. When consecutive cells of one unit merge,
+-  overdraw the seams by a pixel so hairlines never show.
+-- Keep the render clean: no grain, no shadows, no glow. Set mux grain to 0.
++- Draw on a Canvas 2D at 1920×1080. The surface set is small and flat: a page grey, a
++  white sheet, a black ink, one signal red and a couple of light greys for hairlines.
++  `demo/film.js` holds that set as `C`.
++- The demo splits a 12-column grid across the frame. `fx(i)` returns the left edge of
++  column `i`; the numbers folded into it are the 96 px margin, the 122 px column and the
++  24 px gutter. Keep bars and blocks as plain rectangles, and where two cells of one unit
++  meet, overlap the seam by a pixel so no hairline shows through.
++- Finish clean: no grain, no vignette, no soft shadow. If a mux step would add grain, set
++  it to zero.
+ 
+ ## Colour logic
+ 
+-- Four things only: paper, ink, greys, and **one** signal colour. The signal colour is
+-  carried by exactly one element at a time; that is what makes it the protagonist.
+-- Get depth without a second colour by placing lighter grey elements under the black
+-  ones.
+-- Overprint is allowed (ink type on the signal colour). Choose the signal colour for the
+-  topic, then never add a second hue.
++- Four ingredients and no more: paper, ink, greys, and one signal colour. The signal
++  colour is worn by a single element at any moment; it is the protagonist and nothing else
++  may borrow it.
++- Build depth by layering lighter greys beneath the blacks rather than by introducing a
++  second hue.
++- Ink type laid over the signal colour is allowed. Choose the signal colour to suit the
++  topic, then hold the line — a second hue dilutes the whole design.
+ 
+ ## Type & text
+ 
+-- One OFL neo-grotesque family for the whole clip, several weights (`demo/film.js` uses
+-  Archivo; the style registry lists the usable faces). Tighten letter-spacing to about
+-  −2 % at 90 px and above.
+-- Flush left, ragged right, everything on a grid line. Large white space is part of the
+-  composition. Giant numerals are *optically* flush left — subtract the glyph's left
+-  bearing, as `drawNumeral` does with `actualBoundingBoxLeft`.
+-- Subtitles are part of the layout, not a bottom bar: a small grey lead-in plus a large
+-  bold statement, each word clipped in on its timestamp (`revealText`). Hold each line at
+-  least max(1.8 s, speech + 0.6 s).
+-- Caption rows are ~19 px medium notes with a 1 px rule above. A corner may carry small
+-  technical notes or a bar counter.
++- One neo-grotesque family carries the clip in several weights. `demo/film.js` draws with
++  Archivo; the style manifest also lists UnifrakturMaguntia and DMSerifDisplay for a
++  deliberate contrast. Tighten tracking slightly (about −2 %) at 90 px and above.
++- Set flush left, ragged right, every line sitting on a grid line. White space is part of
++  the composition, not leftover room. A giant numeral is aligned *optically* to the column
++  edge: the numeral routine subtracts the glyph's left side bearing with
++  `actualBoundingBoxLeft`, so the digit looks flush even though it is not.
++- A word can be clipped in from below the baseline, the way `revealText` does it; keep the
++  same idea for any text the viewer must read. Measure after the font is set, because
++  canvas `letterSpacing` changes `measureText`.
++- A caption row is a small medium-weight note with a hairline rule above it. A corner may
++  carry tiny technical notes or a counter.
+ 
+ ## Motion quality
+ 
+-- Two curves only: a precise ease, `cubic-bezier(.7,0,.2,1)`, for snaps, and linear for
+-  drawn lines, playheads and the exception. No overshoot, no spring, no bounce. Both live
+-  in `demo/ease.js` as `E`, `snap`, `lin`, `steps` and `track`.
+-- Durations are note values at the clip's tempo. A snap starts one note value early and
+-  lands on the beat (`snap(t, t_arrive, dur)`).
+-- Entrances are wipes and clip-reveals, never fades: words rise out of a clip rectangle
+-  from below the baseline and leave upward; lines grow along their length; paper appears
+-  by a wipe; large numerals climb in eased steps.
+-- Deletions are knife cuts: a thin line crosses the element, then the element collapses to
+-  its midline.
+-- Ripples propagate in distance order from their cause. The single exception element moves
+-  differently — linear, unsnapped, allowed to pause mid-flight.
++- Two curves do all the work: one exact curve, `cubic-bezier(.7,0,.2,1)`, for anything
++  that snaps, and linear for drawn lines, playheads and the one deliberate exception.
++  Nothing overshoots, springs or bounces. Both live in `demo/ease.js` (`E`, `snap`, `lin`,
++  `steps`, `track`).
++- Durations are note values at the clip's own tempo. `snap(t, t_arrive, dur)` starts an
++  element one note-value early so it settles exactly on the beat.
++- Entrances are wipes and clip-reveals, never fades: a line grows along its length, a word
++  rises out of a clipping rectangle, a large numeral climbs in eased steps.
++- An exit is a knife cut — a thin rule passes across the element, and the shape then folds
++  down to its own midline.
++- A disturbance ripples outward in order of distance from its cause. The one exception
++  element is allowed to move linearly, off the beat, and to pause mid-flight.
+ 
+ ## Camera grammar
+ 
+-A 2D camera matrix of centre, scale and rotation (`posterMatrix` in `demo/film.js`) drives
+-every move. The camera moves only with the precise ease, and only on beats.
+-
+-- Locked spread: cause on the left, effect on the right.
+-- Hard pan by one column or page: the next step in a system.
+-- Rotate 90° and stop: the same artifact read another way.
+-- Pull out to a wall of artifacts: one programme, many outputs.
+-- Push into one module: detail, the unit of the system.
+-- Extend the grid past the page: the system is bigger than the artifact.
++- A single 2D matrix of centre, scale and rotation (`posterMatrix` in `demo/film.js`)
++  drives every move, and it only ever moves on the precise ease and only ever on beats.
++- Hold the spread locked: cause on the left page, effect on the right.
++- Jump a whole column or a whole page: the next item in the sequence.
++- Turn the sheet a quarter turn and stop: the same artifact read from another side.
++- Pull back to a wall of copies: one programme, many outputs.
++- Push into a single module: the unit the system is built from.
++- Run the grid past the paper edge: the system is larger than any one page.
+ - Split the frame into equal cells: parallel cases.
+-- Transitions are wipes, knife cuts, camera moves and re-flows — never dissolves.
++- Move between shots by wipe, knife cut, camera move or re-flow; never by dissolve.
+ 
+ ## Native moves
+ 
+-**Cutaway (3–6 s, default 6).** One snap. Open on the page; wipe a few grid columns up
+-from a single signal-colour line; clip-reveal two short words flush left; land one flat
+-bar or numeral on the first downbeat; hold a beat; knife-cut one element and end on the
+-empty grid. Three to five arrivals, each on a beat, nothing explained.
++**Cutaway (3–6 s, default 6).** The manifest window opens at 3 s, so the cutaway is
++`max(3, 3) .. 6 s` — 3 s to 6 s, default 6. One snap: open on the page; wipe a few grid
++columns up from one signal-colour rule; clip-reveal a short pair of words flush left; land
++a single flat bar or numeral on the first downbeat; hold; knife-cut one element and finish
++on the empty grid. Three to five arrivals, each on a beat and nothing explained.
+ 
+-**Micro-explanation (8–20 s).** A programme applied to one artifact. Establish the grid
+-(columns wipe on); reveal a giant numeral as a chapter card; set the type blocks and align
+-them flush left; then re-flow everything around one change, nearest element first, so the
+-layout visibly adapts. Introduce a single exception element that leaves the grid and flies
+-linearly, with a small on/off-grid readout; close by cutting it away and letting the system
+-close over the gap. Keep every arrival on the beat and assert the subtitle holds in code.
++**Micro-explanation (8–20 s).** The window closes at 12 s, so this runs `8 .. 12 s`. One
++programme applied to one artifact: establish the grid by wiping the columns on; reveal a
++giant numeral as a chapter card; set the type blocks and align them; then re-flow the
++layout around a single change, nearest element first, so the page visibly adapts. Bring in
++the one exception element that leaves the grid and travels linearly, backed by a small
++on/off-grid readout; close by cutting it away and letting the system close the gap. Keep
++every arrival on a beat.
+ 
+ ## Module map
+ 
+ - `demo/index.html` — the 1920×1080 canvas, the module entry and the `@font-face` rules.
+-- `demo/main.js` — the entry module: loads the font weights with `document.fonts.load`,
+-  fetches the score, lines and word timings, calls `setScore`, `setLines`, `setWords` and
+-  `measureNumeral`, and exposes `window.DUR`, `window.EV` (foley events), `window.SUBS`,
+-  `window.render(t)` and `window.READY`.
+-- `demo/film.js` — the timeline and drawing: palette `C`, the grid helpers, the key-moment
+-  table `T`, `renderFilm(g, t, opt)`, the clip-reveal `revealText`, `drawNumeral`,
+-  `drawPosterText`, `drawUnits`, `drawCircle`/`circleState`/`flight`, `posterMatrix`
+-  (camera), `subs` and `buildEvents`.
+-- `demo/ease.js` — the easing kit: `cubicBezier`, the single ease `E`, tempo constants
++- `demo/main.js` — the page contract: loads the font weights, reads the demo's timing
++  fixtures, drives the timeline setup, and exposes `window.DUR`, `window.render(t)` and
++  `window.READY`.
++- `demo/film.js` — the timeline and the drawing: the palette `C`, the column helpers
++  `fx`/`px`/`py`, the paper constants `PW`/`PH`/`PM`, the key-moment table `T`, the camera
++  `posterMatrix`, the flight interpolation `flight`/`circleState`, the export `renderFilm`
++  and the numeral fitter `measureNumeral`, plus the drawing routines `drawPosterText`,
++  `drawNumeral`, `revealText`, `drawUnits`, `drawCircle`, `drawCaptions`, `drawOpening`,
++  `drawVariant`, `drawWallLabels`, `drawEndCard` and `drawHUD`.
++- `demo/ease.js` — the easing kit: `cubicBezier`, the single ease `E`, the tempo constants
+   `BPM`/`BEAT`/`E8`/`E16`/`BAR`, and `snap`, `lin`, `steps`, `track`.
+ 
+-Read these for technique; write your own timeline, your own text and your own signal
++Read these for technique. Write your own timeline, your own words and your own signal
+ element.
+ 
+ ## Aspect adaptation
+ 
+-- **16:9** is the native landscape spread: left page and artifact side by side, a
+-  12-column grid, a giant numeral on the left.
+-- **9:16** becomes a single column: stack the numeral over the artifact, use a narrow
+-  4–6 column grid, and let the giant numeral fill more of the height. A vertical scroll
+-  reads naturally here.
+-- **1:1** and **4:5** sit between: reduce the column count, keep the flush-left axis and
+-  the caption row, and let the artifact bleed off one edge.
++- **16:9** is the native landscape spread: two pages side by side on a 12-column grid, the
++  giant numeral anchoring the left.
++- **9:16** collapses to a single column: stack the numeral above the artifact, run a narrow
++  grid of maybe four to six columns, and let the numeral take more of the height; a
++  downward scroll reads naturally.
++- **1:1** squares the layout: fewer columns, the flush-left axis kept, the artifact cropped
++  to the centre.
++- **4:5** is a gentle portrait: like 1:1 with more headroom and the caption row low.
++- **3:4** is the tallest portrait: give the artifact the full column and set the headline
++  in two short lines.
+ 
+-Measure text after setting the font (canvas `letterSpacing` changes `measureText`), and
+-keep every text box fully inside the frame in every aspect.
++Measure text after setting the font, and keep every text box fully inside the frame in
++every aspect.
+ 
+ ## Inputs & proof
+ 
+-- No required inputs. The style takes no external data file.
+-- Record in `clip.json` the subject, the one idea, the aspect, size, fps, duration and
+-  `facts` (real, checkable claims only).
+-- Keep the duration inside the style's window (3–12 s) and default to 6 s. Pick 24 or
+-  30 fps.
+-- Expose `window.TEXTS(t)` for any text a viewer must read, with full strings and
+-  screen-space boxes.
++- No required inputs; the style draws no external data file.
++- First release is **silent**. The clip declares `sound: "none"` — no narration, no voice,
++  no score, no foley, no subtitles and no audio stream. Every recipe and every QA check
++  here is visual only.
++- Record in `clip.json`: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++  `height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs` and `facts`.
++- Keep `duration_seconds` inside the 3–12 s window and default to 6 s. The style may run at
++  24 or 30 fps.
++- Expose `window.TEXTS(t)` for any text a viewer must read, with the full string and its
++  screen-space box.
+ 
+ ## Pitfalls
+ 
+-- Too many thin columns read as a chart — use fewer, wider modules so elements have mass.
+-- A merely tilted layout is not a bold one. Build a strong diagonal with long/short
+-  rhythm, a larger signal element and bleeds.
+-- Rotating and labelling at once reads as noise — rotate, hold, then add labels.
+-- Merged bars show seams after rotation — overdraw 1 px.
+-- Elements sharing the camera matrix leak into other shots — draw them only when on
+-  screen.
+-- Onsets that fall between frames flicker — put visual onsets on whole frames.
+-- Treating subtitles as a bottom bar breaks the style — set them into the layout.
++- Too many narrow columns read as a chart — use fewer, wider modules so each element has
++  mass.
++- A merely tilted arrangement is not a bold one; build a real diagonal with long and short
++  rhythm, a larger signal element and a bleed.
++- Rotating and labelling at the same time reads as noise — rotate, hold, then label.
++- Merged bars show seams once rotated — overlap by one pixel.
++- Elements set in the shared camera matrix can bleed into neighbouring shots — render
++  each one only while it is on screen.
++- An onset that lands between frames flickers — put every visual onset on a whole frame.
++- Treating the caption as a bottom bar breaks the composition — set it into the layout.
+ 
+ ## Originality checklist
+ 
+ - [ ] The grid means something specific to this topic.
+-- [ ] Exactly one signal colour, carried by one signal element.
++- [ ] Exactly one signal colour, worn by one signal element.
+ - [ ] The text is written for this clip, not the demo's programme.
+-- [ ] The exception (if any) is genuinely linear and unsnapped.
++- [ ] The exception, if there is one, is genuinely linear and off-beat.
+ - [ ] No gradient, glow, shadow, particle or device.
+-- [ ] The composition is your own arrangement — not a lift of any known poster.
++- [ ] The arrangement is your own, not a lift of a known poster.
+ 
+ ## QA checklist
+ 
+-- [ ] Duration inside 3–12 s (default 6) and fps in 24/30.
++- [ ] `duration_seconds` inside 3–12 s (default 6); fps 24 or 30.
+ - [ ] Every text box fully inside frame at 0 %, 25 %, 50 %, 75 % and 100 %.
+ - [ ] All faces defined and loaded before `window.READY = true`.
+-- [ ] Only the precise ease and linear are used; no bounce.
+-- [ ] Snaps land on beats; subtitle holds asserted in code.
+-- [ ] `window.DUR` matches `clip.json`; MP4 probes clean at the requested size/fps.
++- [ ] Only the precise ease and linear are used; nothing bounces.
++- [ ] Snaps land on beats.
++- [ ] `window.DUR` matches `clip.json`; the MP4 probes clean at the requested size and fps
++      and carries no audio track.
+diff --git a/tests/contracts/test_lemo_briefs.py b/tests/contracts/test_lemo_briefs.py
+index 2ec1ff0..b0dbfd8 100644
+--- a/tests/contracts/test_lemo_briefs.py
++++ b/tests/contracts/test_lemo_briefs.py
+@@ -1,22 +1,21 @@
+ # tests/contracts/test_lemo_briefs.py
+ from pathlib import Path
+ import pytest
+ REPO_ROOT = Path(__file__).resolve().parents[2]
+ BRIEFS = REPO_ROOT / ".agents/skills/lemo/briefs"
+ SECTIONS = ["Promise","When to use","When not to use","Materials & rendering","Colour logic",
+             "Type & text","Motion quality","Camera grammar","Native moves","Module map",
+             "Aspect adaptation","Inputs & proof","Pitfalls","Originality checklist","QA checklist"]
+ 
+-# The three pilot ids (swiss-motion, midcentury-toon, dataviz) are added back by their
+-# own task; this task (phase-2 briefs) covers the six ids below only.
+-@pytest.mark.parametrize("style", ["silkscreen-poster","bauhaus-shapes","flat-space-explainer",
+-                                    "assembly-line-diagram","living-screencast","isometric-picture-book"])
++@pytest.mark.parametrize("style", ["swiss-motion","midcentury-toon","dataviz","silkscreen-poster",
++                                    "bauhaus-shapes","flat-space-explainer","assembly-line-diagram",
++                                    "living-screencast","isometric-picture-book"])
+ def test_pilot_brief_has_the_contract(style):
+     text = (BRIEFS/f"{style}.md").read_text(encoding="utf-8")
+     assert len(text) >= 1500, style
+     import re
+     assert re.findall(r"^## (.+)$", text, re.M) == SECTIONS, style
+     assert "demo/" in text  # module map names real files
+     assert "16:9" in text and "9:16" in text
+     assert "silent" in text.lower(), style  # v1 clips have no audio at all
+     assert "sound" in text.lower(), style

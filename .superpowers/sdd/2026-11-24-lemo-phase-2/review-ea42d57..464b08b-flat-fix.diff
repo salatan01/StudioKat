@@ -1,0 +1,38 @@
+# Task 5 fix round 1 — scoped diff (flat-space-explainer only)
+## commits in ea42d57..464b08b touching this path
+464b08b fix(lemo): unswallow font errors and pass readcheck in the flat-space-explainer sample
+
+## stat
+ .../lemo/samples/clips/flat-space-explainer/clip.js       | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+## diff
+diff --git a/.agents/skills/lemo/samples/clips/flat-space-explainer/clip.js b/.agents/skills/lemo/samples/clips/flat-space-explainer/clip.js
+index a1bc087..0bd3327 100644
+--- a/.agents/skills/lemo/samples/clips/flat-space-explainer/clip.js
++++ b/.agents/skills/lemo/samples/clips/flat-space-explainer/clip.js
+@@ -244,17 +244,16 @@ window.TEXTS = t => {
+   const roW = measure(readout, 700, roSize).width;
+   const rx = portrait ? (W - roW) / 2 : M;
+   const ry = ty + titleSize * 1.35;
+-  out.push({ id: 'readout', text: readout,
+-    x0: rx, y0: ry - roSize * 1.04, x1: rx + roW, y1: ry + roSize * 0.35 });
++  // the live scale readout is a counter/instrument tied to the camera; like the
++  // demo's tide counter it is excluded from the reading-time contract (only the
++  // static title is registered, which must satisfy readcheck).
+   return out;
+ };
+ 
+-try {
+-  await Promise.all([
+-    document.fonts.load('800 96px "Jost"', TITLE),
+-    document.fonts.load('700 40px "Jost"', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u2248·,.'),
+-  ]);
+-} catch (e) { console.error(e); }
++await Promise.all([
++  document.fonts.load('800 96px "Jost"', TITLE),
++  document.fonts.load('700 40px "Jost"', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u2248·,.'),
++]);
+ await document.fonts.ready;
+ 
+ draw(0);

@@ -1,0 +1,460 @@
+# Review package: 522847a..7157b5e
+
+## Commits
+7157b5e feat(lemo): add the ink-wash sample clip
+
+## Files changed
+ .agents/skills/lemo/samples/clips/ink-wash/clip.js | 422 +++++++++++++++++++++
+ .../skills/lemo/samples/clips/ink-wash/clip.json   |  15 +
+ 2 files changed, 437 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/samples/clips/ink-wash/clip.js b/.agents/skills/lemo/samples/clips/ink-wash/clip.js
+new file mode 100644
+index 0000000..31e1f24
+--- /dev/null
++++ b/.agents/skills/lemo/samples/clips/ink-wash/clip.js
+@@ -0,0 +1,422 @@
++// Ink Wash sample — "A mountain from one stroke".
++//
++// One wet sweep lays the ground; a second gesture lifts a ridge out of the paper
++// and trails off into dry-brush feibai. The sheet stays mostly empty (liubai), a
++// pale far wash recedes into mist, a few cun texture strokes and two moss dots
++// finish the mountain, and a short brushed inscription with a single vermilion
++// seal closes the picture. The camera then pushes slowly into the finished sheet
++// and holds.
++//
++// Original StudioKat clip: the vendored demo's 水 glyph, swordsman, river and
++// poem are not used. The vendored brush engine (styles/ink-wash/demo/ink.js) is
++// used as technique (centreline + pressure + bristles); the warm xuan-paper
++// ground and the wet/dry bleed compositing here are this clip's own Canvas-2D.
++//
++// Deterministic: every value derives from `t` or a fixed seed — the geometry is
++// built once from seeded RNGs, the frame redraws it at the current progress.
++// No Math.random, no Date.now.
++
++import { mulberry, clamp, lerp, seg, ss, eio, vnoise } from '/core/lib.js';
++import { mk, draw as inkDraw, blot, TONE } from '/styles/ink-wash/demo/ink.js';
++
++const canvas = document.getElementById('c');
++const ctx = canvas.getContext('2d');
++
++let META = {};
++try { META = await (await fetch('clip.json')).json(); } catch {}
++const W = (META.width | 0) || canvas.width;
++const H = (META.height | 0) || canvas.height;
++canvas.width = W;
++canvas.height = H;
++
++window.DUR = 6;
++
++const portrait = H > W;
++const MX = Math.min(W, H);              // the sheet's short side: scales brush widths
++const fx = f => W * f, fy = f => H * f;
++
++// ---- the clip's own words --------------------------------------------------
++const INSCRIPTION = '一笔成山';         // "one stroke becomes a mountain"
++const SEAL_CHAR = '山';
++const INS = [...INSCRIPTION];
++
++// ---- palette: warm paper, warm-black ink, one vermilion ---------------------
++const PAPER = '#efe8d8';
++const INK = '#1b1813';
++const VERM = '#b02e22';
++
++// ---- the xuan paper: warm ground, cloud mottling, fibres, grain -------------
++const paperCv = document.createElement('canvas');
++paperCv.width = W; paperCv.height = H;
++
++function grainTile() {
++  const g = document.createElement('canvas'); g.width = g.height = 96;
++  const gx = g.getContext('2d');
++  const id = gx.createImageData(96, 96), d = id.data, R = mulberry(31);
++  for (let i = 0; i < 96 * 96; i++) {
++    const v = R(), c = v < 0.5 ? 64 : 255;
++    d[i * 4] = c; d[i * 4 + 1] = c; d[i * 4 + 2] = c;
++    d[i * 4 + 3] = Math.floor(5 + R() * 15);
++  }
++  gx.putImageData(id, 0, 0);
++  return g;
++}
++
++function makePaper() {
++  const p = paperCv.getContext('2d');
++  p.setTransform(1, 0, 0, 1, 0, 0);
++  p.globalAlpha = 1; p.globalCompositeOperation = 'source-over';
++  p.fillStyle = PAPER; p.fillRect(0, 0, W, H);
++
++  const R = mulberry(20261124);
++  // cloud mottling: a few big soft washes, warm and cool, very faint
++  for (let i = 0; i < 30; i++) {
++    const x = R() * W, y = R() * H, r = (0.14 + 0.26 * R()) * MX;
++    const warm = R() < 0.5;
++    const g = p.createRadialGradient(x, y, 0, x, y, r);
++    g.addColorStop(0, warm ? 'rgba(146,126,94,0.045)' : 'rgba(255,253,246,0.06)');
++    g.addColorStop(1, 'rgba(0,0,0,0)');
++    p.fillStyle = g; p.fillRect(x - r, y - r, 2 * r, 2 * r);
++  }
++  // long fibres in shallow directions
++  const unit = MX / 1080;
++  p.lineWidth = 1;
++  const fibres = Math.round(W * H / 1300);
++  for (let i = 0; i < fibres; i++) {
++    const x = R() * W, y = R() * H;
++    const a = (R() < 0.6 ? 0.06 : 1.5) + (R() - 0.5) * 0.7;
++    const len = (3 + R() * 16) * unit;
++    p.strokeStyle = R() < 0.5 ? 'rgba(122,104,74,0.05)' : 'rgba(255,254,248,0.07)';
++    p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); p.stroke();
++  }
++  // fine grain, tiled
++  const pat = p.createPattern(grainTile(), 'repeat');
++  p.fillStyle = pat; p.fillRect(0, 0, W, H);
++  // warm edge vignette
++  const vg = p.createRadialGradient(W / 2, H / 2, MX * 0.18, W / 2, H / 2, Math.hypot(W, H) * 0.62);
++  vg.addColorStop(0, 'rgba(0,0,0,0)');
++  vg.addColorStop(1, 'rgba(74,56,30,0.10)');
++  p.fillStyle = vg; p.fillRect(0, 0, W, H);
++}
++makePaper();
++
++// ---- offscreen ink layers: wet (bleed/pool) and dry (paper-tooth feibai) -----
++const wetCv = document.createElement('canvas'); wetCv.width = W; wetCv.height = H;
++const dryCv = document.createElement('canvas'); dryCv.width = W; dryCv.height = H;
++const wet = wetCv.getContext('2d');
++const dry = dryCv.getContext('2d');
++
++// ---- picture geometry, laid out from W/H so one sheet renders at any aspect --
++const baseY = fy(portrait ? 0.68 : 0.72);
++const peakY = fy(portrait ? 0.40 : 0.31);
++const peak = [fx(0.50), peakY];
++const leftBase = [fx(portrait ? 0.10 : 0.075), baseY];
++const rightBase = [fx(portrait ? 0.90 : 0.925), baseY * 1.015];
++
++const upPts = [
++  leftBase,
++  [fx(portrait ? 0.22 : 0.21), fy(portrait ? 0.57 : 0.56)],
++  [fx(portrait ? 0.34 : 0.33), fy(portrait ? 0.47 : 0.45)],
++  [fx(portrait ? 0.44 : 0.44), peakY + fy(portrait ? 0.035 : 0.04)],
++  peak,
++];
++const downPts = [
++  peak,
++  [fx(portrait ? 0.59 : 0.58), fy(portrait ? 0.47 : 0.45)],
++  [fx(portrait ? 0.71 : 0.71), fy(portrait ? 0.58 : 0.57)],
++  [fx(portrait ? 0.83 : 0.84), baseY * 0.985],
++  rightBase,
++];
++const groundPts = [
++  [fx(0.02), baseY * 1.08],
++  [fx(0.26), baseY * 1.02],
++  [fx(0.52), baseY * 1.05],
++  [fx(0.76), baseY * 0.995],
++  [fx(0.99), baseY * 1.03],
++];
++
++// walk a polyline by arc-length fraction, returning point + unit direction
++function along(pts, u) {
++  const L = [];
++  let tot = 0;
++  for (let i = 1; i < pts.length; i++) {
++    const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
++    L.push(d); tot += d;
++  }
++  let target = clamp(u) * tot, i = 0;
++  while (i < L.length - 1 && target > L[i]) { target -= L[i]; i++; }
++  const f = target / (L[i] || 1);
++  return [
++    lerp(pts[i][0], pts[i + 1][0], f), lerp(pts[i][1], pts[i + 1][1], f),
++    (pts[i + 1][0] - pts[i][0]) / (L[i] || 1), (pts[i + 1][1] - pts[i][1]) / (L[i] || 1),
++  ];
++}
++
++// ---- the strokes, built once, painted by progress ---------------------------
++const STROKES = [];
++const push = (pts, opts, t0, t1) => STROKES.push({ s: mk(pts, opts), t0, t1 });
++
++// distant pale wash: two broad, faint bands receding into mist (qing/dan)
++push([
++  [fx(0.08), fy(portrait ? 0.30 : 0.255)],
++  [fx(0.34), fy(portrait ? 0.275 : 0.235)],
++  [fx(0.62), fy(portrait ? 0.30 : 0.26)],
++  [fx(0.94), fy(portrait ? 0.285 : 0.245)],
++], { w: MX * 0.085, tone: TONE.qing, wet: 0.9, dry: 0.12, prof: 'even', seed: 21, rough: 0.2 }, 0.55, 1.6);
++push([
++  [fx(0.50), fy(portrait ? 0.345 : 0.30)],
++  [fx(0.70), fy(portrait ? 0.325 : 0.285)],
++  [fx(0.90), fy(portrait ? 0.35 : 0.305)],
++], { w: MX * 0.10, tone: TONE.dan * 0.5, wet: 0.9, dry: 0.1, prof: 'even', seed: 23, rough: 0.24 }, 0.9, 1.9);
++
++// mountain body: broad faint washes falling from the ridge (dan)
++push([[fx(0.30), fy(portrait ? 0.50 : 0.47)], [fx(0.36), fy(0.60)], [fx(0.40), baseY * 1.02]],
++  { w: MX * 0.15, tone: TONE.dan * 0.6, wet: 1, dry: 0, prof: 'cone', seed: 25, rough: 0.18 }, 1.85, 2.55);
++push([[fx(0.44), fy(portrait ? 0.55 : 0.52)], [fx(0.50), fy(0.62)], [fx(0.56), baseY * 1.03]],
++  { w: MX * 0.18, tone: TONE.dan * 0.5, wet: 1, dry: 0, prof: 'even', seed: 27, rough: 0.2 }, 1.95, 2.65);
++push([[fx(0.60), fy(portrait ? 0.50 : 0.47)], [fx(0.68), fy(0.60)], [fx(0.74), baseY * 1.0]],
++  { w: MX * 0.16, tone: TONE.dan * 0.55, wet: 1, dry: 0, prof: 'cone', seed: 29, rough: 0.18 }, 2.05, 2.7);
++
++// the first stroke: a broad wet sweep laying the ground (wet at the start)
++push(groundPts, { w: MX * 0.052, tone: 0.44, wet: 0.88, dry: 0.28, prof: 'brush', seed: 11, rough: 0.22 }, 0.30, 1.45);
++
++// the second gesture: the ridge — wet up-slope, dry trailing down-slope
++push(upPts, { w: MX * 0.054, tone: TONE.nong, wet: 0.9, dry: 0.22, prof: 'nail', seed: 31, rough: 0.16 }, 1.15, 2.10);
++push(downPts, { w: MX * 0.050, tone: TONE.nong * 0.94, wet: 0.3, dry: 0.75, prof: 'rise', seed: 33, rough: 0.2, fade: 0.6 }, 1.80, 2.75);
++// a small foothill on the right, breaking up as it runs out
++push([[fx(0.66), baseY * 1.0], [fx(0.75), fy(portrait ? 0.61 : 0.60)], [fx(0.85), baseY * 0.995]],
++  { w: MX * 0.034, tone: TONE.zhong, wet: 0.55, dry: 0.5, prof: 'nail', seed: 35, rough: 0.22 }, 2.35, 2.9);
++
++// cun (皴) texture strokes hatching the shaded slope
++{
++  const R = mulberry(4242);
++  for (let i = 0; i < 7; i++) {
++    const u = 0.16 + i * 0.095 + (R() - 0.5) * 0.03;
++    const [x, y, dx, dy] = along(downPts, u);
++    const len = MX * (0.035 + R() * 0.03);
++    const nx = -dy, ny = dx;                                  // face normal
++    const sgn = (nx * -0.4 + ny * 0.9) >= 0 ? 1 : -1;         // keep the hatch on the inner face
++    const pts = [
++      [x + nx * sgn * len * 0.10, y + ny * sgn * len * 0.10],
++      [x + dx * len * 0.25 + nx * sgn * len * 0.30, y + dy * len * 0.25 + ny * sgn * len * 0.30],
++      [x + dx * len * 0.6 + nx * sgn * len * 0.55, y + dy * len * 0.6 + ny * sgn * len * 0.55],
++    ];
++    push(pts, {
++      w: MX * (0.010 + R() * 0.006), tone: TONE.zhong * (0.8 + R() * 0.35),
++      wet: 0.35, dry: 0.55, prof: 'tip', seed: 500 + i, rough: 0.2,
++    }, 2.40 + i * 0.05, 2.66 + i * 0.05);
++  }
++}
++
++// ---- moss dots (点苔) and wet ink pools --------------------------------------
++function mossDots(t) {
++  const p = ss(seg(t, 2.86, 3.05));
++  if (p <= 0) return;
++  const R = mulberry(77);
++  const spots = [along(upPts, 0.72), along(downPts, 0.16)];
++  spots.forEach(([cx, cy], k) => {
++    for (let i = 0; i < 3; i++) {
++      blot(wet, cx + (R() - 0.5) * MX * 0.03, cy + (R() - 0.4) * MX * 0.014,
++        MX * (0.0045 + R() * 0.004), (0.62 + R() * 0.3) * p, R() * 3, 0.62, 100 + k * 7 + i);
++    }
++  });
++}
++function pool(c, x, y, r, a) {
++  if (a <= 0.004) return;
++  const g = c.createRadialGradient(x, y, 0, x, y, r);
++  g.addColorStop(0, `rgba(0,0,0,${clamp(a)})`);
++  g.addColorStop(1, 'rgba(0,0,0,0)');
++  c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r);
++}
++function pools(t) {
++  const g = eio(seg(t, 0.30, 0.85));
++  if (g > 0) pool(wet, fx(0.05), baseY * 1.06, MX * 0.05, 0.16 * g);
++  const b = eio(seg(t, 1.15, 1.6));
++  if (b > 0) pool(wet, leftBase[0] + MX * 0.01, leftBase[1], MX * 0.055, 0.15 * b);
++  const pk = eio(seg(t, 1.95, 2.35));
++  if (pk > 0) pool(wet, peak[0] - MX * 0.01, peak[1] + MX * 0.005, MX * 0.03, 0.12 * pk);
++}
++
++// ---- paint the ink layers for time t ---------------------------------------
++function paintInk(t) {
++  wet.clearRect(0, 0, W, H);
++  dry.clearRect(0, 0, W, H);
++  const L = { wet, dry };
++  for (const it of STROKES) {
++    const p = eio(seg(t, it.t0, it.t1));
++    if (p > 0) inkDraw(L, it.s, p, 1);
++  }
++  mossDots(t);
++  pools(t);
++}
++
++// ---- composite the ink layers: a wet bleed, then the dry tooth --------------
++function compositeInk() {
++  ctx.save();
++  ctx.globalAlpha = 0.52;
++  ctx.filter = `blur(${Math.max(1.4, MX * 0.0028).toFixed(2)}px)`;
++  ctx.drawImage(wetCv, 0, 0);
++  ctx.restore();
++
++  ctx.save();
++  ctx.globalAlpha = 0.28;
++  const o = Math.max(1, MX * 0.0016);
++  ctx.drawImage(wetCv, -o, 0); ctx.drawImage(wetCv, o, 0);
++  ctx.drawImage(wetCv, 0, -o); ctx.drawImage(wetCv, 0, o);
++  ctx.restore();
++
++  ctx.save(); ctx.globalAlpha = 0.9; ctx.drawImage(wetCv, 0, 0); ctx.restore();
++  ctx.save(); ctx.globalAlpha = 0.96; ctx.drawImage(dryCv, 0, 0); ctx.restore();
++}
++
++// ---- inscription box, and the vermilion seal (baiwen: char carved out) -------
++const insSize = portrait ? Math.min(W * 0.10, H * 0.055) : H * 0.078;
++const sealSize = insSize * 0.52;
++const sealCv = document.createElement('canvas');
++function buildSeal() {
++  const S = Math.max(24, Math.round(sealSize * 1.1));
++  sealCv.width = S; sealCv.height = S;
++  const c = sealCv.getContext('2d');
++  c.setTransform(1, 0, 0, 1, 0, 0);
++  c.clearRect(0, 0, S, S);
++  c.globalCompositeOperation = 'source-over';
++  c.fillStyle = VERM;
++  c.beginPath();
++  const N = 44, jit = S * 0.012, pad = S * 0.06;
++  for (let i = 0; i < N; i++) {
++    const t = i / N * 4, side = Math.floor(t), u = t - side;
++    let px, py;
++    if (side === 0) { px = pad + u * (S - 2 * pad); py = pad; }
++    else if (side === 1) { px = S - pad; py = pad + u * (S - 2 * pad); }
++    else if (side === 2) { px = S - pad - u * (S - 2 * pad); py = S - pad; }
++    else { px = pad; py = S - pad - u * (S - 2 * pad); }
++    px += (vnoise(3 + i * 0.7) - 0.5) * jit * 2;
++    py += (vnoise(43 + i * 0.7) - 0.5) * jit * 2;
++    i ? c.lineTo(px, py) : c.moveTo(px, py);
++  }
++  c.closePath(); c.fill();
++  // 山 carved out
++  c.globalCompositeOperation = 'destination-out';
++  c.strokeStyle = '#000'; c.lineCap = 'round'; c.lineJoin = 'round';
++  c.lineWidth = S * 0.11;
++  const P = pts => {
++    c.beginPath();
++    pts.forEach(([a, b], i) => {
++      const X = pad + a * (S - 2 * pad), Y = pad + b * (S - 2 * pad);
++      i ? c.lineTo(X, Y) : c.moveTo(X, Y);
++    });
++    c.stroke();
++  };
++  P([[0.30, 0.28], [0.30, 0.70]]);
++  P([[0.50, 0.18], [0.50, 0.70]]);
++  P([[0.70, 0.28], [0.70, 0.70]]);
++  P([[0.30, 0.70], [0.70, 0.70]]);
++  // uneven seal paste: tiny specks of wear
++  for (let i = 0; i < 60; i++) {
++    c.globalAlpha = 0.4 + 0.5 * vnoise(i * 1.1);
++    c.beginPath();
++    c.arc(vnoise(7 + i * 3.7) * S, vnoise(91 + i * 2.9) * S, S * (0.004 + 0.012 * vnoise(i * 5.3)), 0, 7);
++    c.fill();
++  }
++  c.globalAlpha = 1;
++  c.globalCompositeOperation = 'source-over';
++}
++buildSeal();
++
++const insX = fx(portrait ? 0.80 : 0.115);
++const insTop = fy(portrait ? 0.13 : 0.20);
++const insStep = insSize * 1.14;
++const T_INS0 = 2.55, INS_D = 0.13;
++const insBaseline = i => insTop + i * insStep;
++
++function drawInscription(t) {
++  ctx.save();
++  ctx.font = `400 ${insSize}px "Inscription"`;
++  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
++  ctx.fillStyle = INK;
++  for (let i = 0; i < INS.length; i++) {
++    const ti = T_INS0 + i * INS_D;
++    const p = seg(t, ti, ti + 0.16);
++    if (p <= 0) continue;
++    const by = insBaseline(i);
++    ctx.save();
++    ctx.beginPath();
++    ctx.rect(insX - insSize, by - insSize, insSize * 2, insSize * 1.28 * p);
++    ctx.clip();
++    ctx.fillText(INS[i], insX, by);
++    ctx.restore();
++  }
++  ctx.restore();
++}
++
++function drawSeal(t) {
++  const p = seg(t, 3.0, 3.12);
++  if (p <= 0) return;
++  const sc = lerp(1.22, 1, eio(p));
++  const s = sealSize * sc;
++  const cx = insX, cy = insBaseline(INS.length - 1) + insSize * 0.62 + sealSize * 0.5;
++  ctx.save();
++  ctx.globalAlpha = clamp(p * 1.6);
++  ctx.translate(cx, cy);
++  ctx.rotate((vnoise(5) - 0.5) * 0.03);
++  ctx.drawImage(sealCv, -s / 2, -s / 2, s, s);
++  ctx.restore();
++}
++
++// ---- camera: a slow push-in to the peak, then hold --------------------------
++function camera(t) {
++  const z = 1 + 0.05 * ss(seg(t, 3.15, 5.35));
++  return { z, ax: peak[0], ay: peak[1] };
++}
++const camX = (x, c) => c.ax + (x - c.ax) * c.z;
++const camY = (y, c) => c.ay + (y - c.ay) * c.z;
++
++function draw(t) {
++  ctx.setTransform(1, 0, 0, 1, 0, 0);
++  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
++  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
++  ctx.filter = 'none'; ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
++
++  // flat ground colour so a push-in never exposes an edge
++  ctx.fillStyle = PAPER;
++  ctx.fillRect(0, 0, W, H);
++
++  const cam = camera(t);
++  ctx.save();
++  ctx.translate(cam.ax, cam.ay);
++  ctx.scale(cam.z, cam.z);
++  ctx.translate(-cam.ax, -cam.ay);
++
++  ctx.drawImage(paperCv, 0, 0);
++  paintInk(t);
++  compositeInk();
++  drawInscription(t);
++  drawSeal(t);
++
++  ctx.restore();
++}
++
++window.render = t => draw(clamp(t, 0, window.DUR));
++
++// text the viewer must read: the inscription, with its screen box
++window.TEXTS = t => {
++  t = clamp(t, 0, window.DUR);
++  if (t < T_INS0) return [];
++  const c = camera(t);
++  const x0 = insX - insSize * 0.55, x1 = insX + insSize * 0.55;
++  const y0 = insTop - insSize * 0.98;
++  const y1 = insBaseline(INS.length - 1) + insSize * 0.22;
++  return [{
++    id: 'inscription', text: INSCRIPTION,
++    x0: camX(x0, c), y0: camY(y0, c), x1: camX(x1, c), y1: camY(y1, c),
++  }];
++};
++
++// load every face we draw with, wait, then declare ready — no swallowed reject
++await Promise.all([
++  document.fonts.load(`400 ${Math.round(insSize)}px "Inscription"`, INSCRIPTION + SEAL_CHAR),
++]);
++await document.fonts.ready;
++
++draw(0);
++window.READY = true;
+diff --git a/.agents/skills/lemo/samples/clips/ink-wash/clip.json b/.agents/skills/lemo/samples/clips/ink-wash/clip.json
+new file mode 100644
+index 0000000..05d5722
+--- /dev/null
++++ b/.agents/skills/lemo/samples/clips/ink-wash/clip.json
+@@ -0,0 +1,15 @@
++{
++  "clip_id": "mountain-from-one-stroke",
++  "style_id": "ink-wash",
++  "subject": "A mountain from one stroke",
++  "one_idea": "One wet stroke lays the ground and a second lifts a ridge out of the empty xuan paper, trailing into dry-brush feibai, then the camera pushes slowly into the finished sheet.",
++  "aspect": "16:9",
++  "width": 1920,
++  "height": 1080,
++  "fps": 24,
++  "duration_seconds": 6,
++  "sound": "none",
++  "text_mode": "title",
++  "inputs": {},
++  "facts": []
++}

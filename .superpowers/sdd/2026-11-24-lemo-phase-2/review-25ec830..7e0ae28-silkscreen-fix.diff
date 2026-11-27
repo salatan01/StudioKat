@@ -1,0 +1,29 @@
+# Task 3 fix round 1 — scoped diff (silkscreen-poster only)
+## commits 25ec830..7e0ae28 touching this path
+7e0ae28 fix(lemo): stop swallowing font-load errors in the silkscreen-poster sample
+
+## stat
+ .agents/skills/lemo/samples/clips/silkscreen-poster/clip.js | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+## diff
+diff --git a/.agents/skills/lemo/samples/clips/silkscreen-poster/clip.js b/.agents/skills/lemo/samples/clips/silkscreen-poster/clip.js
+index 0267c85..753de5d 100644
+--- a/.agents/skills/lemo/samples/clips/silkscreen-poster/clip.js
++++ b/.agents/skills/lemo/samples/clips/silkscreen-poster/clip.js
+@@ -185,12 +185,9 @@ window.TEXTS = (t) => {
+ };
+ 
+ // fonts: every drawn face defined and loaded before READY
+-try {
+-  await Promise.all([
+-    document.fonts.load('900 140px "Big Shoulders Display"', HEADLINE),
+-  ]);
+-} catch (e) {}
++await Promise.all([
++  document.fonts.load('900 140px "Big Shoulders Display"', HEADLINE),
++]);
+ await document.fonts.ready;
+-
+ draw(0);
+ window.READY = true;

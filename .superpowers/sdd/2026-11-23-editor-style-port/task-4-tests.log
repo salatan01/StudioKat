@@ -1,0 +1,24 @@
+/home/superkat01/github/StudioKat/.venv/lib/python3.11/site-packages/pytest_asyncio/plugin.py:306: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session". Set it to "fixture-scope" to keep the current behavior.
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.2.0, pluggy-1.7.0 -- /home/superkat01/github/StudioKat/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/superkat01/github/StudioKat
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 10 items
+
+tests/contracts/test_faceless_skill_vendoring.py::test_skill_frontmatter_is_opencode_portable PASSED [ 10%]
+tests/contracts/test_faceless_skill_vendoring.py::test_immutable_tree_is_present PASSED [ 20%]
+tests/contracts/test_faceless_skill_vendoring.py::test_capture_example_handles_websocket_close PASSED [ 30%]
+tests/contracts/test_faceless_skill_vendoring.py::test_capture_examples_are_identical_across_styles PASSED [ 40%]
+tests/contracts/test_faceless_skill_vendoring.py::test_no_claude_specific_instructions_remain_in_core_skill PASSED [ 50%]
+tests/contracts/test_faceless_skill_vendoring.py::test_opencode_tool_map_names_the_real_tools PASSED [ 60%]
+tests/contracts/test_faceless_skill_vendoring.py::test_upstream_checksums_verify PASSED [ 70%]
+tests/contracts/test_faceless_skill_vendoring.py::test_styles_tree_is_byte_identical_to_upstream SKIPPED [ 80%]
+tests/contracts/test_faceless_skill_vendoring.py::test_only_the_py_shim_shebang_differs_from_upstream SKIPPED [ 90%]
+tests/contracts/test_faceless_skill_vendoring.py::test_publish_reference_keeps_the_verified_flow PASSED [100%]
+
+========================= 8 passed, 2 skipped in 0.20s =========================

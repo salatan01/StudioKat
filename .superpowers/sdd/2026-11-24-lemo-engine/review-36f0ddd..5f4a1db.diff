@@ -1,0 +1,1008 @@
+# Review package: 36f0ddd..5f4a1db
+
+## Commits
+5f4a1db feat(lemo): create and validate clip workspaces
+
+## Files changed
+ .agents/skills/lemo/scripts/page_check.mjs   |  60 +++++
+ .agents/skills/lemo/scripts/validate_clip.py |  25 ++
+ tests/tools/test_lemo_render_workspace.py    | 128 ++++++++++
+ tools/video/lemo/validate_clip.py            | 277 +++++++++++++++++++++
+ tools/video/lemo_render.py                   | 344 ++++++++++++++++++++++++++-
+ 5 files changed, 824 insertions(+), 10 deletions(-)
+
+## Diff
+diff --git a/.agents/skills/lemo/scripts/page_check.mjs b/.agents/skills/lemo/scripts/page_check.mjs
+new file mode 100644
+index 0000000..a014cdb
+--- /dev/null
++++ b/.agents/skills/lemo/scripts/page_check.mjs
+@@ -0,0 +1,60 @@
++// Page-duration check for a Lemo clip workspace.
++//   node page_check.mjs <clip_dir> <expected_duration>
++//
++// Opens the clip page through the vendored engine (openDemo mounts a clip that
++// lives outside the library under /@film/ and waits for window.READY), draws at
++// t = 0 and t = window.DUR to prove window.render(t) works, and confirms the
++// page's window.DUR agrees with the duration recorded in clip.json.
++//
++// Prints {"ok":true,"dur":6} on success. Exits non-zero (printing a JSON error
++// object when it got far enough to form one) on any failure.
++import { openDemo, closeServer, requireDemo } from '../library/core/render/page.mjs';
++
++const args = process.argv.slice(2);
++const dir = args[0];
++const expected = Number(args[1]);
++
++function fail(message, { json = false } = {}) {
++  if (json) console.error(JSON.stringify({ ok: false, error: message }));
++  else console.error('page_check: ' + message);
++  process.exit(1);
++}
++
++requireDemo(dir);
++if (!Number.isFinite(expected) || expected <= 0) {
++  console.error('usage: node page_check.mjs <clip_dir> <expected_duration>');
++  process.exit(2);
++}
++
++const { browser, page } = await openDemo(dir);
++let dur = null;
++let renderError = null;
++try {
++  const report = await page.evaluate(() => {
++    const value = typeof window.DUR === 'number' ? window.DUR : null;
++    if (typeof window.render !== 'function') return { value, noRender: true };
++    try {
++      window.render(0);
++      if (value !== null) window.render(value);
++    } catch (e) {
++      return { value, error: String(e && e.message ? e.message : e) };
++    }
++    return { value };
++  });
++  dur = report.value;
++  if (report.noRender) fail('the page has no window.render(t) (see the page contract in core/render/page.mjs)', { json: true });
++  if (report.error) renderError = report.error;
++} finally {
++  await browser.close();
++  closeServer();
++}
++
++if (renderError) fail(`window.render(t) threw: ${renderError}`, { json: true });
++if (dur === null || !Number.isFinite(dur)) {
++  fail('the page did not set a numeric window.DUR (see the page contract in core/render/page.mjs)', { json: true });
++}
++if (Math.abs(dur - expected) > 1e-6) {
++  fail(`window.DUR is ${dur} s but clip.json says ${expected} s`, { json: true });
++}
++
++console.log(JSON.stringify({ ok: true, dur }));
+diff --git a/.agents/skills/lemo/scripts/validate_clip.py b/.agents/skills/lemo/scripts/validate_clip.py
+new file mode 100644
+index 0000000..36a5137
+--- /dev/null
++++ b/.agents/skills/lemo/scripts/validate_clip.py
+@@ -0,0 +1,25 @@
++#!/usr/bin/env python
++"""Thin CLI shim for the Lemo clip validation.
++
++Run from anywhere::
++
++    .agents/skills/lemo/scripts/validate_clip.py <clip_dir>
++
++Prints a single JSON object ``{"ok", "errors", "warnings"}`` to stdout and
++exits non-zero when the clip has errors. The real implementation lives at
++``tools/video/lemo/validate_clip.py``; this shim only puts the repo root on
++``sys.path`` so the package imports without an install.
++"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parents[4]
++sys.path.insert(0, str(REPO_ROOT))
++
++from tools.video.lemo.validate_clip import main  # noqa: E402
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/tests/tools/test_lemo_render_workspace.py b/tests/tools/test_lemo_render_workspace.py
+new file mode 100644
+index 0000000..fa055a3
+--- /dev/null
++++ b/tests/tools/test_lemo_render_workspace.py
+@@ -0,0 +1,128 @@
++import json
++
++import pytest
++
++from tools.video.lemo_render import LemoRender, LemoRenderError
++
++
++def test_new_seeds_the_workspace(tmp_path, monkeypatch):
++    monkeypatch.setattr("tools.video.lemo_render.PROJECTS_ROOT", tmp_path)
++    (tmp_path / "demo").mkdir()
++    r = LemoRender().execute(
++        {
++            "operation": "new",
++            "project_id": "demo",
++            "clip_id": "clip-01",
++            "style_id": "swiss-motion",
++            "duration_seconds": 6,
++            "aspect": "16:9",
++        }
++    )
++    assert r.success, r.error
++    clip = tmp_path / "demo/lemo/clips/clip-01"
++    for name in ["index.html", "clip.js", "clip.json"]:
++        assert (clip / name).is_file(), name
++    doc = json.loads((clip / "clip.json").read_text())
++    assert doc["style_id"] == "swiss-motion" and doc["duration_seconds"] == 6
++
++
++def test_new_leaves_no_template_placeholders(tmp_path, monkeypatch):
++    monkeypatch.setattr("tools.video.lemo_render.PROJECTS_ROOT", tmp_path)
++    (tmp_path / "demo").mkdir()
++    r = LemoRender().execute(
++        {
++            "operation": "new",
++            "project_id": "demo",
++            "clip_id": "clip-01",
++            "style_id": "swiss-motion",
++            "duration_seconds": 6,
++            "aspect": "16:9",
++        }
++    )
++    assert r.success, r.error
++    clip = tmp_path / "demo/lemo/clips/clip-01"
++    tokens = [
++        "__CLIP_ID__",
++        "__STYLE_ID__",
++        "__SUBJECT__",
++        "__ONE_IDEA__",
++        "__ASPECT__",
++        "__WIDTH__",
++        "__HEIGHT__",
++        "__FPS__",
++        "__DURATION__",
++        "__SOUND__",
++        "__TEXT_MODE__",
++    ]
++    for name in ["index.html", "clip.js", "clip.json"]:
++        text = (clip / name).read_text()
++        for tok in tokens:
++            assert tok not in text, (name, tok)
++    assert "const W = 1920, H = 1080;" in (clip / "clip.js").read_text()
++    assert "window.DUR = 6;" in (clip / "clip.js").read_text()
++    assert 'width="1920"' in (clip / "index.html").read_text()
++
++
++def test_new_rejects_duplicate_without_force(tmp_path, monkeypatch):
++    monkeypatch.setattr("tools.video.lemo_render.PROJECTS_ROOT", tmp_path)
++    (tmp_path / "demo").mkdir()
++    tool = LemoRender()
++    args = {
++        "operation": "new",
++        "project_id": "demo",
++        "clip_id": "clip-01",
++        "style_id": "swiss-motion",
++    }
++    assert tool.execute(args).success
++    r = tool.execute(args)
++    assert not r.success and "already exists" in r.error
++
++
++def test_validate_rejects_duration_outside_style_window(tmp_path, monkeypatch):
++    from tools.video.lemo.validate_clip import validate_static
++
++    style = {
++        "duration_seconds": [3, 12],
++        "aspects": ["16:9"],
++        "fps": [24],
++        "sound": ["none"],
++        "inputs": [],
++    }
++    clip = {
++        "style_id": "swiss-motion",
++        "duration_seconds": 30,
++        "aspect": "16:9",
++        "fps": 24,
++        "sound": "none",
++        "inputs": {},
++    }
++    assert any("duration" in e for e in validate_static(clip, style))
++
++
++def test_validate_rejects_unsupported_aspect():
++    from tools.video.lemo.validate_clip import validate_static
++
++    style = {
++        "duration_seconds": [3, 12],
++        "aspects": ["16:9"],
++        "fps": [24],
++        "sound": ["none"],
++        "inputs": [],
++    }
++    clip = {
++        "style_id": "swiss-motion",
++        "duration_seconds": 6,
++        "aspect": "9:16",
++        "fps": 24,
++        "sound": "none",
++        "inputs": {},
++    }
++    assert any("aspect" in e for e in validate_static(clip, style))
++
++
++def test_validate_requires_inputs(tmp_path):
++    from tools.video.lemo.validate_clip import validate_inputs
++
++    clip = {"inputs": {}, "facts": []}
++    errors = validate_inputs(clip, tmp_path, required=["data"])
++    assert any("data" in e for e in errors)
+diff --git a/tools/video/lemo/validate_clip.py b/tools/video/lemo/validate_clip.py
+new file mode 100644
+index 0000000..52d801f
+--- /dev/null
++++ b/tools/video/lemo/validate_clip.py
+@@ -0,0 +1,277 @@
++"""Validate a Lemo clip workspace.
++
++Two layers, both pure functions so ``lemo_render.validate`` can call them
++directly and the CLI shim can run them standalone:
++
++- :func:`validate_static` checks the clip against its style manifest: the
++  duration window, the supported aspects, fps and sound.
++- :func:`validate_inputs` checks the named inputs. Every required name except
++  ``facts`` must be a path relative to the clip directory that exists and stays
++  inside it; ``facts`` is *content* (a non-empty list of claim strings in
++  ``clip.json``), never a file. ``ui_spec``/``parts_spec`` inputs are checked
++  against ``schemas/lemo/*.schema.json``, and a ``dataviz`` clip must carry a
++  ``data_manifest.json`` with provenance.
++
++The module never renders. The page check (does ``window.DUR`` match?) belongs to
++``lemo_render.validate``, which runs the vendored engine's ``page_check.mjs``.
++"""
++
++from __future__ import annotations
++
++import json
++import sys
++from pathlib import Path
++from typing import Any, Optional
++
++import jsonschema
++
++# tools/video/lemo/validate_clip.py -> repo root is three parents up.
++REPO_ROOT = Path(__file__).resolve().parents[3]
++SCHEMAS_DIR = REPO_ROOT / "schemas" / "lemo"
++
++# ``facts`` is content, not a file: the one required name that lives in the clip
++# body rather than in ``inputs``.
++FACTS = "facts"
++
++# Input names whose file is checked against a schema in schemas/lemo/.
++SPEC_SCHEMAS = {
++    "ui_spec": "ui_spec",
++    "parts_spec": "parts_spec",
++}
++
++# Provenance a dataviz clip's data_manifest.json must carry.
++DATAVIZ_PROVENANCE = ("source_url", "retrieved_at", "licence")
++
++
++def load_clip(clip_dir: Path | str) -> dict[str, Any]:
++    """Load ``clip_dir/clip.json``; raise if it is missing or malformed."""
++    path = Path(clip_dir) / "clip.json"
++    if not path.is_file():
++        raise FileNotFoundError(f"clip.json not found: {path}")
++    return json.loads(path.read_text(encoding="utf-8"))
++
++
++def validate_static(clip: dict[str, Any], style: dict[str, Any]) -> list[str]:
++    """Check the clip's format against its style manifest window/menu.
++
++    Returns a list of human-readable errors; each one names the field it is
++    about (``duration``, ``aspect``, ``fps`` or ``sound``) so callers can route
++    without parsing the sentence.
++    """
++    errors: list[str] = []
++    style_id = clip.get("style_id", "<unknown>")
++
++    window = style.get("duration_seconds") or []
++    duration = clip.get("duration_seconds")
++    if not isinstance(window, (list, tuple)) or len(window) != 2:
++        errors.append(f"style {style_id!r} has no duration_seconds [min, max] window")
++    elif not isinstance(duration, (int, float)) or isinstance(duration, bool):
++        errors.append(f"duration_seconds must be a number, got {duration!r}")
++    else:
++        low, high = window[0], window[1]
++        if not (low <= duration <= high):
++            errors.append(
++                f"duration_seconds {duration} is outside {style_id!r}'s window "
++                f"{low}-{high} s"
++            )
++
++    aspects = style.get("aspects") or []
++    if clip.get("aspect") not in aspects:
++        errors.append(
++            f"aspect {clip.get('aspect')!r} is not supported by {style_id!r}; "
++            f"choose one of {aspects}"
++        )
++
++    fps = style.get("fps") or []
++    if clip.get("fps") not in fps:
++        errors.append(
++            f"fps {clip.get('fps')!r} is not supported by {style_id!r}; "
++            f"choose one of {fps}"
++        )
++
++    sound = style.get("sound") or []
++    if clip.get("sound") not in sound:
++        errors.append(
++            f"sound {clip.get('sound')!r} is not supported by {style_id!r}; "
++            f"choose one of {sound}"
++        )
++
++    return errors
++
++
++def _required_from_style(clip: dict[str, Any], errors: list[str]) -> list[str]:
++    """The style manifest's required inputs, or [] (with an error) if unresolvable."""
++    style_id = clip.get("style_id")
++    try:
++        from styles.lemo.loader import get_style
++
++        return list(get_style(style_id).get("inputs") or [])
++    except Exception as exc:  # unknown style, bad manifest, import failure
++        errors.append(f"cannot resolve required inputs for style {style_id!r}: {exc}")
++        return []
++
++
++def _validate_spec_file(
++    name: str, path: Path, errors: list[str], resolved: Optional[Path]
++) -> None:
++    """Validate a ui_spec/parts_spec file against schemas/lemo/<name>.schema.json."""
++    if resolved is None or not resolved.is_file():
++        return  # a missing required file is already reported by the caller
++    try:
++        doc = json.loads(resolved.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        errors.append(f"{name} {path} is not valid JSON: {exc}")
++        return
++    schema_name = SPEC_SCHEMAS.get(name, name)
++    schema_path = SCHEMAS_DIR / f"{schema_name}.schema.json"
++    try:
++        schema = json.loads(schema_path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        errors.append(f"schema schemas/lemo/{schema_name}.schema.json is unavailable: {exc}")
++        return
++    try:
++        jsonschema.validate(instance=doc, schema=schema)
++    except jsonschema.ValidationError as exc:
++        pointer = "/".join(str(part) for part in exc.absolute_path) or "<root>"
++        errors.append(
++            f"{name} {path} does not match schemas/lemo/{schema_name}.schema.json "
++            f"at {pointer}: {exc.message}"
++        )
++
++
++def _validate_dataviz_manifest(clip: dict[str, Any], root: Path, errors: list[str]) -> None:
++    """A dataviz clip must carry a data_manifest.json with provenance."""
++    if clip.get("style_id") != "dataviz":
++        return
++    manifest = root / "data_manifest.json"
++    if not manifest.is_file():
++        errors.append(
++            "dataviz clips require a data_manifest.json with provenance "
++            "(source_url, retrieved_at, licence) beside clip.json"
++        )
++        return
++    try:
++        doc = json.loads(manifest.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        errors.append(f"data_manifest.json is not valid JSON: {exc}")
++        return
++    for key in DATAVIZ_PROVENANCE:
++        if not doc.get(key):
++            errors.append(
++                f"data_manifest.json is missing provenance {key!r}: dataviz clips "
++                "need source_url, retrieved_at and licence"
++            )
++
++
++def validate_inputs(
++    clip: dict[str, Any],
++    clip_dir: Path,
++    required: Optional[list[str]] = None,
++) -> list[str]:
++    """Check the clip's named inputs against the clip directory.
++
++    ``required`` defaults to the style manifest's ``inputs`` (resolved from
++    ``clip["style_id"]``). Every required name except ``facts`` must appear in
++    ``clip["inputs"]`` as a path relative to ``clip_dir`` that exists and
++    resolves inside it (``..`` escapes are rejected). ``facts`` is content: the
++    clip must carry a non-empty list of claim strings.
++
++    ``ui_spec``/``parts_spec`` files are validated against
++    ``schemas/lemo/*.schema.json``; a ``dataviz`` clip must carry a
++    ``data_manifest.json`` with provenance.
++    """
++    clip_dir = Path(clip_dir)
++    errors: list[str] = []
++
++    if required is None:
++        required = _required_from_style(clip, errors)
++    required = list(required)
++
++    inputs = clip.get("inputs")
++    if not isinstance(inputs, dict):
++        errors.append("inputs must be an object mapping required names to relative paths")
++        inputs = {}
++
++    root = clip_dir.resolve()
++
++    for name in required:
++        if name == FACTS:
++            facts = clip.get(FACTS)
++            if (
++                not isinstance(facts, list)
++                or not facts
++                or not all(isinstance(claim, str) and claim.strip() for claim in facts)
++            ):
++                errors.append(
++                    f"{FACTS} is required for this style: clip.json needs a "
++                    "non-empty list of claim strings"
++                )
++            continue
++
++        raw = inputs.get(name)
++        if not raw or not isinstance(raw, str):
++            errors.append(f"required input {name!r} is missing from clip.json inputs")
++            continue
++
++        resolved = (root / raw).resolve()
++        try:
++            resolved.relative_to(root)
++        except ValueError:
++            errors.append(f"input {name!r} path {raw!r} escapes the clip directory")
++            continue
++        if not resolved.is_file():
++            errors.append(f"input {name!r} file not found: {raw}")
++            continue
++
++        if name in SPEC_SCHEMAS:
++            _validate_spec_file(name, resolved, errors, resolved)
++
++    _validate_dataviz_manifest(clip, root, errors)
++    return errors
++
++
++def main(argv: Optional[list[str]] = None) -> int:
++    """CLI: validate_clip.py <clip_dir>. Prints {"ok","errors","warnings"}."""
++    args = list(sys.argv[1:] if argv is None else argv)
++    if len(args) != 1:
++        print(
++            json.dumps(
++                {
++                    "ok": False,
++                    "errors": ["usage: validate_clip.py <clip_dir>"],
++                    "warnings": [],
++                }
++            )
++        )
++        return 2
++
++    clip_dir = Path(args[0]).expanduser()
++    errors: list[str] = []
++    warnings: list[str] = []
++
++    try:
++        clip = load_clip(clip_dir)
++    except (OSError, json.JSONDecodeError) as exc:
++        errors.append(f"{clip_dir}/clip.json could not be read: {exc}")
++        print(json.dumps({"ok": False, "errors": errors, "warnings": warnings}))
++        return 1
++
++    style: Optional[dict[str, Any]] = None
++    style_id = clip.get("style_id")
++    try:
++        from styles.lemo.loader import get_style
++
++        style = get_style(style_id)
++    except Exception as exc:
++        errors.append(f"style {style_id!r} could not be loaded: {exc}")
++
++    if style is not None:
++        errors.extend(validate_static(clip, style))
++    errors.extend(validate_inputs(clip, clip_dir))
++
++    print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings}))
++    return 0 if not errors else 1
++
++
++if __name__ == "__main__":  # pragma: no cover
++    raise SystemExit(main())
+diff --git a/tools/video/lemo_render.py b/tools/video/lemo_render.py
+index ebac0e5..9fe8d7b 100644
+--- a/tools/video/lemo_render.py
++++ b/tools/video/lemo_render.py
+@@ -1,24 +1,26 @@
+ """Lemo clip-style render adapter.
+ 
+ Thin BaseTool wrapper around the vendored Lemo engine at
+ ``.agents/skills/lemo/``. This module owns workspace layout, path guards,
+ command assembly, and Chrome discovery; it never reimplements the engine and
+ never substitutes FFmpeg/Remotion/HyperFrames for a Lemo render.
+ 
+-Task 11 lands the skeleton: ``setup``, ``check``, and ``styles`` are live, and
+-every remaining operation declared in the schema routes to a ``_op_<name>``
+-stub that raises :class:`LemoRenderError` until its own task implements it.
++``setup``, ``check``, ``styles``, ``new`` and ``validate`` are live; every
++remaining operation declared in the schema routes to a ``_op_<name>`` stub that
++raises :class:`LemoRenderError` until its own task implements it.
+ """
+ 
+ from __future__ import annotations
+ 
++import html
++import json
+ import os
+ import re
+ import shutil
+ import subprocess
+ import sys
+ from pathlib import Path
+ from typing import Any, Optional
+ 
+ from tools.base_tool import (
+     BaseTool,
+@@ -31,23 +33,67 @@ from tools.base_tool import (
+     ToolStability,
+     ToolTier,
+ )
+ from tools.video.browser_env import resolve_chrome
+ 
+ REPO_ROOT = Path(__file__).resolve().parents[2]
+ PROJECTS_ROOT = REPO_ROOT / "projects"
+ SKILL_DIR = REPO_ROOT / ".agents" / "skills" / "lemo"
+ LIBRARY_DIR = SKILL_DIR / "library"
+ SETUP_SCRIPT = SKILL_DIR / "scripts" / "setup.py"
++PAGE_CHECK_SCRIPT = SKILL_DIR / "scripts" / "page_check.mjs"
++TEMPLATES_DIR = SKILL_DIR / "templates"
+ 
+ PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ 
++# Native frame sizes for each supported aspect. Explicit width/height inputs
++# override these.
++ASPECT_SIZES = {
++    "16:9": (1920, 1080),
++    "9:16": (1080, 1920),
++    "1:1": (1080, 1080),
++    "4:5": (1080, 1350),
++    "3:4": (1080, 1440),
++}
++
++# Every placeholder the three templates use. After substitution none may
++# survive in any written file.
++TEMPLATE_TOKENS = (
++    "__CLIP_ID__",
++    "__STYLE_ID__",
++    "__SUBJECT__",
++    "__ONE_IDEA__",
++    "__ASPECT__",
++    "__WIDTH__",
++    "__HEIGHT__",
++    "__FPS__",
++    "__DURATION__",
++    "__SOUND__",
++    "__TEXT_MODE__",
++)
++
++# Maps each clip.json field to the template token that stands for it.
++FIELD_TOKENS = {
++    "clip_id": "__CLIP_ID__",
++    "style_id": "__STYLE_ID__",
++    "subject": "__SUBJECT__",
++    "one_idea": "__ONE_IDEA__",
++    "aspect": "__ASPECT__",
++    "width": "__WIDTH__",
++    "height": "__HEIGHT__",
++    "fps": "__FPS__",
++    "duration_seconds": "__DURATION__",
++    "sound": "__SOUND__",
++    "text_mode": "__TEXT_MODE__",
++}
++
++
+ OPERATIONS = (
+     "setup",
+     "check",
+     "styles",
+     "new",
+     "validate",
+     "stills",
+     "render",
+     "render_start",
+     "job_status",
+@@ -61,24 +107,48 @@ PROJECT_OPERATIONS = {
+     "new",
+     "validate",
+     "stills",
+     "render",
+     "render_start",
+     "job_status",
+     "job_cancel",
+     "report",
+ }
+ 
+-# Declared here so the tool advertises its full contract, but implemented in a
+-# later task. Routing them to a clean ``success=False`` (never a crash) is the
+-# skeleton's job; they must NOT read as "Unknown operation".
+-LATER_TASK_OPERATIONS = PROJECT_OPERATIONS
++# Operations that are declared in the schema but still route to a stub. Routing
++# them to a clean ``success=False`` (never a crash) is intentional; they must NOT
++# read as "Unknown operation". ``new`` and ``validate`` left this set when Task
++# 12 implemented them.
++LATER_TASK_OPERATIONS = PROJECT_OPERATIONS - {"new", "validate"}
++
++
++def _positive_int(value: Any, default: int, label: str) -> int:
++    """Return a validated positive int, or ``default`` when ``value`` is None."""
++    if value is None:
++        return default
++    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
++        raise LemoRenderError(f"{label} must be a positive integer, got {value!r}")
++    return value
++
++
++def _normalize_number(value: Any) -> Any:
++    """Keep whole numbers as int; anything else stays a float."""
++    if isinstance(value, bool):
++        return value
++    if isinstance(value, float) and value.is_integer():
++        return int(value)
++    return value
++
++
++def _number_literal(value: Any) -> str:
++    """Render a number for a JS/JSON literal (``6`` not ``6.0``)."""
++    return repr(_normalize_number(value))
+ 
+ 
+ class LemoRenderError(RuntimeError):
+     """A guard or engine command failed with an actionable message."""
+ 
+ 
+ class LemoRender(BaseTool):
+     name = "lemo_render"
+     version = "0.1.0"
+     tier = ToolTier.CORE
+@@ -122,20 +192,24 @@ class LemoRender(BaseTool):
+         "required": ["operation"],
+         "properties": {
+             "operation": {
+                 "type": "string",
+                 "enum": list(OPERATIONS),
+             },
+             "project_id": {"type": "string"},
+             "project_dir": {"type": "string"},
+             "clip_id": {"type": "string"},
+             "style_id": {"type": "string"},
++            "subject": {"type": "string"},
++            "one_idea": {"type": "string"},
++            "text_mode": {"type": "string"},
++            "sound": {"type": "string"},
+             "confirm_downloads": {"type": "boolean", "default": False},
+             "duration_seconds": {"type": "number", "minimum": 0},
+             "aspect": {"type": "string"},
+             "width": {"type": "integer", "minimum": 1},
+             "height": {"type": "integer", "minimum": 1},
+             "fps": {"type": "integer", "minimum": 1},
+             "force": {"type": "boolean", "default": False},
+             "timeout_seconds": {"type": "integer", "minimum": 1},
+             "output_path": {"type": "string"},
+             "job_id": {"type": "string"},
+@@ -227,21 +301,26 @@ class LemoRender(BaseTool):
+         return workspace
+ 
+     def _clip_dir(self, inputs: dict[str, Any]) -> Path:
+         workspace = self._workspace(inputs)
+         clip_id = inputs.get("clip_id")
+         if not isinstance(clip_id, str) or not PROJECT_ID_RE.match(clip_id):
+             raise LemoRenderError(
+                 f"Invalid clip_id {clip_id!r}: use letters, numbers, '.', '_' "
+                 "or '-' only, starting with a letter or number."
+             )
+-        clips_root = (workspace / "clips").resolve()
++        clips_root = workspace / "clips"
++        if clips_root.is_symlink():
++            raise LemoRenderError(
++                f"Lemo clips directory must not be a symlink: {clips_root}"
++            )
++        clips_root = clips_root.resolve()
+         clip_dir = (clips_root / clip_id).resolve()
+         try:
+             clip_dir.relative_to(clips_root)
+         except ValueError as exc:
+             raise LemoRenderError(
+                 f"clip_id {clip_id!r} escapes the clips directory: {clip_dir}"
+             ) from exc
+         return clip_dir
+ 
+     def _project_path(
+@@ -442,24 +521,269 @@ class LemoRender(BaseTool):
+                 "ffmpeg": shutil.which("ffmpeg"),
+                 "ffprobe": shutil.which("ffprobe"),
+                 "chrome": chrome,
+                 "library": str(LIBRARY_DIR),
+                 "styles": len(styles),
+                 "fonts": (font_proc.stdout or "").strip(),
+             },
+         )
+ 
+     def _op_new(self, inputs: dict[str, Any]) -> ToolResult:
+-        raise LemoRenderError("new is implemented in a later task")
++        from styles.lemo.loader import get_style
++
++        style_id = inputs.get("style_id")
++        if not isinstance(style_id, str) or not style_id:
++            raise LemoRenderError("style_id is required for operation 'new'")
++        try:
++            style = get_style(style_id)
++        except Exception as exc:
++            raise LemoRenderError(
++                f"Unknown lemo style_id {style_id!r}: {exc}"
++            ) from exc
++
++        clip_id = inputs.get("clip_id")
++        if not isinstance(clip_id, str) or not PROJECT_ID_RE.match(clip_id):
++            raise LemoRenderError(
++                f"Invalid clip_id {clip_id!r}: use letters, numbers, '.', '_' or "
++                "'-' only, starting with a letter or number."
++            )
++
++        project_dir = self._resolve_project_dir(inputs)
++        workspace = project_dir / "lemo"
++        clips_dir = workspace / "clips"
++        # Same guard ``_workspace``/``_clip_dir`` apply: neither layer may be a
++        # symlink pointing out of the project.
++        if workspace.is_symlink():
++            raise LemoRenderError(
++                f"Lemo workspace must not be a symlink: {workspace}"
++            )
++        if clips_dir.is_symlink():
++            raise LemoRenderError(
++                f"Lemo clips directory must not be a symlink: {clips_dir}"
++            )
++        clip_dir = clips_dir / clip_id
++        if clip_dir.exists() or clip_dir.is_symlink():
++            if not inputs.get("force"):
++                raise LemoRenderError(
++                    f"Clip directory already exists: {clip_dir}. Pass force=True "
++                    "to overwrite its clip.json, index.html and clip.js."
++                )
++
++        aspect = inputs.get("aspect") or style["aspects"][0]
++        if aspect not in ASPECT_SIZES:
++            raise LemoRenderError(
++                f"Unknown aspect {aspect!r}: choose one of {sorted(ASPECT_SIZES)}"
++            )
++        default_w, default_h = ASPECT_SIZES[aspect]
++        width = _positive_int(inputs.get("width"), default_w, "width")
++        height = _positive_int(inputs.get("height"), default_h, "height")
++        fps = _positive_int(inputs.get("fps"), style["fps"][0], "fps")
++        duration = self._resolve_duration(inputs.get("duration_seconds"), style)
++        sound = inputs.get("sound") or "none"
++        text_mode = inputs.get("text_mode") or "title"
++        subject = inputs.get("subject") or clip_id
++        one_idea = inputs.get("one_idea") or "One idea"
++
++        files = self._render_templates(
++            {
++                "clip_id": clip_id,
++                "style_id": style["id"],
++                "subject": subject,
++                "one_idea": one_idea,
++                "aspect": aspect,
++                "width": width,
++                "height": height,
++                "fps": fps,
++                "duration_seconds": duration,
++                "sound": sound,
++                "text_mode": text_mode,
++            }
++        )
++
++        clip_dir.mkdir(parents=True, exist_ok=True)
++        (clip_dir / "clip.json").write_text(files["clip.json"], encoding="utf-8")
++        (clip_dir / "index.html").write_text(files["index.html"], encoding="utf-8")
++        (clip_dir / "clip.js").write_text(files["clip.js"], encoding="utf-8")
++
++        return ToolResult(
++            success=True,
++            data={
++                "workspace": str(workspace),
++                "clip_dir": str(clip_dir),
++                "style_id": style["id"],
++                "clip_id": clip_id,
++                "aspect": aspect,
++                "width": width,
++                "height": height,
++                "fps": fps,
++                "duration_seconds": duration,
++            },
++            artifacts=[str(clip_dir)],
++        )
++
++    @staticmethod
++    def _resolve_duration(value: Any, style: dict[str, Any]) -> Any:
++        """Style default when unset, clamped into the style's native window."""
++        window = style.get("duration_seconds") or [0, float("inf")]
++        low, high = window[0], window[1]
++        if value is None:
++            value = style.get("default_duration_seconds", low)
++        if isinstance(value, bool) or not isinstance(value, (int, float)):
++            raise LemoRenderError(
++                f"duration_seconds must be a number, got {value!r}"
++            )
++        if value <= 0:
++            raise LemoRenderError(
++                f"duration_seconds must be positive, got {value!r}"
++            )
++        return _normalize_number(min(max(value, low), high))
++
++    @staticmethod
++    def _render_templates(fields: dict[str, Any]) -> dict[str, str]:
++        """Substitute every placeholder in the three templates.
++
++        No ``__TOKEN__`` may survive in any file; ``clip.json`` ends up with
++        integer ``width``/``height``/``fps`` (and a numeric
++        ``duration_seconds``), ``index.html`` escapes the subject, and
++        ``clip.js`` gets bare JS numbers.
++        """
++        clip_json_template = (TEMPLATES_DIR / "clip.json").read_text(encoding="utf-8")
++        index_template = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
++        clip_js_template = (TEMPLATES_DIR / "clip.js").read_text(encoding="utf-8")
++
++        # clip.json: replace the *quoted* token with a JSON literal (strings are
++        # escaped, numbers come out bare), then load it back so the parsed
++        # document — and its integer fields — is the source of truth.
++        literals = {
++            FIELD_TOKENS[field]: json.dumps(value)
++            for field, value in fields.items()
++            if field in FIELD_TOKENS
++        }
++        clip_json_text = re.sub(
++            r'"__([A-Z_]+)__"',
++            lambda m: literals.get(f"__{m.group(1)}__", m.group(0)),
++            clip_json_template,
++        )
++        document = json.loads(clip_json_text)
++        document["width"] = int(document["width"])
++        document["height"] = int(document["height"])
++        document["fps"] = int(document["fps"])
++        document["duration_seconds"] = _normalize_number(document["duration_seconds"])
++        clip_json_text = json.dumps(document, indent=2) + "\n"
++
++        index_text = index_template.replace(
++            "__SUBJECT__", html.escape(str(fields["subject"]), quote=True)
++        )
++        index_text = index_text.replace("__WIDTH__", str(fields["width"]))
++        index_text = index_text.replace("__HEIGHT__", str(fields["height"]))
++
++        clip_js_text = clip_js_template.replace("__WIDTH__", str(fields["width"]))
++        clip_js_text = clip_js_text.replace("__HEIGHT__", str(fields["height"]))
++        clip_js_text = clip_js_text.replace(
++            "__DURATION__", _number_literal(fields["duration_seconds"])
++        )
++
++        rendered = {
++            "clip.json": clip_json_text,
++            "index.html": index_text,
++            "clip.js": clip_js_text,
++        }
++        for name, text in rendered.items():
++            for token in TEMPLATE_TOKENS:
++                if token in text:
++                    raise LemoRenderError(
++                        f"template placeholder {token} survived into {name}"
++                    )
++        return rendered
++
++    @staticmethod
++    def _parse_page_check(proc: subprocess.CompletedProcess) -> Optional[dict]:
++        """The last JSON object on stdout, or None if there is not one."""
++        for line in reversed((proc.stdout or "").strip().splitlines()):
++            line = line.strip()
++            if not line:
++                continue
++            try:
++                payload = json.loads(line)
++            except json.JSONDecodeError:
++                continue
++            if isinstance(payload, dict):
++                return payload
++        return None
+ 
+     def _op_validate(self, inputs: dict[str, Any]) -> ToolResult:
+-        raise LemoRenderError("validate is implemented in a later task")
++        from styles.lemo.loader import get_style
++        from tools.video.lemo.validate_clip import (
++            load_clip,
++            validate_inputs,
++            validate_static,
++        )
++
++        clip_dir = self._clip_dir(inputs)
++
++        try:
++            clip = load_clip(clip_dir)
++        except Exception as exc:
++            raise LemoRenderError(
++                f"Could not read {clip_dir / 'clip.json'}: {exc}"
++            ) from exc
++
++        errors: list[str] = []
++        style: Optional[dict[str, Any]] = None
++        try:
++            style = get_style(clip.get("style_id"))
++        except Exception as exc:
++            errors.append(f"style {clip.get('style_id')!r} could not be loaded: {exc}")
++        if style is not None:
++            errors.extend(validate_static(clip, style))
++        errors.extend(validate_inputs(clip, clip_dir))
++        if errors:
++            raise LemoRenderError(
++                "validate failed:\n  - " + "\n  - ".join(errors)
++            )
++
++        duration = clip.get("duration_seconds")
++        node = shutil.which("node")
++        if not node:
++            raise LemoRenderError(
++                "node not found on PATH. lemo_render needs Node.js to run the "
++                "page check. Run inside the StudioKat Nix shell or install Node.js."
++            )
++        if not PAGE_CHECK_SCRIPT.is_file():
++            raise LemoRenderError(
++                f"Page-check script missing: {PAGE_CHECK_SCRIPT}. Restore the "
++                "vendored lemo library scripts."
++            )
++
++        proc = self._run(
++            [node, str(PAGE_CHECK_SCRIPT), str(clip_dir), _number_literal(duration)],
++            cwd=REPO_ROOT,
++            timeout=int(inputs.get("timeout_seconds") or 300),
++        )
++        payload = self._parse_page_check(proc)
++        if proc.returncode != 0 or not payload or not payload.get("ok"):
++            detail = (proc.stderr or proc.stdout or "").strip()
++            raise LemoRenderError(
++                f"Page check failed (exit {proc.returncode}): {detail or payload}"
++            )
++
++        return ToolResult(
++            success=True,
++            data={
++                "clip_dir": str(clip_dir),
++                "duration_seconds": duration,
++                "page": payload,
++                "stdout": proc.stdout,
++                "stderr": proc.stderr,
++            },
++            artifacts=[str(clip_dir)],
++        )
+ 
+     def _op_stills(self, inputs: dict[str, Any]) -> ToolResult:
+         raise LemoRenderError("stills is implemented in a later task")
+ 
+     def _op_render(self, inputs: dict[str, Any]) -> ToolResult:
+         raise LemoRenderError("render is implemented in a later task")
+ 
+     def _op_render_start(self, inputs: dict[str, Any]) -> ToolResult:
+         raise LemoRenderError("render_start is implemented in a later task")
+ 

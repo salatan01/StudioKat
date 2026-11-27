@@ -1,0 +1,140 @@
+# Review package: b7c57c4..cc2eca39
+
+## Commits
+cc2eca3 fix(lemo): label the briefing-board sample illustrative on screen
+
+## Files changed
+ .../lemo/samples/clips/briefing-board/clip.js      | 30 ++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/samples/clips/briefing-board/clip.js b/.agents/skills/lemo/samples/clips/briefing-board/clip.js
+index 6f5c645..6e09920 100644
+--- a/.agents/skills/lemo/samples/clips/briefing-board/clip.js
++++ b/.agents/skills/lemo/samples/clips/briefing-board/clip.js
+@@ -27,20 +27,23 @@ const W = Math.round(window.innerWidth || (META.width | 0) || canvas.width);
+ const H = Math.round(window.innerHeight || (META.height | 0) || canvas.height);
+ canvas.width = W;
+ canvas.height = H;
+ 
+ window.DUR = 6;
+ 
+ const PORTRAIT = H > W;
+ const D2R = Math.PI / 180;
+ const C = { ink: THEME.graphite, blue: THEME.blue, red: THEME.red, grey: THEME.grey };
+ const CREDIT = 'Photographs: NASA (public domain).';
++// The board is a curated sample: the composition (not the photographs) is
++// illustrative. Constant, deterministic footer caption, drawn in screen space.
++const SAMPLE_NOTE = 'Illustrative sample';
+ 
+ // ---- the real, sourced photographs (records live in cutouts/objects.json) ----
+ const OBJ = await (await fetch('cutouts/objects.json')).json();
+ const RECORDS = Array.isArray(OBJ.objects) ? OBJ.objects : [];
+ 
+ function tryImage(src) {
+   return new Promise((resolve, reject) => {
+     const img = new Image();
+     img.onload = () => resolve(img);
+     img.onerror = () => reject(new Error(`image failed: ${src}`));
+@@ -448,32 +451,54 @@ function drawVignette() {
+   g.addColorStop(1, 'rgba(60,55,48,0.18)');
+   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+ }
+ function creditGeom() {
+   const size = Math.round(Math.min(W, H) * 0.024);
+   mctx.font = `500 ${size}px "${FONT.sans}"`;
+   const w = mctx.measureText(CREDIT).width;
+   const y = H - Math.round(size * 1.3);
+   return { size, y, x0: W / 2 - w / 2 - 4, x1: W / 2 + w / 2 + 4 };
+ }
++// The "Illustrative sample" footer caption: same face and size as the credit,
++// left-aligned at the bottom-left so it stays clear of the centred credit line.
++function sampleGeom() {
++  const size = Math.round(Math.min(W, H) * 0.024);
++  mctx.font = `500 ${size}px "${FONT.sans}"`;
++  const w = mctx.measureText(SAMPLE_NOTE).width;
++  const x0 = Math.round(size * 1.6);
++  const y = H - Math.round(size * 1.3);
++  return { size, y, x0, x1: x0 + w };
++}
+ function drawCredit(t) {
+   if (t < 3.4) return;
+   const { size, y } = creditGeom();
+   ctx.setTransform(1, 0, 0, 1, 0, 0);
+   ctx.font = `500 ${size}px "${FONT.sans}"`;
+   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+   ctx.save();
+   ctx.shadowColor = 'rgba(255,255,255,.85)'; ctx.shadowBlur = 8;
+   ctx.fillStyle = '#464B52';
+   ctx.fillText(CREDIT, W / 2, y);
+   ctx.restore();
+ }
++function drawSampleNote(t) {
++  if (t < 0.5) return;   // on screen from early, held to the end
++  const { size, y, x0 } = sampleGeom();
++  ctx.setTransform(1, 0, 0, 1, 0, 0);
++  ctx.font = `500 ${size}px "${FONT.sans}"`;
++  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
++  ctx.save();
++  ctx.shadowColor = 'rgba(255,255,255,.85)'; ctx.shadowBlur = 8;
++  ctx.fillStyle = '#464B52';
++  ctx.fillText(SAMPLE_NOTE, x0, y);
++  ctx.restore();
++}
+ 
+ // ---- frame render ------------------------------------------------------------
+ function draw(t) {
+   t = clamp(t, 0, window.DUR);
+   ctx.setTransform(1, 0, 0, 1, 0, 0);
+   ctx.globalAlpha = 1;
+   ctx.globalCompositeOperation = 'source-over';
+   ctx.textBaseline = 'alphabetic';
+   ctx.textAlign = 'left';
+ 
+@@ -486,20 +511,21 @@ function draw(t) {
+   drawDimension(t);
+   drawPrints();
+   drawLabels(t);
+   drawHeader(t);
+   drawDimLabel(t);
+   drawCard(t);
+ 
+   ctx.setTransform(1, 0, 0, 1, 0, 0);
+   drawVignette();
+   drawCredit(t);
++  drawSampleNote(t);
+   ctx.globalAlpha = 1;
+ }
+ window.render = t => draw(clamp(t, 0, window.DUR));
+ 
+ // ---- readable text: every on-screen string a viewer must read ----------------
+ const TEXTDEFS = [
+   { id: 'title', text: TITLE, size: L.title.size, x: L.title.x, y: L.title.y, align: 'left', seed: 'title', t0: 3.40 },
+   { id: 'subtitle', text: SUBTITLE, size: L.subtitle.size, x: L.subtitle.x, y: L.subtitle.y, align: 'left', seed: 'subtitle', t0: 3.46 },
+   { id: 'dim', text: DIMLABEL, size: L.dimLabel.size, x: L.dimLabel.x, y: L.dimLabel.y, align: L.dimLabel.align, seed: 'dim', t0: 3.30 },
+ ];
+@@ -514,20 +540,24 @@ window.TEXTS = t => {
+   const c = camAt(t), out = [];
+   for (const d of TEXTDEFS) {
+     if (t < d.t0) continue;
+     const s = projectBox(markerBox(d.text, d.x, d.y, d.size, d.align, d.seed), c);
+     out.push({ id: d.id, text: d.text, x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1 });
+   }
+   if (t >= 3.4) {
+     const { size, y, x0, x1 } = creditGeom();
+     out.push({ id: 'credit', text: CREDIT, x0, y0: y - size * 0.95, x1, y1: y + size * 0.2, pass: true });
+   }
++  if (t >= 0.5) {
++    const { size, y, x0, x1 } = sampleGeom();
++    out.push({ id: 'sample-note', text: SAMPLE_NOTE, x0, y0: y - size * 0.95, x1, y1: y + size * 0.2 });
++  }
+   return out;
+ };
+ 
+ // ---- fonts + board, then READY -----------------------------------------------
+ const SAMPLE = `${TITLE} ${SUBTITLE} ${DIMLABEL} ${VERDICT1} ${VERDICT2} ${LABELS.join(' ')} Photographs: NASA (public domain). ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`;
+ await Promise.all([
+   document.fonts.load(`400 100px "${FONT.marker}"`, SAMPLE),
+   document.fonts.load(`500 40px "${FONT.sc}"`, SAMPLE),
+   document.fonts.load(`700 40px "${FONT.sc}"`, SAMPLE),
+   document.fonts.load(`500 40px ${FONT.sans}`, SAMPLE),

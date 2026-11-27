@@ -1,0 +1,909 @@
+# Review package: 9de7ca3..HEAD
+
+## Commits
+25bf344 feat(lemo): add the 15-style registry
+
+## Files changed
+ schemas/styles/lemo_style.schema.json   | 123 ++++++++++++++
+ styles/lemo/__init__.py                 |  32 ++++
+ styles/lemo/art-deco.json               |  19 +++
+ styles/lemo/ascii-crt.json              |  19 +++
+ styles/lemo/assembly-line-diagram.json  |  19 +++
+ styles/lemo/bauhaus-shapes.json         |  19 +++
+ styles/lemo/briefing-board.json         |  19 +++
+ styles/lemo/dataviz.json                |  19 +++
+ styles/lemo/flat-space-explainer.json   |  19 +++
+ styles/lemo/ink-wash.json               |  19 +++
+ styles/lemo/isometric-picture-book.json |  19 +++
+ styles/lemo/living-screencast.json      |  19 +++
+ styles/lemo/loader.py                   | 278 ++++++++++++++++++++++++++++++++
+ styles/lemo/midcentury-toon.json        |  19 +++
+ styles/lemo/paper-popup.json            |  19 +++
+ styles/lemo/silkscreen-poster.json      |  19 +++
+ styles/lemo/swiss-motion.json           |  19 +++
+ styles/lemo/teardown.json               |  19 +++
+ tests/styles/test_lemo_styles.py        |  49 ++++++
+ 19 files changed, 767 insertions(+)
+
+## Diff
+diff --git a/schemas/styles/lemo_style.schema.json b/schemas/styles/lemo_style.schema.json
+new file mode 100644
+index 0000000..25d8feb
+--- /dev/null
++++ b/schemas/styles/lemo_style.schema.json
+@@ -0,0 +1,123 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "openmontage/styles/lemo_style",
++  "title": "Lemo Style Manifest",
++  "description": "Selection metadata and source pointers for one lemo clip style. The look contract lives in the style brief and the vendored demo; this file never duplicates palette or engine rules.",
++  "type": "object",
++  "required": [
++    "id",
++    "name",
++    "aliases",
++    "engine",
++    "category",
++    "brief_md",
++    "demo_dir",
++    "duration_seconds",
++    "default_duration_seconds",
++    "aspects",
++    "fps",
++    "sound",
++    "inputs",
++    "fonts",
++    "native_moves",
++    "not_for",
++    "pilot"
++  ],
++  "properties": {
++    "id": {
++      "type": "string",
++      "enum": [
++        "silkscreen-poster",
++        "swiss-motion",
++        "bauhaus-shapes",
++        "flat-space-explainer",
++        "assembly-line-diagram",
++        "midcentury-toon",
++        "living-screencast",
++        "isometric-picture-book",
++        "briefing-board",
++        "dataviz",
++        "ink-wash",
++        "paper-popup",
++        "teardown",
++        "ascii-crt",
++        "art-deco"
++      ]
++    },
++    "name": { "type": "string", "minLength": 1 },
++    "aliases": {
++      "type": "array",
++      "items": { "type": "string", "minLength": 1 },
++      "minItems": 1,
++      "uniqueItems": true
++    },
++    "engine": { "const": "lemo" },
++    "category": {
++      "type": "string",
++      "enum": [
++        "print",
++        "graphic-type",
++        "line-diagrams",
++        "cartoons",
++        "screens-ui",
++        "3d-miniature",
++        "instruments-evidence",
++        "data-maps",
++        "traditional-crafts",
++        "film-tape"
++      ]
++    },
++    "brief_md": {
++      "type": "string",
++      "pattern": "^\\.agents/skills/lemo/briefs/[a-z0-9-]+\\.md$"
++    },
++    "demo_dir": {
++      "type": "string",
++      "pattern": "^\\.agents/skills/lemo/library/styles/[a-z0-9-]+/demo$"
++    },
++    "duration_seconds": {
++      "type": "array",
++      "items": { "type": "number", "minimum": 1 },
++      "minItems": 2,
++      "maxItems": 2
++    },
++    "default_duration_seconds": { "type": "number", "minimum": 1 },
++    "aspects": {
++      "type": "array",
++      "items": { "enum": ["16:9", "9:16", "1:1", "4:5", "3:4"] },
++      "minItems": 1,
++      "uniqueItems": true
++    },
++    "fps": {
++      "type": "array",
++      "items": { "type": "integer", "minimum": 1 },
++      "minItems": 1,
++      "uniqueItems": true
++    },
++    "sound": {
++      "type": "array",
++      "items": { "enum": ["none", "foley"] },
++      "minItems": 1,
++      "uniqueItems": true
++    },
++    "inputs": {
++      "type": "array",
++      "items": { "enum": ["data", "cutouts", "ui_spec", "parts_spec", "facts"] },
++      "uniqueItems": true
++    },
++    "fonts": {
++      "type": "array",
++      "items": { "type": "string", "minLength": 1 },
++      "uniqueItems": true
++    },
++    "native_moves": {
++      "type": "array",
++      "items": { "type": "string", "minLength": 1 },
++      "minItems": 1,
++      "uniqueItems": true
++    },
++    "not_for": { "type": "string", "minLength": 1 },
++    "pilot": { "type": "boolean" }
++  },
++  "additionalProperties": false
++}
+diff --git a/styles/lemo/__init__.py b/styles/lemo/__init__.py
+new file mode 100644
+index 0000000..2a08e86
+--- /dev/null
++++ b/styles/lemo/__init__.py
+@@ -0,0 +1,32 @@
++"""Lemo clip-style registry (selection metadata only).
++
++Exports are lazy so `python -m styles.lemo.loader` runs without importing the
++module twice (which emits a runpy RuntimeWarning that would pollute the CLI's
++stderr for an agent reading it).
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++__all__ = [
++    "AmbiguousStyleError",
++    "LemoStyleError",
++    "UnknownStyleError",
++    "get_style",
++    "list_styles",
++    "normalize_query",
++    "resolve_style",
++]
++
++
++def __getattr__(name: str) -> Any:
++    if name in __all__:
++        from . import loader
++
++        return getattr(loader, name)
++    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
++
++
++def __dir__() -> list[str]:
++    return sorted(__all__)
+diff --git a/styles/lemo/art-deco.json b/styles/lemo/art-deco.json
+new file mode 100644
+index 0000000..d8c9334
+--- /dev/null
++++ b/styles/lemo/art-deco.json
+@@ -0,0 +1,19 @@
++{
++  "id": "art-deco",
++  "name": "Art Deco",
++  "aliases": ["deco", "gatsby", "1920s poster"],
++  "engine": "lemo",
++  "category": "graphic-type",
++  "brief_md": ".agents/skills/lemo/briefs/art-deco.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/art-deco/demo",
++  "duration_seconds": [4, 15],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["limelight", "poiretone", "josefinsans", "italiana"],
++  "native_moves": ["symmetry opens from a centre axis", "bulbs count on"],
++  "not_for": "Minimal grids, photoreal footage, or dense technical diagrams.",
++  "pilot": false
++}
+diff --git a/styles/lemo/ascii-crt.json b/styles/lemo/ascii-crt.json
+new file mode 100644
+index 0000000..d97cae7
+--- /dev/null
++++ b/styles/lemo/ascii-crt.json
+@@ -0,0 +1,19 @@
++{
++  "id": "ascii-crt",
++  "name": "ASCII CRT",
++  "aliases": ["terminal", "retro computer", "text mode"],
++  "engine": "lemo",
++  "category": "film-tape",
++  "brief_md": ".agents/skills/lemo/briefs/ascii-crt.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/ascii-crt/demo",
++  "duration_seconds": [3, 15],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["vt323"],
++  "native_moves": ["character grid zooms", "phosphor and scanlines"],
++  "not_for": "Modern UI polish, photoreal imagery, or unicode-free typography.",
++  "pilot": false
++}
+diff --git a/styles/lemo/assembly-line-diagram.json b/styles/lemo/assembly-line-diagram.json
+new file mode 100644
+index 0000000..cfc4b5e
+--- /dev/null
++++ b/styles/lemo/assembly-line-diagram.json
+@@ -0,0 +1,19 @@
++{
++  "id": "assembly-line-diagram",
++  "name": "Assembly Line Diagram",
++  "aliases": ["exploded view", "parts diagram", "disassembly"],
++  "engine": "lemo",
++  "category": "line-diagrams",
++  "brief_md": ".agents/skills/lemo/briefs/assembly-line-diagram.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/assembly-line-diagram/demo",
++  "duration_seconds": [8, 20],
++  "default_duration_seconds": 8,
++  "aspects": ["16:9", "9:16"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["notosanssc", "bigshouldersdisplay", "archivo"],
++  "native_moves": ["camera rides one cargo through stations"],
++  "not_for": "Artistic mood pieces, cartoons, or chart-led data stories.",
++  "pilot": false
++}
+diff --git a/styles/lemo/bauhaus-shapes.json b/styles/lemo/bauhaus-shapes.json
+new file mode 100644
+index 0000000..6205344
+--- /dev/null
++++ b/styles/lemo/bauhaus-shapes.json
+@@ -0,0 +1,19 @@
++{
++  "id": "bauhaus-shapes",
++  "name": "Bauhaus Shapes",
++  "aliases": ["bauhaus", "geometric shapes", "primary colour shapes"],
++  "engine": "lemo",
++  "category": "graphic-type",
++  "brief_md": ".agents/skills/lemo/briefs/bauhaus-shapes.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/bauhaus-shapes/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["jost", "notosanssc"],
++  "native_moves": ["point to line to plane", "area doubles"],
++  "not_for": "Photographic texture, ornate decoration, or character acting.",
++  "pilot": false
++}
+diff --git a/styles/lemo/briefing-board.json b/styles/lemo/briefing-board.json
+new file mode 100644
+index 0000000..24b3d93
+--- /dev/null
++++ b/styles/lemo/briefing-board.json
+@@ -0,0 +1,19 @@
++{
++  "id": "briefing-board",
++  "name": "Briefing Board",
++  "aliases": ["evidence board", "case board", "investigation board"],
++  "engine": "lemo",
++  "category": "instruments-evidence",
++  "brief_md": ".agents/skills/lemo/briefs/briefing-board.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/briefing-board/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": ["cutouts", "facts"],
++  "fonts": ["archivo", "ibmplexmono", "lxgwmarkergothic", "notosanssc"],
++  "native_moves": ["camera travels the lines", "final pull-back"],
++  "not_for": "Invented evidence, photographic product renders, or pure typography.",
++  "pilot": false
++}
+diff --git a/styles/lemo/dataviz.json b/styles/lemo/dataviz.json
+new file mode 100644
+index 0000000..faa42a0
+--- /dev/null
++++ b/styles/lemo/dataviz.json
+@@ -0,0 +1,19 @@
++{
++  "id": "dataviz",
++  "name": "Data Visualization",
++  "aliases": ["dataviz", "chart story", "data story"],
++  "engine": "lemo",
++  "category": "data-maps",
++  "brief_md": ".agents/skills/lemo/briefs/dataviz.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/dataviz/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24, 30],
++  "sound": ["none"],
++  "inputs": ["data", "facts"],
++  "fonts": ["caveat", "ibmplexmono", "newsreader"],
++  "native_moves": ["mark lands", "axis grows", "scale changes", "series morphs"],
++  "not_for": "Decorative-only motion, fictional numbers, or character-led cartoons.",
++  "pilot": true
++}
+diff --git a/styles/lemo/flat-space-explainer.json b/styles/lemo/flat-space-explainer.json
+new file mode 100644
+index 0000000..02732df
+--- /dev/null
++++ b/styles/lemo/flat-space-explainer.json
+@@ -0,0 +1,19 @@
++{
++  "id": "flat-space-explainer",
++  "name": "Flat Space Explainer",
++  "aliases": ["flat explainer", "diagram explainer", "cutaway explainer"],
++  "engine": "lemo",
++  "category": "graphic-type",
++  "brief_md": ".agents/skills/lemo/briefs/flat-space-explainer.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/flat-space-explainer/demo",
++  "duration_seconds": [8, 20],
++  "default_duration_seconds": 8,
++  "aspects": ["16:9", "9:16", "1:1"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["jost", "notosanssc"],
++  "native_moves": ["one continuous zoom", "scale readout"],
++  "not_for": "Real datasets, character performance, or a static infographic.",
++  "pilot": false
++}
+diff --git a/styles/lemo/ink-wash.json b/styles/lemo/ink-wash.json
+new file mode 100644
+index 0000000..1a727b8
+--- /dev/null
++++ b/styles/lemo/ink-wash.json
+@@ -0,0 +1,19 @@
++{
++  "id": "ink-wash",
++  "name": "Ink Wash",
++  "aliases": ["sumi-e", "ink painting", "wash painting"],
++  "engine": "lemo",
++  "category": "traditional-crafts",
++  "brief_md": ".agents/skills/lemo/briefs/ink-wash.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/ink-wash/demo",
++  "duration_seconds": [4, 15],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["cormorantgaramond", "cormorantsc", "mashanzheng", "zhimangxing"],
++  "native_moves": ["brushstroke paints the world", "empty paper"],
++  "not_for": "Hard-edged UI, dense diagrams, or photoreal 3D.",
++  "pilot": false
++}
+diff --git a/styles/lemo/isometric-picture-book.json b/styles/lemo/isometric-picture-book.json
+new file mode 100644
+index 0000000..4fd866e
+--- /dev/null
++++ b/styles/lemo/isometric-picture-book.json
+@@ -0,0 +1,19 @@
++{
++  "id": "isometric-picture-book",
++  "name": "Isometric Picture Book",
++  "aliases": ["isometric storybook", "diorama story", "picture book"],
++  "engine": "lemo",
++  "category": "3d-miniature",
++  "brief_md": ".agents/skills/lemo/briefs/isometric-picture-book.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/isometric-picture-book/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["newsreader", "notoserifsc"],
++  "native_moves": ["one isometric place", "people move in rule order"],
++  "not_for": "Photoreal 3D, motion-captured characters, or chart-led stories.",
++  "pilot": false
++}
+diff --git a/styles/lemo/living-screencast.json b/styles/lemo/living-screencast.json
+new file mode 100644
+index 0000000..bece117
+--- /dev/null
++++ b/styles/lemo/living-screencast.json
+@@ -0,0 +1,19 @@
++{
++  "id": "living-screencast",
++  "name": "Living Screencast",
++  "aliases": ["animated ui", "app walkthrough", "software demo"],
++  "engine": "lemo",
++  "category": "screens-ui",
++  "brief_md": ".agents/skills/lemo/briefs/living-screencast.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/living-screencast/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5"],
++  "fps": [24, 30],
++  "sound": ["none"],
++  "inputs": ["ui_spec"],
++  "fonts": ["inter", "newsreader"],
++  "native_moves": ["cursor push-ins", "mascot acts out the feature"],
++  "not_for": "Real product logos, proprietary mascots, or live screen capture.",
++  "pilot": false
++}
+diff --git a/styles/lemo/loader.py b/styles/lemo/loader.py
+new file mode 100644
+index 0000000..41ed55f
+--- /dev/null
++++ b/styles/lemo/loader.py
+@@ -0,0 +1,278 @@
++"""Lemo clip-style registry.
++
++Selection metadata and pointers only. The look contract lives in the style
++brief (`.agents/skills/lemo/briefs/<id>.md`) and the vendored demo; this module
++never duplicates palette or engine rules.
++
++Resolve a style from a plain-language request the way the faceless and editor
++loaders do: canonical id or name first, then aliases; generic phrases are
++rejected as ambiguous rather than guessed.
++"""
++
++from __future__ import annotations
++
++import json
++import re
++import sys
++from pathlib import Path
++from typing import Any
++
++import jsonschema
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++STYLES_DIR = Path(__file__).resolve().parent
++SCHEMA_PATH = REPO_ROOT / "schemas" / "styles" / "lemo_style.schema.json"
++
++# Alphabetical, matching list_styles(), which sorts by id. The curated menu
++# order (by job, not by name) lives in the pipeline's SKILL.md.
++STYLE_IDS = [
++    "art-deco",
++    "ascii-crt",
++    "assembly-line-diagram",
++    "bauhaus-shapes",
++    "briefing-board",
++    "dataviz",
++    "flat-space-explainer",
++    "ink-wash",
++    "isometric-picture-book",
++    "living-screencast",
++    "midcentury-toon",
++    "paper-popup",
++    "silkscreen-poster",
++    "swiss-motion",
++    "teardown",
++]
++
++# Queries that name a family of styles rather than one style. Resolving one of
++# these to a single style would be a guess, so the loader raises with the
++# candidate list and the agent asks one question instead.
++GENERIC_QUERIES = {
++    "retro": ["ascii-crt", "midcentury-toon"],
++    "diagram": ["assembly-line-diagram", "flat-space-explainer"],
++}
++
++
++class LemoStyleError(ValueError):
++    """Base error for the lemo style registry."""
++
++
++class UnknownStyleError(LemoStyleError):
++    def __init__(self, query: str, valid_ids: list[str]):
++        self.query = query
++        self.valid_ids = valid_ids
++        joined = ", ".join(valid_ids)
++        super().__init__(f"No lemo style matches {query!r}. Valid style ids: {joined}")
++
++
++class AmbiguousStyleError(LemoStyleError):
++    def __init__(self, query: str, candidates: list[dict]):
++        self.query = query
++        self.candidates = candidates
++        names = ", ".join(f"{c['name']} ({c['id']})" for c in candidates)
++        super().__init__(
++            f"{query!r} matches more than one lemo style: {names}. "
++            "Ask the user which one they want."
++        )
++
++
++def normalize_query(query: str) -> str:
++    """Lowercase, strip punctuation, collapse whitespace."""
++    return re.sub(r"[^a-z0-9]+", " ", str(query).lower()).strip()
++
++
++def _load_schema() -> dict[str, Any]:
++    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
++
++
++def _read_manifest(path: Path) -> dict[str, Any]:
++    manifest = json.loads(path.read_text(encoding="utf-8"))
++    jsonschema.validate(instance=manifest, schema=_load_schema())
++
++    duration = manifest["duration_seconds"]
++    if duration[0] > duration[1]:
++        raise LemoStyleError(
++            f"{path.name}: duration_seconds must be [min, max] with min <= max, "
++            f"got {duration}"
++        )
++    default = manifest["default_duration_seconds"]
++    if not duration[0] <= default <= duration[1]:
++        raise LemoStyleError(
++            f"{path.name}: default_duration_seconds {default} is outside the "
++            f"window {duration}"
++        )
++
++    # The demo ships in this task; the brief is authored in Phase 2 at the same
++    # path, so only the demo is required to exist now.
++    demo_dir = REPO_ROOT / manifest["demo_dir"]
++    if not demo_dir.is_dir():
++        raise LemoStyleError(
++            f"{path.name}: demo_dir points at a missing path: {manifest['demo_dir']}"
++        )
++    return manifest
++
++
++def list_styles() -> list[dict[str, Any]]:
++    """Load and schema-validate every *.json manifest, sorted by id."""
++    manifests = [_read_manifest(path) for path in STYLES_DIR.glob("*.json")]
++    return sorted(manifests, key=lambda style: style["id"])
++
++
++def get_style(style_id: str) -> dict[str, Any]:
++    """Return one validated manifest; raise UnknownStyleError otherwise."""
++    if isinstance(style_id, str):
++        for style in list_styles():
++            if style["id"] == style_id:
++                return style
++    raise UnknownStyleError(str(style_id), list(STYLE_IDS))
++
++
++def _canonical_match(query: str, styles: list[dict[str, Any]]) -> dict[str, Any] | None:
++    """A style's id or full name, as a whole-word run inside the query."""
++    tokens = query.split()
++    for style in styles:
++        for label in (style["id"], style["name"]):
++            label_tokens = normalize_query(label).split()
++            if not label_tokens:
++                continue
++            span = len(label_tokens)
++            for start in range(len(tokens) - span + 1):
++                if tokens[start : start + span] == label_tokens:
++                    return style
++    return None
++
++
++def _alias_match(query: str, styles: list[dict[str, Any]]) -> list[dict[str, Any]]:
++    """Styles whose alias appears as a whole word run inside the query."""
++    tokens = query.split()
++    matched: list[dict[str, Any]] = []
++    for style in styles:
++        for alias in style["aliases"]:
++            alias_tokens = normalize_query(alias).split()
++            if not alias_tokens:
++                continue
++            span = len(alias_tokens)
++            for start in range(len(tokens) - span + 1):
++                if tokens[start : start + span] == alias_tokens:
++                    matched.append(style)
++                    break
++            else:
++                continue
++            break
++    return matched
++
++
++def _generic_match(query: str) -> list[dict[str, Any]]:
++    """Styles named by type rather than by name, matched as whole-word runs.
++
++    A bare "retro" and a sentence like "make me a retro poster" name the same
++    family, so the phrases are matched against the token stream instead of the
++    whole normalized string. Several hits union their candidates: that is
++    exactly the question the agent should ask.
++    """
++    tokens = query.split()
++    candidate_ids: set[str] = set()
++    for phrase, style_ids in GENERIC_QUERIES.items():
++        phrase_tokens = normalize_query(phrase).split()
++        if not phrase_tokens:
++            continue
++        span = len(phrase_tokens)
++        for start in range(len(tokens) - span + 1):
++            if tokens[start : start + span] == phrase_tokens:
++                candidate_ids.update(style_ids)
++                break
++    if not candidate_ids:
++        return []
++    return sorted(
++        (get_style(style_id) for style_id in candidate_ids),
++        key=lambda style: style["id"],
++    )
++
++
++def resolve_style(query: str) -> dict[str, Any]:
++    """Canonical id/name first, then aliases, then generic phrases.
++
++    - Canonical match returns matched_on="canonical".
++    - Exactly one alias match returns matched_on="alias".
++    - Multiple alias matches raise AmbiguousStyleError.
++    - A GENERIC_QUERIES phrase (bare or inside a sentence) raises
++      AmbiguousStyleError with every matching style.
++    - No match raises UnknownStyleError with all fifteen ids.
++    """
++    styles = list_styles()
++    normalized = normalize_query(query)
++
++    canonical = _canonical_match(normalized, styles)
++    if canonical is not None:
++        return {"style": canonical, "matched_on": "canonical", "query": query}
++
++    # Aliases come before generic phrases: "parts diagram" is an
++    # assembly-line-diagram alias and also contains the generic "diagram", and
++    # the specific name wins.
++    matched = _alias_match(normalized, styles)
++    if len(matched) == 1:
++        return {"style": matched[0], "matched_on": "alias", "query": query}
++    if len(matched) > 1:
++        raise AmbiguousStyleError(query, sorted(matched, key=lambda style: style["id"]))
++
++    generic = _generic_match(normalized)
++    if generic:
++        raise AmbiguousStyleError(query, generic)
++
++    raise UnknownStyleError(query, list(STYLE_IDS))
++
++
++def _print(payload: Any) -> None:
++    print(json.dumps(payload, indent=2))
++
++
++def main(argv: list[str] | None = None) -> int:
++    """CLI: list | show <id> | resolve <query>. JSON to stdout; 2 on error."""
++    args = list(sys.argv[1:] if argv is None else argv)
++    if not args:
++        print("usage: python -m styles.lemo.loader list|show <id>|resolve <query>",
++              file=sys.stderr)
++        return 2
++
++    command, rest = args[0], args[1:]
++
++    try:
++        if command == "list":
++            _print(list_styles())
++            return 0
++
++        if command == "show":
++            if len(rest) != 1:
++                print("usage: python -m styles.lemo.loader show <id>", file=sys.stderr)
++                return 2
++            _print(get_style(rest[0]))
++            return 0
++
++        if command == "resolve":
++            if len(rest) != 1:
++                print(
++                    "usage: python -m styles.lemo.loader resolve <query>",
++                    file=sys.stderr,
++                )
++                return 2
++            _print(resolve_style(rest[0]))
++            return 0
++
++        print(f"unknown command {command!r}", file=sys.stderr)
++        return 2
++    except AmbiguousStyleError as exc:
++        _print(
++            {
++                "error": "ambiguous",
++                "query": exc.query,
++                "candidates": exc.candidates,
++                "message": str(exc),
++            }
++        )
++        return 2
++    except LemoStyleError as exc:
++        _print({"error": "unknown_style", "message": str(exc)})
++        return 2
++
++
++if __name__ == "__main__":  # pragma: no cover
++    raise SystemExit(main())
+diff --git a/styles/lemo/midcentury-toon.json b/styles/lemo/midcentury-toon.json
+new file mode 100644
+index 0000000..f0293c1
+--- /dev/null
++++ b/styles/lemo/midcentury-toon.json
+@@ -0,0 +1,19 @@
++{
++  "id": "midcentury-toon",
++  "name": "Mid-century Toon",
++  "aliases": ["midcentury cartoon", "50s cartoon", "retro cartoon"],
++  "engine": "lemo",
++  "category": "cartoons",
++  "brief_md": ".agents/skills/lemo/briefs/midcentury-toon.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/midcentury-toon/demo",
++  "duration_seconds": [4, 15],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["oleoscript", "alfaslabone", "jost"],
++  "native_moves": ["held body, animated hands", "cel misregistration"],
++  "not_for": "Photoreal 3D, data charts, or dense technical diagrams.",
++  "pilot": true
++}
+diff --git a/styles/lemo/paper-popup.json b/styles/lemo/paper-popup.json
+new file mode 100644
+index 0000000..3aaf5ed
+--- /dev/null
++++ b/styles/lemo/paper-popup.json
+@@ -0,0 +1,19 @@
++{
++  "id": "paper-popup",
++  "name": "Paper Pop-up",
++  "aliases": ["pop-up book", "paper craft", "cut paper"],
++  "engine": "lemo",
++  "category": "3d-miniature",
++  "brief_md": ".agents/skills/lemo/briefs/paper-popup.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/paper-popup/demo",
++  "duration_seconds": [5, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["zcoolkuaile", "fredoka", "lilitaone", "imfellenglish"],
++  "native_moves": ["book opens", "paper sets pop up", "macro camera"],
++  "not_for": "Flat motion graphics, photoreal surfaces, or chart-led stories.",
++  "pilot": false
++}
+diff --git a/styles/lemo/silkscreen-poster.json b/styles/lemo/silkscreen-poster.json
+new file mode 100644
+index 0000000..2037e8a
+--- /dev/null
++++ b/styles/lemo/silkscreen-poster.json
+@@ -0,0 +1,19 @@
++{
++  "id": "silkscreen-poster",
++  "name": "Silkscreen Poster",
++  "aliases": ["screen print", "screenprint", "gig poster"],
++  "engine": "lemo",
++  "category": "print",
++  "brief_md": ".agents/skills/lemo/briefs/silkscreen-poster.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/silkscreen-poster/demo",
++  "duration_seconds": [3, 12],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["bigshouldersdisplay", "outfit", "notosanssc"],
++  "native_moves": ["ink layer per beat", "squeegee pull", "registration slip"],
++  "not_for": "Photographic realism, gradients, or narrated kinetic typography.",
++  "pilot": false
++}
+diff --git a/styles/lemo/swiss-motion.json b/styles/lemo/swiss-motion.json
+new file mode 100644
+index 0000000..3e69278
+--- /dev/null
++++ b/styles/lemo/swiss-motion.json
+@@ -0,0 +1,19 @@
++{
++  "id": "swiss-motion",
++  "name": "Swiss Motion",
++  "aliases": ["grid typography", "international style", "swiss typography"],
++  "engine": "lemo",
++  "category": "graphic-type",
++  "brief_md": ".agents/skills/lemo/briefs/swiss-motion.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/swiss-motion/demo",
++  "duration_seconds": [3, 12],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16", "1:1", "4:5", "3:4"],
++  "fps": [24, 30],
++  "sound": ["none"],
++  "inputs": [],
++  "fonts": ["archivo", "unifrakturmaguntia", "dmserifdisplay"],
++  "native_moves": ["snap to grid on the beat", "one deliberate break"],
++  "not_for": "Narrated kinetic typography, gradients, device renders.",
++  "pilot": true
++}
+diff --git a/styles/lemo/teardown.json b/styles/lemo/teardown.json
+new file mode 100644
+index 0000000..f1ce1dc
+--- /dev/null
++++ b/styles/lemo/teardown.json
+@@ -0,0 +1,19 @@
++{
++  "id": "teardown",
++  "name": "Teardown",
++  "aliases": ["product teardown", "exploded product"],
++  "engine": "lemo",
++  "category": "line-diagrams",
++  "brief_md": ".agents/skills/lemo/briefs/teardown.md",
++  "demo_dir": ".agents/skills/lemo/library/styles/teardown/demo",
++  "duration_seconds": [6, 20],
++  "default_duration_seconds": 6,
++  "aspects": ["16:9", "9:16"],
++  "fps": [24, 30],
++  "sound": ["none"],
++  "inputs": ["parts_spec", "facts"],
++  "fonts": [],
++  "native_moves": ["layers lift on one axis", "orbit outside, macro inside"],
++  "not_for": "Invented parts, decorative-only motion, or non-product storytelling.",
++  "pilot": false
++}
+diff --git a/tests/styles/test_lemo_styles.py b/tests/styles/test_lemo_styles.py
+new file mode 100644
+index 0000000..497d8be
+--- /dev/null
++++ b/tests/styles/test_lemo_styles.py
+@@ -0,0 +1,49 @@
++# tests/styles/test_lemo_styles.py
++from pathlib import Path
++import pytest
++from styles.lemo.loader import (STYLE_IDS, AmbiguousStyleError, UnknownStyleError,
++                                get_style, list_styles, resolve_style)
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++
++def test_fifteen_manifests_load_and_point_at_real_demos():
++    assert len(STYLE_IDS) == 15
++    styles = list_styles()
++    assert [s["id"] for s in styles] == STYLE_IDS
++    for s in styles:
++        assert s["engine"] == "lemo"
++        assert (REPO_ROOT / s["demo_dir"]).is_dir(), s["id"]
++        assert s["duration_seconds"][0] < s["duration_seconds"][1]
++
++@pytest.mark.parametrize("query", ["Swiss Motion", "swiss-motion", "SWISS MOTION"])
++def test_canonical_resolution(query):
++    assert resolve_style(query)["style"]["id"] == "swiss-motion"
++
++def test_alias_resolution():
++    assert resolve_style("grid typography")["style"]["id"] == "swiss-motion"
++    assert resolve_style("use grid typography here")["style"]["id"] == "swiss-motion"
++    assert resolve_style("terminal green")["style"]["id"] == "ascii-crt"
++
++@pytest.mark.parametrize("query,expected", [
++    ("retro", {"ascii-crt","midcentury-toon"}),
++    ("diagram", {"assembly-line-diagram","flat-space-explainer"}),
++])
++def test_generic_phrases_are_ambiguous(query, expected):
++    with pytest.raises(AmbiguousStyleError) as exc:
++        resolve_style(query)
++    assert {s["id"] for s in exc.value.candidates} == expected
++
++def test_unknown_lists_ids():
++    with pytest.raises(UnknownStyleError) as exc:
++        resolve_style("claymation noir")
++    assert "silkscreen-poster" in str(exc.value)
++
++def test_style_font_slugs_exist_and_default_duration_is_in_window():
++    import json
++    doc = json.loads((REPO_ROOT/".agents/skills/lemo/library/assets/fonts/manifest.json").read_text())
++    slugs = {f["slug"] for f in doc["files"]}
++    for style in list_styles():
++        assert set(style["fonts"]) <= slugs, (style["id"], set(style["fonts"]) - slugs)
++        lo, hi = style["duration_seconds"]
++        assert lo <= style["default_duration_seconds"] <= hi, style["id"]
++        assert style["brief_md"].startswith(".agents/skills/lemo/briefs/"), style["id"]

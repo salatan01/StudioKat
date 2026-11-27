@@ -1,0 +1,335 @@
+# Review package: f73ba17..935063b
+
+## Commits
+935063b feat(schemas): admit the lemo engine in shared artifacts
+
+## Files changed
+ schemas/artifacts/brief.schema.json         | 30 +++++++++++++---
+ schemas/artifacts/final_review.schema.json  |  4 +--
+ schemas/artifacts/style_lock.schema.json    | 54 ++++++++++++++++++++++++++---
+ tests/contracts/test_lemo_shared_schemas.py | 51 +++++++++++++++++++++++++++
+ 4 files changed, 128 insertions(+), 11 deletions(-)
+
+## Diff
+diff --git a/schemas/artifacts/brief.schema.json b/schemas/artifacts/brief.schema.json
+index 6f22f5d..4cf126c 100644
+--- a/schemas/artifacts/brief.schema.json
++++ b/schemas/artifacts/brief.schema.json
+@@ -13,64 +13,86 @@
+       "type": "array",
+       "items": { "type": "string" },
+       "minItems": 1
+     },
+     "core_message": { "type": "string" },
+     "cta": { "type": "string", "description": "Call to action" },
+     "tone": { "type": "string" },
+     "style": { "type": "string", "description": "Style playbook name or custom description" },
+     "visual_style": {
+       "type": "object",
+-      "description": "Structured record of the chosen visual style. The faceless system uses system='faceless' plus style_id and engine; other pipelines keep using the existing systems.",
++      "description": "Structured record of the chosen visual style. The faceless, editor, and lemo systems use an explicit style_id and engine; other pipelines keep using the existing systems.",
+       "required": ["system", "name", "source"],
+       "properties": {
+         "system": {
+           "type": "string",
+-          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless", "editor"]
++          "enum": ["heygen", "visual-style-md", "playbook", "custom", "faceless", "editor", "lemo"]
+         },
+         "name": { "type": "string", "minLength": 1 },
+         "source": { "type": "string", "minLength": 1 },
+         "style_id": {
+           "type": "string",
+           "enum": [
+             "deep-dive",
+             "night-file",
+             "inside-out",
+             "stick-story",
+             "paper-atlas",
+             "tall-tale",
+             "chalk-talk",
+             "clean-tech",
+             "creator-motion-graphics",
+             "data-story",
+             "pop-info",
+             "software-walkthrough",
+-            "warm-canvas"
++            "warm-canvas",
++            "art-deco",
++            "ascii-crt",
++            "assembly-line-diagram",
++            "bauhaus-shapes",
++            "briefing-board",
++            "dataviz",
++            "flat-space-explainer",
++            "ink-wash",
++            "isometric-picture-book",
++            "living-screencast",
++            "midcentury-toon",
++            "paper-popup",
++            "silkscreen-poster",
++            "swiss-motion",
++            "teardown"
+           ]
+         },
+-        "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] }
++        "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas", "lemo"] }
+       },
+       "additionalProperties": false,
+       "allOf": [
+         {
+           "if": {
+             "properties": { "system": { "const": "faceless" } },
+             "required": ["system"]
+           },
+           "then": { "required": ["style_id", "engine"] }
+         },
+         {
+           "if": {
+             "properties": { "system": { "const": "editor" } },
+             "required": ["system"]
+           },
+           "then": { "required": ["style_id", "engine"] }
++        },
++        {
++          "if": {
++            "properties": { "system": { "const": "lemo" } },
++            "required": ["system"]
++          },
++          "then": { "required": ["style_id", "engine"] }
+         }
+       ]
+     },
+     "target_audience": { "type": "string" },
+     "target_platform": {
+       "type": "string",
+       "enum": ["youtube", "instagram", "tiktok", "linkedin", "generic"]
+     },
+     "target_duration_seconds": { "type": "number", "minimum": 1 },
+     "reference_material": {
+diff --git a/schemas/artifacts/final_review.schema.json b/schemas/artifacts/final_review.schema.json
+index 62e7f66..49e965c 100644
+--- a/schemas/artifacts/final_review.schema.json
++++ b/schemas/artifacts/final_review.schema.json
+@@ -78,22 +78,22 @@
+           }
+         },
+         "promise_preservation": {
+           "type": "object",
+           "description": "Delivery promise and renderer governance checks",
+           "properties": {
+             "delivery_promise_honored": { "type": "boolean" },
+             "renderer_family_used": { "type": "string", "description": "Creative grammar that actually ran" },
+             "render_runtime_used": {
+               "type": "string",
+-              "enum": ["remotion", "hyperframes", "ffmpeg", "faceless", "editor"],
+-              "description": "Technical runtime that actually executed the render. Must match the runtime locked at proposal unless a logged decision overrode it. 'faceless' is valid only for the faceless-short pipeline and is executed by faceless_render; 'editor' is valid only for the editor pipeline and is executed by editor_render; video_compose rejects both."
++              "enum": ["remotion", "hyperframes", "ffmpeg", "faceless", "editor", "lemo"],
++              "description": "Technical runtime that actually executed the render. Must match the runtime locked at proposal unless a logged decision overrode it. 'faceless' is valid only for the faceless-short pipeline and is executed by faceless_render; 'editor' is valid only for the editor pipeline and is executed by editor_render; 'lemo' is valid only for the lemo clip-style pipeline; video_compose rejects all three."
+             },
+             "runtime_swap_detected": {
+               "type": "boolean",
+               "description": "True if the runtime that ran differs from the runtime locked in proposal_packet. An unapproved swap is a contract violation."
+             },
+             "runtime_swap_check": {
+               "type": "string",
+               "description": "Human-readable status of the runtime-swap check: 'ok — …', 'detected — …', or 'skipped — …'. When the check was skipped, the reviewer skill is responsible for cross-artifact comparison."
+             },
+             "motion_ratio_actual": { "type": "number" },
+diff --git a/schemas/artifacts/style_lock.schema.json b/schemas/artifacts/style_lock.schema.json
+index ad78f05..369c000 100644
+--- a/schemas/artifacts/style_lock.schema.json
++++ b/schemas/artifacts/style_lock.schema.json
+@@ -1,15 +1,15 @@
+ {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "$id": "openmontage/artifacts/style_lock",
+   "title": "Style Lock",
+-  "description": "Style identity for a faceless-short or editor-pipeline project, written at the idea stage after reading the style contract (STYLE.md / style.md + base.js) and inspecting the referenced material. The referenced document remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
++  "description": "Style identity for a faceless-short, editor-pipeline, or lemo clip-style project, written at the idea stage after reading the style contract (STYLE.md / style.md + base.js / lemo style brief + manifest) and inspecting the referenced material. The referenced document remains binding; this artifact is an auditable snapshot, not a replacement for the document.",
+   "type": "object",
+   "required": ["version", "style_id", "style_name", "engine", "contract", "source", "format", "confirmed_by_user", "resolution_note"],
+   "allOf": [
+     {
+       "if": { "properties": { "engine": { "const": "canvas-2d" } }, "required": ["engine"] },
+       "then": { "required": ["palette", "caption_rules"] }
+     },
+     {
+       "if": { "properties": { "engine": { "const": "threejs" } }, "required": ["engine"] },
+       "then": { "required": ["palette", "caption_rules"] }
+@@ -25,25 +25,40 @@
+         "inside-out",
+         "stick-story",
+         "paper-atlas",
+         "tall-tale",
+         "chalk-talk",
+         "clean-tech",
+         "creator-motion-graphics",
+         "data-story",
+         "pop-info",
+         "software-walkthrough",
+-        "warm-canvas"
++        "warm-canvas",
++        "art-deco",
++        "ascii-crt",
++        "assembly-line-diagram",
++        "bauhaus-shapes",
++        "briefing-board",
++        "dataviz",
++        "flat-space-explainer",
++        "ink-wash",
++        "isometric-picture-book",
++        "living-screencast",
++        "midcentury-toon",
++        "paper-popup",
++        "silkscreen-poster",
++        "swiss-motion",
++        "teardown"
+       ]
+     },
+     "style_name": { "type": "string", "minLength": 1 },
+-    "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas"] },
++    "engine": { "type": "string", "enum": ["canvas-2d", "threejs", "editor-canvas", "lemo"] },
+     "contract": {
+       "type": "string",
+       "minLength": 1,
+       "description": "One-line playback of the style the user will see, e.g. 'Inside Out: flat 2D x-ray what-if explainer, 9:16, 25-45 s, 1-3 word captions with one yellow word.'"
+     },
+     "source": {
+       "oneOf": [
+         {
+           "type": "object",
+           "required": ["style_md", "engine_js", "has_aroll"],
+@@ -74,30 +89,49 @@
+             "style_sheet": {
+               "type": "string",
+               "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/style-sheet\\.png$"
+             },
+             "example": {
+               "type": "string",
+               "pattern": "^\\.agents/skills/faceless-shorts/styles/[a-z0-9-]+/example$"
+             }
+           },
+           "additionalProperties": false
++        },
++        {
++          "type": "object",
++          "required": ["brief_md", "manifest", "demo_dir"],
++          "properties": {
++            "brief_md": {
++              "type": "string",
++              "pattern": "^\\.agents/skills/lemo/briefs/[a-z0-9-]+\\.md$"
++            },
++            "manifest": {
++              "type": "string",
++              "pattern": "^styles/lemo/[a-z0-9-]+\\.json$"
++            },
++            "demo_dir": {
++              "type": "string",
++              "pattern": "^\\.agents/skills/lemo/library/styles/[a-z0-9-]+/demo$"
++            }
++          },
++          "additionalProperties": false
+         }
+       ]
+     },
+     "format": {
+       "type": "object",
+       "required": ["aspect", "resolution", "fps", "duration_seconds"],
+       "properties": {
+         "aspect": {
+-          "enum": ["9:16", "16:9", "3:4"],
+-          "description": "Output aspect ratio. Faceless styles are locked to 9:16; editor styles accept the user's chosen ratio."
++          "enum": ["9:16", "16:9", "3:4", "1:1", "4:5"],
++          "description": "Output aspect ratio. Faceless styles are locked to 9:16; editor styles accept the user's chosen ratio; lemo styles accept the ratio declared in their manifest."
+         },
+         "resolution": { "type": "string", "pattern": "^\\d+x\\d+$" },
+         "fps": {
+           "type": "integer",
+           "minimum": 1,
+           "description": "Delivery frame rate. Equal to the style's native fps unless fps_native_fps is set, which records the style's own rate alongside a sanctioned override."
+         },
+         "fps_native": {
+           "type": "integer",
+           "minimum": 1,
+@@ -161,14 +195,24 @@
+       "description": "Languages the chosen style supports (editor styles: en/bn)."
+     },
+     "example_evidence": {
+       "type": "object",
+       "required": ["name", "shot_count"],
+       "properties": {
+         "name": { "type": "string", "minLength": 1 },
+         "shot_count": { "type": "integer", "minimum": 1 }
+       },
+       "additionalProperties": false
++    },
++    "sound": {
++      "type": "string",
++      "enum": ["none", "foley"],
++      "description": "Lemo-style sound design: 'none' for silent graphic pieces, 'foley' when the style ships sound effects."
++    },
++    "inputs": {
++      "type": "array",
++      "items": { "type": "string" },
++      "description": "Lemo styles consume supplied inputs (e.g. screenshots, footage) instead of generating all footage; empty when none are required."
+     }
+   },
+   "additionalProperties": false
+ }
+diff --git a/tests/contracts/test_lemo_shared_schemas.py b/tests/contracts/test_lemo_shared_schemas.py
+new file mode 100644
+index 0000000..48e369a
+--- /dev/null
++++ b/tests/contracts/test_lemo_shared_schemas.py
+@@ -0,0 +1,51 @@
++import copy
++import pytest
++from schemas.artifacts import validate_artifact
++from tests.contracts.test_editor_contracts import EDITOR_STYLE_LOCK
++from tests.contracts.test_faceless_contracts import STYLE_LOCK as FACELESS_STYLE_LOCK
++from tests.contracts.test_phase0_contracts import sample_artifact
++
++LEMO_LOCK = {
++  "version":"1.0","style_id":"swiss-motion","style_name":"Swiss Motion","engine":"lemo",
++  "contract":"Swiss Motion: strict grid, one signal colour, 3-12 s, title-only text.",
++  "source":{"brief_md":".agents/skills/lemo/briefs/swiss-motion.md",
++            "manifest":"styles/lemo/swiss-motion.json",
++            "demo_dir":".agents/skills/lemo/library/styles/swiss-motion/demo"},
++  "format":{"aspect":"16:9","resolution":"1920x1080","fps":24,"duration_seconds":[3,12]},
++  "sound":"none","inputs":[],"confirmed_by_user":True,
++  "resolution_note":"Explicit user choice from the style menu."
++}
++
++def test_lemo_style_lock_validates():
++    validate_artifact("style_lock", LEMO_LOCK)
++
++def test_lemo_lock_requires_its_source_branch():
++    doc = copy.deepcopy(LEMO_LOCK); del doc["source"]["manifest"]
++    with pytest.raises(Exception): validate_artifact("style_lock", doc)
++
++def test_editor_and_faceless_locks_still_validate():
++    validate_artifact("style_lock", EDITOR_STYLE_LOCK)
++    validate_artifact("style_lock", FACELESS_STYLE_LOCK)
++
++def test_lemo_brief_visual_style_requires_engine():
++    brief = copy.deepcopy(sample_artifact("brief"))
++    brief["visual_style"] = {"system":"lemo","name":"Swiss Motion",
++                             "style_id":"swiss-motion","source":".agents/skills/lemo/briefs/swiss-motion.md"}
++    with pytest.raises(Exception): validate_artifact("brief", brief)
++    brief["visual_style"]["engine"] = "lemo"
++    validate_artifact("brief", brief)
++
++def test_lemo_render_runtime_is_allowed():
++    review = {
++        "version": "1.0",
++        "output_path": "projects/demo/renders/final.mp4",
++        "status": "pass",
++        "checks": {
++            "technical_probe": {},
++            "visual_spotcheck": {},
++            "audio_spotcheck": {},
++            "promise_preservation": {"render_runtime_used": "lemo"},
++            "subtitle_check": {},
++        },
++    }
++    validate_artifact("final_review", review)

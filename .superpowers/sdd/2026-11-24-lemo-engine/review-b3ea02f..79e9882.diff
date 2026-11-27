@@ -1,0 +1,246 @@
+# Review package: b3ea02f..79e9882
+
+## Commits
+79e9882 feat(schemas): add the lemo clip artifact and b-roll block
+
+## Files changed
+ schemas/artifacts/__init__.py            |   1 +
+ schemas/artifacts/lemo_clip.schema.json  | 105 +++++++++++++++++++++++++++++++
+ schemas/artifacts/scene_plan.schema.json |  30 ++++++++-
+ tests/contracts/test_lemo_artifacts.py   |  36 +++++++++++
+ 4 files changed, 171 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/schemas/artifacts/__init__.py b/schemas/artifacts/__init__.py
+index b40f3e3..54487be 100644
+--- a/schemas/artifacts/__init__.py
++++ b/schemas/artifacts/__init__.py
+@@ -25,20 +25,21 @@ ARTIFACT_NAMES = [
+     "edit_decisions",
+     "render_report",
+     "publish_log",
+     "review",
+     "cost_log",
+     "decision_log",
+     "source_media_review",
+     "final_review",
+     "character_qa_report",
+     "video_analysis_brief",
++    "lemo_clip",
+ ]
+ 
+ 
+ def load_schema(name: str) -> dict:
+     """Load a JSON schema by artifact name."""
+     path = SCHEMA_DIR / f"{name}.schema.json"
+     if not path.exists():
+         raise FileNotFoundError(f"Schema not found: {path}")
+     with open(path, encoding="utf-8") as f:
+         return json.load(f)
+diff --git a/schemas/artifacts/lemo_clip.schema.json b/schemas/artifacts/lemo_clip.schema.json
+new file mode 100644
+index 0000000..fdb6cc2
+--- /dev/null
++++ b/schemas/artifacts/lemo_clip.schema.json
+@@ -0,0 +1,105 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "$id": "openmontage/artifacts/lemo_clip",
++  "title": "Lemo Clip",
++  "description": "A single authored lemo motion-graphics clip: the clip's identity and idea, its delivery format, the authoring workspace with its three files (clip.json, clip.js, index.html), the resolved inputs, and the per-clip QA verdict. Additional project-specific fields are allowed.",
++  "type": "object",
++  "required": [
++    "version",
++    "clip_id",
++    "style_id",
++    "subject",
++    "one_idea",
++    "duration_seconds",
++    "aspect",
++    "width",
++    "height",
++    "fps",
++    "sound",
++    "text_mode",
++    "workspace",
++    "clip_json",
++    "clip_js",
++    "index_html",
++    "inputs",
++    "qa"
++  ],
++  "properties": {
++    "version": { "type": "string", "const": "1.0" },
++    "clip_id": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Stable identifier for this clip within the production, e.g. 'clip-01'."
++    },
++    "style_id": {
++      "type": "string",
++      "minLength": 1,
++      "description": "The lemo style this clip is authored in, e.g. 'swiss-motion'."
++    },
++    "subject": {
++      "type": "string",
++      "minLength": 1,
++      "description": "What the clip is about."
++    },
++    "one_idea": {
++      "type": "string",
++      "minLength": 1,
++      "description": "The single idea the clip must make legible."
++    },
++    "duration_seconds": {
++      "type": "number",
++      "exclusiveMinimum": 0,
++      "description": "Clip duration in seconds."
++    },
++    "aspect": {
++      "enum": ["9:16", "16:9", "3:4", "1:1", "4:5"],
++      "description": "Output aspect ratio."
++    },
++    "width": { "type": "integer", "minimum": 1, "description": "Output width in pixels." },
++    "height": { "type": "integer", "minimum": 1, "description": "Output height in pixels." },
++    "fps": { "type": "integer", "minimum": 1, "description": "Delivery frame rate." },
++    "sound": {
++      "type": "string",
++      "description": "Sound design for the clip, e.g. 'none' or 'foley'."
++    },
++    "text_mode": {
++      "type": "string",
++      "description": "How on-screen text is used, e.g. 'title' or 'none'."
++    },
++    "workspace": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Directory holding the clip's authored files."
++    },
++    "clip_json": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Path to the authored clip.json."
++    },
++    "clip_js": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Path to the authored clip.js."
++    },
++    "index_html": {
++      "type": "string",
++      "minLength": 1,
++      "description": "Path to the clip's index.html entry point."
++    },
++    "inputs": {
++      "type": "object",
++      "description": "Resolved inputs consumed by the clip (supplied assets such as screenshots or footage); empty when the clip is fully procedural."
++    },
++    "qa": {
++      "type": "object",
++      "required": ["validate_ok"],
++      "properties": {
++        "validate_ok": {
++          "type": "boolean",
++          "description": "True when the clip passed schema and render validation."
++        }
++      },
++      "description": "Per-clip QA verdict."
++    }
++  }
++}
+diff --git a/schemas/artifacts/scene_plan.schema.json b/schemas/artifacts/scene_plan.schema.json
+index 751665b..251d9b4 100644
+--- a/schemas/artifacts/scene_plan.schema.json
++++ b/schemas/artifacts/scene_plan.schema.json
+@@ -98,20 +98,48 @@
+             "type": "array",
+             "items": {
+               "type": "object",
+               "properties": {
+                 "type": { "type": "string" },
+                 "description": { "type": "string" },
+                 "source": { "type": "string", "enum": ["generate", "source", "provided", "record"] }
+               },
+               "required": ["type", "description", "source"]
+             }
++          },
++          "lemo": {
++            "type": "object",
++            "description": "Lemo motion-graphics block for this scene. Only valid on a 'broll' scene.",
++            "required": ["style_id", "subject", "duration_seconds"],
++            "properties": {
++              "style_id": {
++                "type": "string",
++                "minLength": 1,
++                "description": "The lemo style this b-roll block is authored in, e.g. 'swiss-motion'."
++              },
++              "subject": {
++                "type": "string",
++                "minLength": 1,
++                "description": "What the lemo clip is about."
++              },
++              "duration_seconds": {
++                "type": "number",
++                "exclusiveMinimum": 0,
++                "description": "Lemo clip duration in seconds."
++              }
++            }
+           }
+         },
+-        "additionalProperties": false
++        "additionalProperties": false,
++        "if": { "required": ["lemo"] },
++        "then": {
++          "properties": {
++            "type": { "const": "broll" }
++          }
++        }
+       },
+       "minItems": 1
+     },
+     "metadata": { "type": "object" }
+   },
+   "additionalProperties": false
+ }
+diff --git a/tests/contracts/test_lemo_artifacts.py b/tests/contracts/test_lemo_artifacts.py
+new file mode 100644
+index 0000000..4a30554
+--- /dev/null
++++ b/tests/contracts/test_lemo_artifacts.py
+@@ -0,0 +1,36 @@
++import copy
++import pytest
++from schemas.artifacts import ARTIFACT_NAMES, validate_artifact
++from tests.contracts.test_phase0_contracts import sample_artifact
++
++CLIP = {
++  "version":"1.0","clip_id":"clip-01","style_id":"swiss-motion",
++  "subject":"A tide timetable","one_idea":"A grid makes the next tide legible.",
++  "duration_seconds":6,"aspect":"16:9","width":1920,"height":1080,"fps":24,
++  "sound":"none","text_mode":"title",
++  "workspace":"projects/p/lemo/clips/clip-01",
++  "clip_json":"projects/p/lemo/clips/clip-01/clip.json",
++  "clip_js":"projects/p/lemo/clips/clip-01/clip.js",
++  "index_html":"projects/p/lemo/clips/clip-01/index.html",
++  "inputs":{},"qa":{"validate_ok":True}
++}
++
++def test_lemo_clip_is_registered_and_validates():
++    assert "lemo_clip" in ARTIFACT_NAMES
++    validate_artifact("lemo_clip", CLIP)
++
++def test_lemo_clip_requires_qa_and_workspace():
++    doc = copy.deepcopy(CLIP); del doc["qa"]
++    with pytest.raises(Exception): validate_artifact("lemo_clip", doc)
++
++def test_scene_plan_accepts_lemo_broll():
++    plan = copy.deepcopy(sample_artifact("scene_plan"))
++    plan["scenes"][0]["type"] = "broll"
++    plan["scenes"][0]["lemo"] = {"style_id":"swiss-motion","subject":"tide","duration_seconds":6}
++    validate_artifact("scene_plan", plan)
++
++def test_scene_plan_rejects_lemo_on_non_broll():
++    plan = copy.deepcopy(sample_artifact("scene_plan"))
++    plan["scenes"][0]["type"] = "talking_head"
++    plan["scenes"][0]["lemo"] = {"style_id":"swiss-motion","subject":"tide","duration_seconds":6}
++    with pytest.raises(Exception): validate_artifact("scene_plan", plan)

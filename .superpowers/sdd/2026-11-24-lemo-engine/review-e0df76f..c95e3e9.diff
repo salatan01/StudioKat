@@ -1,0 +1,799 @@
+# Review package: e0df76f..HEAD
+
+## Commits
+c95e3e9 feat(lemo): add the agent skill, references and clip templates
+
+## Files changed
+ .agents/skills/lemo/SKILL.md                | 123 +++++++++++++++++++++
+ .agents/skills/lemo/references/authoring.md | 131 ++++++++++++++++++++++
+ .agents/skills/lemo/references/engine.md    | 131 ++++++++++++++++++++++
+ .agents/skills/lemo/references/style-map.md | 164 ++++++++++++++++++++++++++++
+ .agents/skills/lemo/templates/clip.js       | 100 +++++++++++++++++
+ .agents/skills/lemo/templates/clip.json     |  15 +++
+ .agents/skills/lemo/templates/index.html    |  30 +++++
+ tests/contracts/test_lemo_skill_surface.py  |  40 +++++++
+ 8 files changed, 734 insertions(+)
+
+## Diff
+diff --git a/.agents/skills/lemo/SKILL.md b/.agents/skills/lemo/SKILL.md
+new file mode 100644
+index 0000000..a3673a3
+--- /dev/null
++++ b/.agents/skills/lemo/SKILL.md
+@@ -0,0 +1,123 @@
++---
++name: lemo
++description: Make short cinematic B-roll and micro-explanation clips fully in code with the vendored Lemo engine, in 15 code-drawn styles - silkscreen-poster, swiss-motion, bauhaus-shapes, flat-space-explainer, assembly-line-diagram, midcentury-toon, living-screencast, isometric-picture-book, briefing-board, dataviz, ink-wash, paper-popup, teardown, ascii-crt and art-deco. Use whenever someone wants a Lemo-style clip, an animated graphic cutaway, a title or chapter card, an explanatory diagram or chart clip, or B-roll in one of these looks. A clip, not a whole film: 3-6 s cutaways or 8-20 s micro-explanations, never a multi-minute film. Asks which style when the request names a family rather than one style.
++compatibility: opencode
++---
++
++# Lemo
++
++You make one short, original clip at a time with Lemo's vendored engine. A page of HTML + JavaScript
++draws the clip on a canvas; headless Chrome captures each frame; ffmpeg writes the MP4. **Everything
++is code**: no AI images, no stock footage, no API keys. The engine's demos are technique references,
++not templates to copy.
++
++`SKILL` = `.agents/skills/lemo/`. All paths below are relative to the repository root unless noted.
++The library root (`library/`) is the render server root, so engine files load as
++`/core/render/video.mjs`, `/styles/<id>/demo/...`, `/assets/fonts/...`.
++
++## What this makes — and what it does not
++
++A **clip**, not a film. `lemo_render` caps a clip at 20 s. There are exactly two length modes:
++
++| Mode | Length | Job |
++|---|---|---|
++| Cutaway | **3–6 s** | one look plus one beat: a title, a transition, atmosphere, a single gesture |
++| Micro-explanation | **8–20 s** | a rule, process, chart or mechanism actually explained |
++
++Default length is **6 s**. A request for a 45–150 s Lemo-style film is not this skill — route it to a
++film pipeline. Never stretch a clip into a film by repeating beats.
++
++## The 15 styles (curated menu)
++
++Pick by **job**, then confirm length, aspect and inputs. This order is the menu; the registry's
++alphabetical order (`styles.lemo.loader.STYLE_IDS`) is for lookup only.
++
++| # | style | make | length | inputs |
++|---|---|---|---|---|
++| 1 | `silkscreen-poster` | a print poster that prints itself: one ink layer per beat, squeegee pull, registration slip | 3–12 s | fonts |
++| 2 | `swiss-motion` | a strict-grid title, rule, brand or chapter card; one deliberate break | 3–12 s | fonts |
++| 3 | `bauhaus-shapes` | compound growth, share, weight or a mechanism told with shapes as quantities (point → line → plane) | 6–20 s | fonts |
++| 4 | `flat-space-explainer` | orders of magnitude, scale, systems: one continuous zoom with a scale readout | 8–20 s | fonts |
++| 5 | `assembly-line-diagram` | a process, pipeline or supply chain as a cut-away factory the camera rides through | 8–20 s | fonts |
++| 6 | `midcentury-toon` | a how-to step performed by a limited-animation character (held body, animated hands) | 4–15 s | fonts |
++| 7 | `living-screencast` | a product feature or UI concept with a mascot inside the interface | 6–20 s | **`ui_spec`** |
++| 8 | `isometric-picture-book` | one isometric place; people move in rule order | 6–20 s | fonts |
++| 9 | `briefing-board` | an engineering comparison, option review or evidence wall; camera travels the lines | 6–20 s | **`cutouts` + facts** |
++| 10 | `dataviz` | the chart is the film: real data with annotations, marks landing, axes growing | 6–20 s | **`data` + facts** |
++| 11 | `ink-wash` | mood, poetry, a cultural brand: one brushstroke paints the world into being | 4–15 s | fonts |
++| 12 | `paper-popup` | a storybook, game or children's world that opens from a page and pops up | 5–20 s | fonts |
++| 13 | `teardown` | hardware/product layers lift on one axis; orbit outside, macro inside | 6–20 s | **`parts_spec` + facts** (illustrative-only) |
++| 14 | `ascii-crt` | a dev tool, retro tech or sci-fi beat: a character grid that types itself, with phosphor and scanlines | 3–15 s | fonts |
++| 15 | `art-deco` | luxury, event, launch or invitation card: symmetry opens from a centre axis, bulbs count on | 4–15 s | fonts |
++
++Resolve a plain-language request before choosing:
++`.venv/bin/python -m styles.lemo.loader resolve "<request>"`. A canonical id or name wins; one alias
++wins; a generic phrase (`retro`, `diagram`, `data`, `cartoon`, `poster`, `tech`… or two names) raises
++**ambiguous** with the candidate list — then ask the user exactly one question and pick from the
++candidates. Never guess.
++
++### When not to use a style
++
++Each manifest carries a `not_for` line (e.g. `dataviz`: "decorative-only motion, fictional numbers";
++`swiss-motion`: "narrated kinetic typography, gradients, device renders"). Read it, and read the
++style brief in `briefs/<id>.md`, before authoring. If the job crosses the `not_for` line, choose a
++different style and say why.
++
++## Originality rule
++
++Demos are **grammar references only**. Never reuse a demo's story, subject, shot list, characters,
++lines, data or composition — an output must be an original StudioKat clip about the user's own
++subject. You may read the demo's modules to learn the drawing and motion technique; you may not
++paraphrase its narrative. Do not vendor or copy upstream `STYLE.md` prose (it is CC BY-NC).
++
++Input-dependent styles (`living-screencast`, `briefing-board`, `dataviz`, `teardown`) **never invent
++evidence**. `living-screencast` needs a `ui_spec`; `briefing-board` needs real `cutouts` and `facts`;
++`dataviz` needs a real `data` file with provenance and `facts`; `teardown` needs a labelled
++`parts_spec` and is illustrative-only in v1. Ask once, or stop. A missing required input is a
++validation failure, never a licence to make one up.
++
++## The page contract (what your clip must expose)
++
++A clip is a folder with `index.html`, `clip.js` and `clip.json`. The page owns the frame:
++
++- `window.DUR` — the clip length in seconds (a positive number).
++- `window.render(t)` — draws the frame at second `t`. Pure and deterministic.
++- `window.READY = true` — set **only after** `document.fonts.ready` (and any images/JSON the page
++  needs) resolve, so no frame draws with a fallback face.
++- Optional `window.EV` — sound-effect/narration events, exported by `events.mjs`.
++- Optional `window.TEXTS(t)` — `[{id, text, x0, y0, x1, y1}]`, every readable text box at `t`, for
++  the reading-time check (`readcheck.mjs`).
++
++Full detail, plus the render commands and flags, is in `references/engine.md`. Authoring rules
++(determinism, fonts, text bounds, the two length modes, QA) are in `references/authoring.md`. The
++per-style demo module map and known limits are in `references/style-map.md`.
++
++## `lemo_render` operations
++
++`lemo_render` is the only tool that touches this engine. Its operations:
++
++| Operation | Use |
++|---|---|
++| `check` | verify node, ffmpeg, ffprobe, Chromium, the engine and the 15 manifests |
++| `setup` | install pinned node deps and fetch/verify fonts (`confirm_downloads` required) |
++| `styles` | list the 15 registry manifests |
++| `new` | create `projects/<id>/lemo/clips/<clip_id>/` and seed `index.html`, `clip.js`, `clip.json` |
++| `validate` | schema-check `clip.json`, check style/duration/aspect/inputs/fonts, load the page, confirm `window.DUR` |
++| `stills` | render stills via `still.mjs` and build a labelled contact sheet |
++| `render` | render the MP4 via `video.mjs`, probe it, return path and metadata |
++| `render_start` / `job_status` / `job_cancel` | background render and its status/cancel |
++| `report` | probe + stills + contact sheet + QA metadata for the render report |
++
++Typical loop: `lemo_render new` → author `clip.js` (and `clip.json` inputs) → `lemo_render validate`
++→ `lemo_render stills` → `lemo_render render`. `clip.json` is the source of truth the tool validates;
++the page must agree with it. The render server mounts a clip that lives outside the library under
++`/@film/`, so engine imports still come from the library root.
++
++## Inputs in `clip.json`
++
++`clip.json` carries exactly: `clip_id`, `style_id`, `subject`, `one_idea`, `aspect`, `width`,
++`height`, `fps`, `duration_seconds`, `sound`, `text_mode`, `inputs`, `facts`. `inputs` maps each
++required name from the style manifest (`data`, `cutouts`, `ui_spec`, `parts_spec`) to a path
++**relative to the clip folder** that exists and stays inside it. `facts` is a list of strings — the
++real, checkable claims shown in the clip (not a file). A required name missing from `inputs`, or a
++`facts` list that is empty when facts are required, fails validation.
+diff --git a/.agents/skills/lemo/references/authoring.md b/.agents/skills/lemo/references/authoring.md
+new file mode 100644
+index 0000000..e805f03
+--- /dev/null
++++ b/.agents/skills/lemo/references/authoring.md
+@@ -0,0 +1,131 @@
++# Authoring a Lemo clip
++
++A clip is a folder with three files, all written by `lemo_render new` from
++`.agents/skills/lemo/templates/`:
++
++```
++projects/<project-id>/lemo/clips/<clip_id>/
++  index.html    # <canvas> + <script type="module" src="clip.js">, and the @font-face rules
++  clip.js       # sets window.DUR, window.render(t), window.READY
++  clip.json     # the source of truth: style, aspect, size, fps, duration, sound, inputs, facts
++```
++
++`new` replaces every `__PLACEHOLDER__` token (raw text substitution), then sets the numeric
++`clip.json` fields to integers. Author `clip.js` after `new`; leave `index.html` alone except for the
++`@font-face` rules you actually use. **Do not generate CSS files** — declare faces inline in
++`index.html`'s `<style>`.
++
++The clip is served from `/@film/`, so load the engine and its demos by **absolute server URL** —
++`import { ... } from '/core/lib.js'`, `/styles/<style-id>/demo/...`, `/node_modules/...`. A relative
++path like `./lib.js` is resolved against the `/@film/` mount and points at the clip folder, not the
++library, so it 404s. Only your own clip files (`clip.js`, `clip.json`) load relatively.
++
++## Determinism
++
++The same `t` must always draw the same frame. That is what makes `--workers` safe (each worker draws
++a different slice) and what makes a still at `t = 3` match the video's frame at 3 s.
++
++- **Never** call `Math.random()` or `Date.now()` (the template is checked for both).
++- Derive every value from `t`. For pseudo-randomness use `mulberry(seed)` from `/core/lib.js`; the
++  same seed always yields the same sequence. Rebuild the generator inside the draw call if you need
++  stable per-frame jitter.
++- Reset all context state at the top of `render(t)`: `ctx.setTransform(1,0,0,1,0,0)`,
++  `ctx.globalAlpha = 1`, `ctx.globalCompositeOperation = 'source-over'`, and clear/fill the frame.
++- Use the helpers (`clamp`, `lerp`, `seg`, `ss`, easings, `spring`, `monotone`, `track`, `env`) so
++  motion reads as intended rather than as raw linear interpolation.
++
++## Fonts
++
++The render server's root is `library/`, so a font URL is absolute from there:
++
++```css
++@font-face {
++  font-family: 'Clip Sans';
++  src: url('/assets/fonts/archivo/Archivo[wdth,wght].ttf') format('truetype');
++  font-weight: 100 900;
++  font-style: normal;
++}
++```
++
++Source the file from the pinned manifest `.agents/skills/lemo/library/assets/fonts/manifest.json`:
++each entry gives a `slug` (the family folder), a `family`, and a `path` matching
++`<slug>/<file>`. The style's usable faces are the `fonts` list in its manifest
++(`styles/lemo/<id>.json`). Example mappings:
++
++| style face (slug) | file served at |
++|---|---|
++| `archivo` | `/assets/fonts/archivo/Archivo[wdth,wght].ttf` |
++| `jost` | `/assets/fonts/jost/Jost[wght].ttf` |
++| `ibmplexmono` | `/assets/fonts/ibmplexmono/IBMPlexMono-Regular.ttf` |
++| `notosanssc` | `/assets/fonts/notosanssc/NotoSansSC[wght].ttf` |
++| `vt323` | `/assets/fonts/vt323/VT323-Regular.ttf` |
++
++Rules:
++
++- **Define every face you use.** Each family a `@font-face` names must be declared by the page. A
++  `font-family` you draw with but never define is a validation error — `validate` fails on a face the
++  page never defines.
++- **No system-font fallback.** Do not write `font-family: Archivo, sans-serif` and rely on the
++  fallback, and do not use a generic family for real content. A wrong face changes the style.
++- **Wait for the faces.** Before `window.READY = true`, load each face you draw with and await the
++  font set:
++
++  ```js
++  await Promise.all([
++    document.fonts.load('700 96px "Clip Sans"', SUBJECT),
++    document.fonts.load('400 32px "Clip Mono"'),
++  ]);
++  await document.fonts.ready;
++  window.READY = true;
++  ```
++
++  If a `document.fonts.load` rejects, the file is missing or the family is misspelled; fix it rather
++  than hiding it. Setting `READY` before the faces resolve renders fallback glyphs into the film.
++
++## Two length modes
++
++- **Cutaway — 3–6 s.** A look plus one beat. The clip is atmosphere, a transition, a title or a
++  single gesture; it is not obliged to "explain" anything.
++- **Micro-explanation — 8–20 s.** A rule, process, chart or mechanism actually explained: a clear
++  setup, one idea that develops, and a resolved end. Keep the pace honest — do not pad.
++
++Default is 6 s. `duration_seconds` must sit inside the style's `duration_seconds` window
++(`styles/lemo/<id>.json`). A Lemo output is a short clip, never an entire film.
++
++## Text bounds and the reading-time check
++
++If the clip shows text a viewer is meant to read, expose `window.TEXTS(t)`:
++
++```js
++window.TEXTS = t => [{ id: 'headline', text: HEADLINE, x0, y0, x1, y1 }];
++```
++
++- One entry per text block visible at `t`, with its **screen box in pixels** (the viewport matches
++  `--size`).
++- `text` must be the block's **complete** text from the first frame it appears. A typewriter effect
++  must report the full string, not the characters typed so far — the picture may reveal characters
++  gradually, but `TEXTS` reports the whole line (otherwise every extra character counts as a new
++  piece and the check fails).
++- Keep boxes **fully inside** the frame. A box that is cropped (a ticker running off the edge) is
++  reported as "never fully visible".
++- Text the viewer is not meant to read in full (a passing sign, licence fine print) can carry
++  `pass: true`; it is listed and not timed. Anything the film needs understood must not be marked.
++- Do not report burned-in subtitle text; its hold is set by the srt.
++
++`readcheck.mjs` steps the clip and fails any block that leaves the frame before it can be read
++(defaults: 15 alphanumeric chars/s, 4.5 CJK chars/s, plus 1.5 s, minimum 1.5 s). Leave the text on
++screen long enough, or cut it shorter.
++
++## QA before render
++
++1. `lemo_render new` → author `clip.js` → `lemo_render validate`. Validation checks `clip.json`
++   against the style (duration window, aspect, fps, sound, required inputs, facts), loads the page
++   and confirms `window.DUR` matches.
++2. `lemo_render stills` at **0%, 25%, 50%, 75% and 100%** of the clip. Open the contact sheet, then
++   look at the full-size frames — not just the sheet.
++3. `lemo_render render`. It probes the MP4 (H.264, `yuv420p`, requested size/fps, duration within one
++   frame, no audio track when `sound` is `"none"`).
++4. `lemo_render report` collects the probe, the stills, the contact sheet and the QA metadata.
++
++Inspect for: text fully inside frame at every still, no face falling back, motion that reads (not
++linear mush), the one idea legible in the first and last frame, and no accidental demo quotation.
+diff --git a/.agents/skills/lemo/references/engine.md b/.agents/skills/lemo/references/engine.md
+new file mode 100644
+index 0000000..ef2856d
+--- /dev/null
++++ b/.agents/skills/lemo/references/engine.md
+@@ -0,0 +1,131 @@
++# Lemo engine: the page contract, server and render commands
++
++This documents only what the vendored engine at `.agents/skills/lemo/library/core/` actually does.
++Read `core/render/page.mjs`, `still.mjs`, `video.mjs`, `events.mjs`, `readcheck.mjs`, `serve.mjs` and
++`core/lib.js` before you rely on anything here.
++
++## The render server
++
++`core/render/serve.mjs` is a minimal static server, on purpose: ES modules cannot load over
++`file://`.
++
++- **Root.** `core/render/page.mjs` sets `ROOT` to the `library/` directory (two levels up from
++  `core/render/`). So `/core/lib.js`, `/styles/<id>/demo/...` and `/assets/fonts/<path>` all resolve
++  from `library/`.
++- **`/@film/`.** A demo folder *outside* the root — your clip at
++  `projects/<id>/lemo/clips/<clip_id>/` — is mounted at `/@film/`. The page URL becomes
++  `http://127.0.0.1:<port>/@film/index.html`, while `/core/...`, `/styles/...`, `/node_modules/...`
++  and `/assets/...` still come from the library root. This is how your clip imports the engine.
++- **Absolute imports only.** Because the clip is served from `/@film/`, a relative import (`./lib.js`,
++  `../lib.js`, `styles/swiss-motion/demo/film.js`) is resolved against that mount and points at the
++  clip folder, not the library — the server answers 404. Every engine import a clip makes must be an
++  **absolute server URL**: `/core/lib.js`, `/styles/<style-id>/demo/...`, `/node_modules/...`,
++  `/assets/...`. Only the clip's own files (`clip.js`, `clip.json`, files you place in the clip
++  folder) load relatively.
++- **Safety and types.** It binds `127.0.0.1` only, rejects a bad Host header (DNS rebinding), refuses
++  paths that escape the root (403), and sends every text type as UTF-8 (`.html`, `.js`, `.mjs`,
++  `.json`, `.css`, `.txt`). A page can still omit `<meta charset>` without mojibaking Chinese, but
++  always declare it.
++- Query strings pass through: `?name=value` reaches the page as `location.search`, which the demos
++  use for variants (e.g. `?cut=a:b`, `?nosub=1`). The tools pass these with `--q`.
++
++## The page contract
++
++A page is `index.html` that loads a module script. It must set three globals:
++
++| Global | Meaning |
++|---|---|
++| `window.DUR` | the clip length in **seconds** (a positive number). `video.mjs` requires `window.DUR > 0`. |
++| `window.render(t)` | draw the frame at second `t`. Called once per output frame; must be deterministic and self-contained (reset transforms/state each call). |
++| `window.READY = true` | set **only after** fonts and any other assets are loaded. Never set it on the first line: the tool waits for it and refuses to capture until it is `true`. |
++
++Optional globals:
++
++| Global | Meaning |
++|---|---|
++| `window.EV` | sound-effect / narration events. `events.mjs` reads `{ dur: window.DUR, ev: window.EV || [] }`. |
++| `window.TEXTS(t)` | `[{id, text, x0, y0, x1, y1}]` — every readable text box at second `t`, in viewport pixels. Required by `readcheck.mjs`; see `authoring.md`. |
++| `window.SUBS` / `window.SRT` | subtitle data some demos expose. Not part of the core contract; subtitles are checked from the srt, not from `TEXTS`. |
++
++### How the tool reacts to the page
++
++`openDemo()` (in `page.mjs`) is shared by every command:
++
++- It waits for `window.READY === true`. A hint prints at **20 s**, the hard limit is **180 s**.
++- A JavaScript error (`pageerror`) exits immediately, non-zero — a broken page never yields a film.
++- A missing resource of type `script` or `document` (a 404 on the page or a script/module import)
++  exits immediately. A missing **font** file prints a one-line warning naming the file; a missing
++  fetch/xhr/image warns once and lets the page fall back.
++- A lost WebGL context before the first frame fails the render (a blank film is worse than a failed
++  one).
++
++## Render commands and flags
++
++All are run from the repository root as `node .agents/skills/lemo/library/core/render/<tool>.mjs
++<demo> ...`. `lemo_render` wraps them; use them directly only to debug.
++
++### Stills — `still.mjs`
++
++```
++node .../core/render/still.mjs <demo> <t> [<t> ...] [--range a:b:step] \
++  [--q 'k=v&..'] [--prefix t_] [--out dir] [--size 1920x1080]
++```
++
++`<demo>` is the folder holding `index.html`. One page renders every time point. Writes
++`<out>/<prefix><t>.jpg` (JPEG, quality 92); default `<out>` is `<demo>/stills`. It calls
++`window.render(t)` for each `t`. `--range a:b:step` expands to points `a, a+step, …` up to `b`.
++
++### Video — `video.mjs`
++
++```
++node .../core/render/video.mjs <demo> [--fps 24] [--workers 3] [--q 'k=v'] \
++  [--out <demo>/out/video.mp4] [--size 1920x1080]
++```
++
++- Opens the page once to read `window.DUR`, then computes `TOTAL = Math.round(DUR * fps)` and splits
++  the frames across workers. Each worker drives its own browser and pipes JPEG screenshots into
++  ffmpeg (`libx264`, `-crf 14`, `-pix_fmt yuv420p`); the segments are joined losslessly at the end.
++- `window.DUR` must be a positive number, and `--fps` must be `> 0`; `--workers` an integer `≥ 1`.
++  Default 3 workers; a single render alone can use up to 6.
++- Each `--out` has a `<out>.lock` holding the owner pid, so two renders cannot write the same file.
++  A lock is stale (and taken over) when the pid is gone or the file is older than 12 hours. Use a
++  different `--out` for each render.
++- Set `RENDER_SLOTS` (an integer) to cap how many full renders run at once; `RENDER_SLOTS` unset means
++  no limit.
++
++### Events — `events.mjs`
++
++```
++node .../core/render/events.mjs <demo> [--q '...'] [--out file] [--size 1920x1080]
++```
++
++Reads the page with drawing off and writes `{ dur, ev }` from `window.DUR` and `window.EV`. Default
++output is `<demo>/events.json`; pass `--q` and `--out` to export a variant without overwriting it.
++
++### Reading-time check — `readcheck.mjs`
++
++```
++node .../core/render/readcheck.mjs <demo> [--q 'k=v'] [--step 0.04] \
++  [--latin-cps 15] [--cjk-cps 4.5] [--pad 1.5] [--min 1.5] [--size 1920x1080]
++```
++
++Steps through the clip calling `window.render(t)` and `window.TEXTS(t)`, and checks that every block
++of readable text stays fully in frame long enough to be read (`hanzi/kana/hangul ÷ cjk-cps + other
++non-space chars ÷ latin-cps + pad`, never less than `min`). Exit `0` all pass, `1` a failure, `2` it
++could not run (no `window.TEXTS`, or no text at all — not a pass). See `authoring.md` for the `TEXTS`
++details.
++
++### Shared flags
++
++- `--size WxH`: width and height must be **even** (an H.264 yuv420p requirement) and between 16 and
++  8192, e.g. `1920x1080`, `1080x1920`. Default `1920x1080`.
++- `--q 'k=v&k2=v2'`: page query string, forwarded verbatim.
++- `--fps`, `--workers`: as above.
++
++## `core/lib.js` — the deterministic helper kit
++
++Import from `/core/lib.js`. It has no state and no clocks:
++
++`clamp`, `lerp`, `seg(t,a,b)` (0→1 ramp), `ss` (smoothstep), `eio`/`eo`/`ei` (ease in-out/out/in),
++`back`, `spring`, `mulberry(seed)` (a seeded PRNG — the deterministic replacement for
++`Math.random`), `hash`, `vnoise`, `TAU`, `monotone(keys)`, `track(keys)` and `env(t,a,b,fi,fo)`.
+diff --git a/.agents/skills/lemo/references/style-map.md b/.agents/skills/lemo/references/style-map.md
+new file mode 100644
+index 0000000..1473194
+--- /dev/null
++++ b/.agents/skills/lemo/references/style-map.md
+@@ -0,0 +1,164 @@
++# Style map: demo modules and known limits
++
++Each entry points at the **real, vendored** demo under
++`.agents/skills/lemo/library/styles/<id>/demo/`. The demo is a grammar reference: read its modules
++to learn the drawing and motion technique, then build an original clip. Never reuse a demo's story,
++subject, shot list, characters or data. Native moves and `not_for` come from `styles/lemo/<id>.json`.
++
++Verified against the tree at the time of writing.
++
++---
++
++## 1. silkscreen-poster
++
++- **Entry:** `demo/index.html` → `demo/main.js` (module).
++- **Modules:** `demo/film.js` (whole-film timeline), `demo/engine/poster.js` (poster composition),
++  `demo/engine/silk.js` (ink layers, squeegee, registration), `demo/engine/scenes.js`,
++  `demo/lines.json`, `demo/events.json`.
++- **Native moves:** an ink layer per beat, a squeegee pull, a registration slip.
++- **Known limits:** the demo is a full film with the film's own venue/tour text; use only the print
++  grammar. Flat ink only — no photographic realism or gradients.
++
++## 2. swiss-motion
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/film.js`, `demo/ease.js` (easing kit), `demo/lines.json`,
++  `demo/fonts/fonts.css`, `demo/events.json`.
++- **Native moves:** snap to grid on the beat; one deliberate break.
++- **Known limits:** the demo times to a music score (`demo/score.json`); do not reuse its beats.
++  Not for narrated kinetic typography, gradients or device renders.
++
++## 3. bauhaus-shapes
++
++- **Entry:** `demo/index.html` (inline module script) → `demo/film.js`.
++- **Modules:** `demo/film.js` (film + three still layouts in one file), `demo/cues.mjs` (build-time
++  tool), `demo/events.json`. Draws with `/core/lib.js`.
++- **Native moves:** point → line → plane; an area doubling.
++- **Known limits:** only circles, rings, squares, triangles, arcs and straight lines; colours meet
++  with hard edges. No photographic texture or ornament.
++
++## 4. flat-space-explainer
++
++- **Entry:** `demo/index.html` loads plain scripts: `demo/flat.js`, `demo/heroes.js` (the guide,
++  Orbi), `demo/sheet.js`, `demo/orbi.js`, `demo/film.js`, `demo/scenes.js`.
++- **Modules:** `demo/film.js`, `demo/flat.js` (drawing kit), `demo/heroes.js`, `demo/orbi.js`,
++  `demo/scenes.js`, `demo/sheet.js`, `demo/shoot.mjs` (build tool).
++- **Native moves:** one continuous zoom with a scale readout.
++- **Known limits:** this demo is an SVG page, not a canvas — reproduce the technique, not the
++  element. No real datasets; scale, not data.
++
++## 5. assembly-line-diagram
++
++- **Entry:** `demo/index.html` → `demo/film.js`.
++- **Modules:** `demo/film.js`, `demo/body.js` (the cut-away machine), `demo/lib.js` (kit),
++  `demo/overlays.js`, `demo/paper.js`, `demo/runner.js`, `demo/cues.json`, `demo/timeline.json`.
++- **Native moves:** the camera rides one cargo through stations.
++- **Known limits:** a long process film (≈55 s). Take one station-to-station beat, not the route.
++
++## 6. midcentury-toon
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/film.js`, `demo/sheet.js`, `demo/engine/toon.js` (drawing kit),
++  `demo/engine/chars.js` (characters), `demo/engine/icons.js`, `demo/content.json`,
++  `demo/content_alt.json`, `demo/lines.json`.
++- **Native moves:** held body with animated hands; cel misregistration.
++- **Known limits:** `content.json` is the demo's own script — replace it entirely. Not for photoreal
++  3D or dense diagrams. Voice lines exist in `demo/voices/`; do not reuse them.
++
++## 7. living-screencast
++
++- **Entry:** **none** — `demo/` has no `index.html` and no page modules.
++- **Present:** `demo/events.json`, `demo/fonts/`, `demo/tools/`, `demo/voices/`, `demo/CREDITS`.
++- **Native moves:** cursor push-ins; a mascot acts out the feature.
++- **Known limits:** **the page must be authored from scratch.** Requires a `ui_spec` input; never
++  invent a UI. The mascot must be an original StudioKat character — no Clawd/Anthropic, no real
++  product logos or proprietary mascots.
++
++## 8. isometric-picture-book
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/film.js`, `demo/engine.js`, `demo/kit.js` (isometric kit),
++  `demo/places.js`, `demo/plane.js` (projection), `demo/lines.json`.
++- **Native moves:** one isometric place; people move in rule order.
++- **Known limits:** `demo/lines.json` is the demo's narration; do not reuse it. Not photoreal 3D or a
++  chart story.
++
++## 9. briefing-board
++
++- **Entry:** `demo/index.html` → `demo/scenes/` and `demo/kit/`.
++- **Modules:** `demo/kit/board.js` (board layout), `demo/kit/batch.mjs` (render batch),
++  `demo/kit/objects/*.json` (illustrative object drawings, e.g. `beam.json`, `cable.json`,
++  `suspension.json`), `demo/scenes/film.json`, `demo/tools/*.mjs|*.py` (camera and cue checks).
++- **Native moves:** the camera travels the lines; a final pull-back.
++- **Known limits:** requires real `cutouts` (photographs) **and** `facts` — never invent evidence.
++  The demo's 470 MB of Commons photos and the BiRefNet model are **not** vendored; `sources/` holds
++  only `candidates/`. Ship small, credited CC0 cut-outs or the user's own.
++
++## 10. dataviz
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/film.js`, `demo/engine.js`, `demo/timeline.js` (scales, key
++  frames), `demo/data/` (demo dataset), `demo/lines.json`, `demo/events.json`.
++- **Native moves:** a mark lands, an axis grows, a scale changes, a series morphs.
++- **Known limits:** requires a real `data` input with provenance and `facts`; **fictional numbers are
++  forbidden**. The agent writes a `data_manifest.json` naming columns, units, source URL and
++  retrieval date. The demo's dataset and captions are its own — replace both.
++
++## 11. ink-wash
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/comp.js` (composition), `demo/story.js`, `demo/world.js`,
++  `demo/ink.js` (ink/brush), `demo/wave.js`, `demo/glyph.js`, `demo/shots.js`, `demo/lines.json`.
++- **Native moves:** a brushstroke paints the world into being; empty paper.
++- **Known limits:** `demo/lines.json` and `demo/story.js` are the demo's poem — write your own. Not
++  for hard-edged UI or dense diagrams.
++
++## 12. paper-popup
++
++- **Entry:** `demo/index.html` → `demo/main.js` (three.js on a canvas).
++- **Modules:** `demo/main.js`, `demo/book.js`, `demo/paper.js`, `demo/actors.js`, `demo/story.js`,
++  `demo/sets.js`, `demo/art.js`, `demo/post.js`, `demo/render.mjs`, `demo/shot.mjs`.
++- **Native moves:** the book opens; paper sets pop up; a macro camera.
++- **Known limits:** three.js (`/node_modules/three`) and an HDRI are involved; `demo/story.js` is the
++  demo's narrative — replace it. Not flat motion graphics or chart-led stories.
++
++## 13. teardown
++
++- **Entry:** **none** — `demo/` holds only a `.gitkeep`; the CAD path was stripped for v1.
++- **Native moves:** layers lift on one axis; orbit outside, macro inside.
++- **Known limits:** **illustrative-only in v1.** No CAD/STEP import, no `occt-import-js`, no
++  `step2mesh.mjs`, no `extract_pcb.py`. Author from an original labelled `parts_spec` (plus `facts`)
++  and label the result "illustrative". Never invent parts. `styles/lemo/teardown.json` has no fonts.
++
++## 14. ascii-crt
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/art.js`, `demo/crt.js` (the CRT post effect), `demo/term.js`
++  (terminal grid), `demo/lines.json`, `demo/events.json`, `demo/voices/`.
++- **Native moves:** a character grid zooms; phosphor and scanlines.
++- **Known limits:** `demo/lines.json` is the demo's log — replace it. Monospace face only (`vt323`);
++  not for modern UI polish or unicode-free typography.
++
++## 15. art-deco
++
++- **Entry:** `demo/index.html` → `demo/main.js`.
++- **Modules:** `demo/main.js`, `demo/film.js`, `demo/engine/deco.js`, `demo/engine/cam.js`,
++  `demo/engine/bulbs.js`, `demo/engine/type.js`, `demo/timeline.js`, `demo/scenes/` (e.g.
++  `lobby.js`, `roof.js`, `stairs.js`, `tower.js`), `demo/shots_*.js`.
++- **Native moves:** symmetry opens from a centre axis; bulbs count on.
++- **Known limits:** a multi-scene film with its own timeline; take one deco reveal, not the tour. Not
++  for minimal grids or photoreal footage.
++
++---
++
++## Inputs at a glance
++
++| style | required inputs | rule |
++|---|---|---|
++| `living-screencast` | `ui_spec` | never invent a UI; original mascot only |
++| `briefing-board` | `cutouts` + `facts` | real photographs with credits; never invent evidence |
++| `dataviz` | `data` + `facts` | real data + `data_manifest.json` provenance; no fictional numbers |
++| `teardown` | `parts_spec` + `facts` | illustrative-only in v1; never invent parts |
++
++`facts` is a list of strings in `clip.json` (real, checkable claims). Every other required name maps
++to a file path in `clip.json`'s `inputs`, relative to the clip folder and inside it.
+diff --git a/.agents/skills/lemo/templates/clip.js b/.agents/skills/lemo/templates/clip.js
+new file mode 100644
+index 0000000..2a68e04
+--- /dev/null
++++ b/.agents/skills/lemo/templates/clip.js
+@@ -0,0 +1,100 @@
++// Lemo clip page. `lemo_render new` copies this template into
++// projects/<id>/lemo/clips/<clip_id>/ and replaces the __TOKEN__ placeholders.
++//
++// Page contract: set window.DUR, draw second t in window.render(t), and set
++// window.READY = true only after the fonts (and any other assets) have loaded.
++// Deterministic: every value derives from t — no Math.random, no clock.
++//
++// This placeholder draws a grid and a title block so `validate` passes before
++// you author the clip. Replace the drawing with the real clip, using the demo
++// modules named in references/style-map.md as grammar only — never their story.
++import { clamp, lerp, seg, ss, hash, mulberry } from '/core/lib.js';
++
++const canvas = document.getElementById('c');
++const ctx = canvas.getContext('2d');
++const W = __WIDTH__, H = __HEIGHT__;
++const TAU = Math.PI * 2;
++
++// clip.json is the source of truth for the clip's text.
++let META = {};
++try { META = await (await fetch('clip.json')).json(); } catch {}
++const SUBJECT = META.subject || 'Lemo clip';
++const ONE_IDEA = META.one_idea || '';
++
++window.DUR = __DURATION__;
++
++const INK = '#15161a';
++const PAPER = '#eceae4';
++const ACCENT = '#e4572e';
++
++function fitText(text, x, y, maxW, size, weight) {
++  let s = size;
++  for (let i = 0; i < 48; i++) {
++    ctx.font = `${weight} ${Math.round(s)}px "Clip Sans"`;
++    if (ctx.measureText(text).width <= maxW || s <= 12) break;
++    s *= 0.94;
++  }
++  ctx.fillText(text, x, y);
++}
++
++function draw(t) {
++  const p = ss(seg(t, 0, window.DUR)); // 0 -> 1 across the clip
++
++  ctx.setTransform(1, 0, 0, 1, 0, 0);
++  ctx.globalAlpha = 1;
++  ctx.globalCompositeOperation = 'source-over';
++
++  ctx.fillStyle = PAPER;
++  ctx.fillRect(0, 0, W, H);
++
++  // grid
++  const cols = 12, rows = Math.round(cols * H / W);
++  ctx.strokeStyle = 'rgba(21,22,26,0.14)';
++  ctx.lineWidth = Math.max(1, W / 1920);
++  ctx.beginPath();
++  for (let i = 1; i < cols; i++) { const x = Math.round(W * i / cols) + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, H); }
++  for (let j = 1; j < rows; j++) { const y = Math.round(H * j / rows) + 0.5; ctx.moveTo(0, y); ctx.lineTo(W, y); }
++  ctx.stroke();
++
++  // fixed deterministic dots that breathe on t
++  const rnd = mulberry(7);
++  for (let i = 0; i < 36; i++) {
++    const x = rnd() * W, y = rnd() * H;
++    const pulse = 0.5 + 0.5 * Math.sin(TAU * (t / window.DUR) + hash(i) * TAU);
++    ctx.fillStyle = 'rgba(21,22,26,' + (0.08 + 0.10 * pulse).toFixed(3) + ')';
++    ctx.beginPath();
++    ctx.arc(x, y, lerp(W * 0.003, W * 0.008, hash(i + 100)), 0, TAU);
++    ctx.fill();
++  }
++
++  // one accent cell slides along the grid as t advances
++  const bw = W / cols, bh = H / rows;
++  const ci = Math.min(cols - 1, Math.floor(p * cols));
++  ctx.fillStyle = ACCENT;
++  ctx.fillRect(ci * bw, (rows - 2) * bh, bw, bh);
++
++  // title block: the subject, then the one idea
++  const margin = Math.round(W * 0.06);
++  const title = Math.round(W * 0.072);
++  const sub = Math.round(W * 0.026);
++  ctx.textBaseline = 'alphabetic';
++  ctx.fillStyle = INK;
++  fitText(SUBJECT, margin, H * 0.5, W - 2 * margin, title, 700);
++  if (ONE_IDEA) {
++    ctx.fillStyle = 'rgba(21,22,26,0.72)';
++    fitText(ONE_IDEA, margin, H * 0.5 + title * 0.9, W - 2 * margin, sub, 500);
++  }
++}
++
++window.render = t => draw(clamp(t, 0, window.DUR));
++
++try {
++  await Promise.all([
++    document.fonts.load(`700 ${Math.round(W * 0.072)}px "Clip Sans"`, SUBJECT),
++    document.fonts.load(`500 ${Math.round(W * 0.026)}px "Clip Sans"`, ONE_IDEA || 'A'),
++  ]);
++} catch (e) {}
++await document.fonts.ready;
++
++draw(0);
++window.READY = true;
+diff --git a/.agents/skills/lemo/templates/clip.json b/.agents/skills/lemo/templates/clip.json
+new file mode 100644
+index 0000000..624ad30
+--- /dev/null
++++ b/.agents/skills/lemo/templates/clip.json
+@@ -0,0 +1,15 @@
++{
++  "clip_id": "__CLIP_ID__",
++  "style_id": "__STYLE_ID__",
++  "subject": "__SUBJECT__",
++  "one_idea": "__ONE_IDEA__",
++  "aspect": "__ASPECT__",
++  "width": "__WIDTH__",
++  "height": "__HEIGHT__",
++  "fps": "__FPS__",
++  "duration_seconds": "__DURATION__",
++  "sound": "__SOUND__",
++  "text_mode": "__TEXT_MODE__",
++  "inputs": {},
++  "facts": []
++}
+diff --git a/.agents/skills/lemo/templates/index.html b/.agents/skills/lemo/templates/index.html
+new file mode 100644
+index 0000000..fb5ce0d
+--- /dev/null
++++ b/.agents/skills/lemo/templates/index.html
+@@ -0,0 +1,30 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>__SUBJECT__</title>
++<style>
++  html, body { margin: 0; background: #15161a; overflow: hidden; }
++  canvas { display: block; }
++
++  /* Faces come from the pinned OFL manifest
++     (.agents/skills/lemo/library/assets/fonts/manifest.json). A clip must define
++     every @font-face it draws with, loading each face from
++     /assets/fonts/<path> — the render server root is library/. No system-font
++     fallback. Add one @font-face per face the style uses; do not use a separate
++     CSS file. */
++  @font-face {
++    font-family: 'Clip Sans';
++    src: url('/assets/fonts/archivo/Archivo[wdth,wght].ttf') format('truetype');
++    font-weight: 100 900;
++    font-style: normal;
++    font-display: block;
++  }
++</style>
++</head>
++<body>
++  <canvas id="c" width="__WIDTH__" height="__HEIGHT__"></canvas>
++  <script type="module" src="clip.js"></script>
++</body>
++</html>
+diff --git a/tests/contracts/test_lemo_skill_surface.py b/tests/contracts/test_lemo_skill_surface.py
+new file mode 100644
+index 0000000..e238bb0
+--- /dev/null
++++ b/tests/contracts/test_lemo_skill_surface.py
+@@ -0,0 +1,40 @@
++from pathlib import Path
++REPO_ROOT = Path(__file__).resolve().parents[2]
++LEMO = REPO_ROOT / ".agents/skills/lemo"
++
++def test_skill_and_references_exist():
++    for rel in ["SKILL.md","references/engine.md","references/authoring.md","references/style-map.md"]:
++        assert (LEMO/rel).is_file(), rel
++    text = (LEMO/"SKILL.md").read_text()
++    for needle in ["window.READY","window.render","window.DUR","/@film/","clip.json","lemo_render"]:
++        assert needle in text, needle
++
++def test_skill_has_discovery_frontmatter():
++    text = (LEMO/"SKILL.md").read_text()
++    assert text.startswith("---\n"), "YAML frontmatter must open the file"
++    head = text.split("---", 2)[1]
++    assert "name: lemo" in head
++    assert "description:" in head
++    assert "compatibility: opencode" in head
++
++def test_skill_menu_lists_every_style():
++    from styles.lemo.loader import STYLE_IDS
++    text = (LEMO/"SKILL.md").read_text()
++    for style_id in STYLE_IDS:
++        assert style_id in text, style_id
++
++def test_templates_obey_the_page_contract():
++    js = (LEMO/"templates/clip.js").read_text()
++    for needle in ["window.DUR","window.render","window.READY","document.fonts.ready"]:
++        assert needle in js, needle
++    for banned in ["Math.random(","Date.now("]:
++        assert banned not in js, banned
++    html = (LEMO/"templates/index.html").read_text()
++    assert "<canvas" in html and "clip.js" in html
++
++def test_template_clip_json_has_required_keys():
++    import json
++    doc = json.loads((LEMO/"templates/clip.json").read_text())
++    for key in ["clip_id","style_id","subject","one_idea","aspect","width","height","fps",
++                "duration_seconds","sound","text_mode","inputs","facts"]:
++        assert key in doc, key
